@@ -15,13 +15,23 @@ Singleton {
     property var list: []
     property bool busy: false
 
-    function set(path) {
-        if (!path || path === current)
+    function set(path, force) {
+        if (!path)
             return;
+
+        if (path === current && force !== true) {
+            // Same image: nothing to fade, but the palette may still
+            // need regenerating after a scheme change.
+            return;
+        }
 
         current = path;
         stateFile.setText(path);
         generate(path);
+    }
+
+    function reapply() {
+        if (current !== "") generate(current);
     }
 
     function next() {
@@ -170,6 +180,7 @@ Singleton {
         function random(): void { root.random() }
         function refresh(): void { root.refresh() }
         function set(path: string): void { root.set(path) }
+        function reapply(): void { root.reapply() }
         function current(): string { return root.current }
     }
 }

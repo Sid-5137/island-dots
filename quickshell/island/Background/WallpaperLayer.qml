@@ -26,85 +26,121 @@ Variants {
 
         color: Theme.background
 
+        // Two images that swap which one is visible. Neither source is
+        // ever cleared: clearing and reassigning during a fade meant a
+        // wallpaper already held by the hidden layer could not be shown
+        // again, which is why the one loaded at login could not be
+        // returned to later in the session.
         Item {
             id: stage
             anchors.fill: parent
 
-            // What's currently displayed.
+            property bool showA: true
+            property Image pending: null
+
             Image {
-                id: back
+                id: imgA
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 cache: false
                 sourceSize.width: win.screen.width
                 sourceSize.height: win.screen.height
-            }
-
-            // The incoming image.
-            Image {
-                id: front
-                anchors.fill: parent
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                cache: false
-                opacity: 0
-                sourceSize.width: win.screen.width
-                sourceSize.height: win.screen.height
-
-                // Only start fading once the image has actually decoded,
-                // or you fade in a blank rectangle.
-                onStatusChanged: {
-                    if (status === Image.Ready && source != "")
-                        opacity = 1;
-                    else if (status === Image.Error)
-                        console.warn("WallpaperLayer: failed to load", source);
-                }
+                opacity: stage.showA ? 1 : 0
 
                 Behavior on opacity {
                     NumberAnimation {
                         duration: Config.wallpaper.crossfadeDuration
                         easing.type: Easing.InOutQuad
+                    }
+                }
+            }
 
-                        onFinished: {
-                            if (front.opacity === 1) {
-                                back.source = front.source;
-                                front.source = "";
-                                front.opacity = 0;
-                            }
-                        }
+            Image {
+                id: imgB
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: false
+                sourceSize.width: win.screen.width
+                sourceSize.height: win.screen.height
+                opacity: stage.showA ? 0 : 1
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Config.wallpaper.crossfadeDuration
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+            }
+
+            readonly property Image visibleImage: showA ? imgA : imgB
+            readonly property Image hiddenImage: showA ? imgB : imgA
+
+            function show(url, animate) {
+                if (visibleImage.source == url)
+                    return;
+
+                const incoming = hiddenImage;
+
+                // Already decoded in the hidden layer — flip straight
+                // to it. This is the path taken when returning to a
+                // wallpaper shown earlier.
+                if (incoming.source == url) {
+                    if (incoming.status === Image.Ready) {
+                        showA = !showA;
+                        return;
+                    }
+                    pending = incoming;
+                    return;
+                }
+
+                incoming.source = url;
+
+                if (!animate) {
+                    showA = !showA;
+                    return;
+                }
+
+                if (incoming.status === Image.Ready)
+                    showA = !showA;
+                else
+                    pending = incoming;
+            }
+
+            // Fade only once the incoming image has decoded, or the
+            // crossfade runs against a blank rectangle.
+            Connections {
+                target: stage.pending
+                enabled: stage.pending !== null
+
+                function onStatusChanged() {
+                    if (stage.pending.status === Image.Ready) {
+                        stage.showA = !stage.showA;
+                        stage.pending = null;
+                    } else if (stage.pending.status === Image.Error) {
+                        console.warn("WallpaperLayer: failed to load",
+                                     stage.pending.source);
+                        stage.pending = null;
                     }
                 }
             }
         }
 
-        // Drive the crossfade from the singleton.
         Connections {
             target: Wallpaper
 
             function onCurrentChanged() {
-                const path = Wallpaper.current;
-                if (path === "")
-                    return;
-
-                const url = "file://" + path;
-
-                // First wallpaper of the session: no fade, just show it.
-                if (back.source == "") {
-                    back.source = url;
-                    return;
-                }
-
-                if (url == back.source)
-                    return;
-
-                front.source = url;
+                if (Wallpaper.current !== "")
+                    stage.show("file://" + Wallpaper.current, true);
             }
         }
 
         Component.onCompleted: {
-            if (Wallpaper.current !== "")
-                back.source = "file://" + Wallpaper.current;
+            if (Wallpaper.current !== "") {
+                imgA.source = "file://" + Wallpaper.current;
+                stage.showA = true;
+            }
         }
     }
 }
