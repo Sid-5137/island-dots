@@ -1,0 +1,34 @@
+{
+  "source": "{{colors.source_color.default.hex}}",
+
+  "background": "{{colors.background.dark.hex}}",
+  "onBackground": "{{colors.on_background.dark.hex}}",
+
+  "surface": "{{colors.surface.dark.hex}}",
+  "surfaceLowest": "{{colors.surface_container_lowest.dark.hex}}",
+  "surfaceLow": "{{colors.surface_container_low.dark.hex}}",
+  "surfaceContainer": "{{colors.surface_container.dark.hex}}",
+  "surfaceHigh": "{{colors.surface_container_high.dark.hex}}",
+  "surfaceHighest": "{{colors.surface_container_highest.dark.hex}}",
+  "onSurface": "{{colors.on_surface.dark.hex}}",
+  "onSurfaceVariant": "{{colors.on_surface_variant.dark.hex}}",
+
+  "primary": "{{colors.primary.dark.hex}}",
+  "onPrimary": "{{colors.on_primary.dark.hex}}",
+  "primaryContainer": "{{colors.primary_container.dark.hex}}",
+
+  "secondary": "{{colors.secondary.dark.hex}}",
+  "onSecondary": "{{colors.on_secondary.dark.hex}}",
+
+  "tertiary": "{{colors.tertiary.dark.hex}}",
+  "onTertiary": "{{colors.on_tertiary.dark.hex}}",
+
+  "error": "{{colors.error.dark.hex}}",
+  "onError": "{{colors.on_error.dark.hex}}",
+
+  "outline": "{{colors.outline.dark.hex}}",
+  "outlineVariant": "{{colors.outline_variant.dark.hex}}",
+
+  "shadow": "{{colors.shadow.dark.hex}}",
+  "scrim": "{{colors.scrim.dark.hex}}"
+}

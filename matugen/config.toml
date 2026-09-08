@@ -1,0 +1,33 @@
+[config]
+reload_apps = false
+
+# The shell reads this and retints itself.
+[templates.quickshell]
+input_path = "~/island-dots/matugen/templates/quickshell.json"
+output_path = "~/island-dots/quickshell/island/colors.json"
+
+# GTK3 and GTK4 need SEPARATE templates: GTK3 reads the classic
+# theme_* names, GTK4/libadwaita reads only the adw names. One shared
+# file leaves half of each generation untouched.
+#
+# Requires:  sudo dnf install adw-gtk3-theme
+# Flatpak apps need it inside their sandbox too:
+#   flatpak install org.gtk.Gtk3theme.adw-gtk3-dark
+[templates.gtk3]
+input_path = "~/island-dots/matugen/templates/gtk3.css"
+output_path = "~/.config/gtk-3.0/gtk.css"
+
+[templates.gtk4]
+input_path = "~/island-dots/matugen/templates/gtk4.css"
+output_path = "~/.config/gtk-4.0/gtk.css"
+# The theme is adw-gtk3, NOT adw-gtk3-dark. color-scheme picks the
+# dark variant; naming the dark theme directly loads one that does
+# not defer to these overrides.
+#
+# Toggling the name forces running apps to re-read their CSS.
+post_hook = """
+gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark';
+gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita';
+sleep 0.2;
+gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3'
+"""
