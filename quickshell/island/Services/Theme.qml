@@ -4,22 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Theme
-//
-// Watches colors.json, which matugen regenerates on every wallpaper
-// change. Everything the shell draws binds to these properties, so
-// a new wallpaper retints the whole UI without anything else
-// knowing matugen exists.
-//
-// Colors are declared as `string`, not `color`. QML accepts a hex
-// string anywhere a color is expected, and this avoids type
-// coercion surprises when a value arrives from JSON.
-//
-// The `?? fallback` on each keeps the shell rendering before the
-// first matugen run, and survives a malformed or half-written file.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 
@@ -32,8 +16,6 @@ Singleton {
                     "onSurfaceVariant:", root.textDim,
                     "primary:", root.primary)
     }
-
-    // ── Colors ───────────────────────────────────────────────
 
     readonly property string background:       palette.background       ?? "#0e0e11"
     readonly property string fgOnBackground:     palette.onBackground     ?? "#e4e4e8"
@@ -56,8 +38,6 @@ Singleton {
     readonly property string outline:          palette.outline          ?? "#55555e"
     readonly property string outlineVariant:   palette.outlineVariant   ?? "#2a2a30"
 
-    // ── Type ─────────────────────────────────────────────────
-
     readonly property string fontFamily: "JetBrainsMono Nerd Font"
     readonly property string fontMono:   "JetBrainsMono Nerd Font Mono"
 
@@ -65,8 +45,6 @@ Singleton {
     readonly property int fontSizeNormal: 13
     readonly property int fontSizeLarge:  16
     readonly property int fontSizeTitle:  22
-
-    // ── Geometry ─────────────────────────────────────────────
 
     readonly property int radiusSmall:  8
     readonly property int radiusNormal: 14
@@ -76,16 +54,12 @@ Singleton {
     readonly property int spacingNormal: 12
     readonly property int spacingLarge:  20
 
-    // ── Motion ───────────────────────────────────────────────
-
     readonly property int durationFast:   150
     readonly property int durationNormal: 300
     readonly property int durationSlow:   450
 
     readonly property int easingIsland:   Easing.OutBack
     readonly property int easingStandard: Easing.OutCubic
-
-    // ── Source ───────────────────────────────────────────────
 
     FileView {
         id: colorFile

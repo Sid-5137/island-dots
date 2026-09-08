@@ -4,13 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Bluetooth
-//
-// Wraps bluetoothctl. Same reasoning as Network: a short poll is
-// simpler than tracking BlueZ over D-Bus for a handful of facts.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 

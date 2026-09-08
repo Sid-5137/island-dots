@@ -1,8 +1,6 @@
--- ─────────────────────────────────────────────────────────────
 -- Input
 -- https://wiki.hypr.land/Configuring/Basics/Variables/
 -- Hyphens are invalid in Lua keys, so tap-to-click is tap_to_click.
--- ─────────────────────────────────────────────────────────────
 
 hl.config({
     input = {
@@ -32,11 +30,9 @@ hl.config({
     },
 })
 
--- ─────────────────────────────────────────────────────────────
 -- Gestures
 -- https://wiki.hypr.land/Configuring/Gestures/
 -- `action` takes a Lua function, not a dispatcher string.
--- ─────────────────────────────────────────────────────────────
 
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 

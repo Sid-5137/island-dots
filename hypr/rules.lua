@@ -1,8 +1,6 @@
--- ─────────────────────────────────────────────────────────────
 -- Window rules
 -- https://wiki.hypr.land/Configuring/Window-Rules/
 -- Find a window's class and title with: hyprctl clients
--- ─────────────────────────────────────────────────────────────
 
 hl.window_rule({
     name           = "suppress-maximize",
@@ -23,8 +21,6 @@ hl.window_rule({
     },
     no_focus = true,
 })
-
--- ── Floating ─────────────────────────────────────────────────
 
 hl.window_rule({
     name   = "calculator",
@@ -65,7 +61,6 @@ for _, title in ipairs({ "^Open File$", "^Save File$", "^Authentication Required
     })
 end
 
--- ── Opacity ──────────────────────────────────────────────────
 -- The two numbers are active and inactive. Firefox is fully opaque
 -- while focused so page content renders honestly, and only dims
 -- slightly when it isn't the active window.
@@ -99,7 +94,6 @@ hl.window_rule({
     opacity = "0.94 override 0.90 override",
 })
 
--- ── Privacy ──────────────────────────────────────────────────
 -- Hide credential managers from screen capture.
 
 -- hl.window_rule({
@@ -108,7 +102,6 @@ hl.window_rule({
 --     no_screen_share = true,
 -- })
 
--- ─────────────────────────────────────────────────────────────
 -- Layer rules
 --
 -- Namespaces come from the `namespace` property on each PanelWindow
@@ -116,7 +109,6 @@ hl.window_rule({
 --
 -- ONE rule per namespace. Declaring a namespace twice makes the
 -- later rule fight the earlier one, and neither applies cleanly.
--- ─────────────────────────────────────────────────────────────
 
 -- Wallpaper: it IS the background, so nothing to blur and nothing
 -- to animate.

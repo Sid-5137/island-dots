@@ -6,7 +6,6 @@
 -- published by the Free Software Foundation, either version 3 of the
 -- License, or (at your option) any later version. See LICENSE.
 
--- ─────────────────────────────────────────────────────────────
 -- Hyprland — root config
 -- https://wiki.hypr.land/Configuring/Start/
 --
@@ -15,7 +14,6 @@
 --
 -- require() resolves against this directory, so each module is
 -- just its filename without the .lua extension.
--- ─────────────────────────────────────────────────────────────
 
 require("env")
 require("monitors")

@@ -4,20 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Config
-//
-// The spine. Every preference lives here, backed by settings.json.
-// Components bind to Config.<section>.<key>; the settings app writes
-// to the same properties. Neither has to know about the other.
-//
-// The file is watched, so editing settings.json by hand updates the
-// running shell. Changing a property in QML writes the file back.
-//
-// Defaults below are what ships when settings.json doesn't exist yet
-// — the file is created on first write.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 
@@ -59,8 +45,6 @@ Singleton {
 
         JsonAdapter {
             id: adapter
-
-            // ── Island ───────────────────────────────────────
 
             property JsonObject island: JsonObject {
                 // "always" — on screen at all times
@@ -164,8 +148,6 @@ Singleton {
                 property bool caffeine: false
             }
 
-            // ── Motion ───────────────────────────────────────
-
             property JsonObject motion: JsonObject {
                 property int morphDuration: 250
                 property real morphOvershoot: 0.6
@@ -176,10 +158,6 @@ Singleton {
                 // before expanded content appears.
                 property real contentThreshold: 0.75
             }
-
-            // ── Appearance ───────────────────────────────────
-            // These drive Hyprland itself via hyprctl, plus the
-            // shell's own panels. See Services/Compositor.qml.
 
             property JsonObject appearance: JsonObject {
                 // Shell panels
@@ -210,9 +188,6 @@ Singleton {
                 property bool shadows: true
             }
 
-            // ── Input ────────────────────────────────────────
-            // Pushed to Hyprland at runtime, same as appearance.
-
             property JsonObject input: JsonObject {
                 // "adaptive" accelerates with speed; "flat" is 1:1.
                 property string mouseAccel: "flat"
@@ -231,8 +206,6 @@ Singleton {
                 property int repeatRate: 25
                 property int repeatDelay: 600
             }
-
-            // ── Wallpaper ────────────────────────────────────
 
             property JsonObject wallpaper: JsonObject {
                 property string directory: Quickshell.env("HOME") + "/Pictures/Wallpapers"

@@ -1,27 +1,19 @@
--- ─────────────────────────────────────────────────────────────
 -- Keybinds
 -- https://wiki.hypr.land/Configuring/Binds/
 --
 -- Shell actions go through Quickshell IPC (see env.lua's Shell).
 -- They fail harmlessly until the matching IpcHandler exists.
 -- List what's available with: qs -c island ipc show
--- ─────────────────────────────────────────────────────────────
 
 local mod = "SUPER"
-
--- ── Applications ─────────────────────────────────────────────
 
 hl.bind(mod .. " + X", hl.dsp.exec_cmd(Apps.terminal),    { description = "Terminal" })
 hl.bind(mod .. " + E", hl.dsp.exec_cmd(Apps.fileManager), { description = "File manager" })
 hl.bind(mod .. " + B", hl.dsp.exec_cmd(Apps.browser),     { description = "Browser" })
 hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload config" })
 
--- ── Shell ────────────────────────────────────────────────────
-
 hl.bind(mod .. " + R",         hl.dsp.exec_cmd(Shell .. "launcher toggle"))
 hl.bind("ALT + Space",         hl.dsp.exec_cmd(Shell .. "launcher toggle"))
--- Not built yet — the shell has no clipboard target.
--- hl.bind(mod .. " + V",         hl.dsp.exec_cmd(Shell .. "clipboard toggle"))
 hl.bind(mod .. " + N",         hl.dsp.exec_cmd(Shell .. "notifications-ui toggle"))
 hl.bind(mod .. " + S",         hl.dsp.exec_cmd(Shell .. "settings toggle"))
 hl.bind(mod .. " + SHIFT + C", hl.dsp.exec_cmd(Shell .. "control toggle"))
@@ -32,43 +24,31 @@ hl.bind(mod .. " + CTRL + W",  hl.dsp.exec_cmd(Shell .. "wallpaper next"))
 hl.bind(mod .. " + L",         hl.dsp.exec_cmd("loginctl lock-session || hyprlock"))
 hl.bind(mod .. " + SHIFT + Q", hl.dsp.exec_cmd(Shell .. "session toggle"))
 
--- ── Window control ───────────────────────────────────────────
-
 hl.bind(mod .. " + Q",         hl.dsp.window.close())
 hl.bind(mod .. " + Space",     hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + F",         hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized" }))
 hl.bind(mod .. " + Tab",       hl.dsp.window.cycle_next())
 
--- ── Focus ────────────────────────────────────────────────────
-
 hl.bind("ALT + left",  hl.dsp.focus({ direction = "left" }))
 hl.bind("ALT + right", hl.dsp.focus({ direction = "right" }))
 hl.bind("ALT + up",    hl.dsp.focus({ direction = "up" }))
 hl.bind("ALT + down",  hl.dsp.focus({ direction = "down" }))
-
--- ── Swap windows ─────────────────────────────────────────────
 
 hl.bind(mod .. " + SHIFT + left",  hl.dsp.window.swap({ direction = "left" }))
 hl.bind(mod .. " + SHIFT + right", hl.dsp.window.swap({ direction = "right" }))
 hl.bind(mod .. " + SHIFT + up",    hl.dsp.window.swap({ direction = "up" }))
 hl.bind(mod .. " + SHIFT + down",  hl.dsp.window.swap({ direction = "down" }))
 
--- ── Move floating windows ────────────────────────────────────
-
 hl.bind("CTRL + SHIFT + left",  hl.dsp.window.move({ x = -50, y = 0,   relative = true }))
 hl.bind("CTRL + SHIFT + right", hl.dsp.window.move({ x = 50,  y = 0,   relative = true }))
 hl.bind("CTRL + SHIFT + up",    hl.dsp.window.move({ x = 0,   y = -50, relative = true }))
 hl.bind("CTRL + SHIFT + down",  hl.dsp.window.move({ x = 0,   y = 50,  relative = true }))
 
--- ── Resize ───────────────────────────────────────────────────
-
 hl.bind("CTRL + ALT + left",  hl.dsp.window.resize({ x = -50, y = 0,   relative = true }))
 hl.bind("CTRL + ALT + right", hl.dsp.window.resize({ x = 50,  y = 0,   relative = true }))
 hl.bind("CTRL + ALT + up",    hl.dsp.window.resize({ x = 0,   y = -50, relative = true }))
 hl.bind("CTRL + ALT + down",  hl.dsp.window.resize({ x = 0,   y = 50,  relative = true }))
-
--- ── Workspaces ───────────────────────────────────────────────
 
 for i = 1, 9 do
     hl.bind(mod .. " + " .. i, hl.dsp.focus({ workspace = i }))
@@ -83,24 +63,17 @@ hl.bind("CTRL + right",    hl.dsp.window.move({ workspace = "e+1" }))
 hl.bind("CTRL + " .. mod .. " + left",  hl.dsp.window.move({ workspace = "e-1", follow = false }))
 hl.bind("CTRL + " .. mod .. " + right", hl.dsp.window.move({ workspace = "e+1", follow = false }))
 
--- ── Scratchpad ───────────────────────────────────────────────
-
 hl.bind(mod .. " + minus",         hl.dsp.workspace.toggle_special("scratchpad"))
 hl.bind(mod .. " + SHIFT + minus", hl.dsp.window.move({ workspace = "special:scratchpad" }))
-
--- ── Monitors ─────────────────────────────────────────────────
 
 hl.bind("ALT + SHIFT + left",  hl.dsp.focus({ monitor = "l" }))
 hl.bind("ALT + SHIFT + right", hl.dsp.focus({ monitor = "r" }))
 hl.bind(mod .. " + ALT + left",  hl.dsp.window.move({ monitor = "l" }))
 hl.bind(mod .. " + ALT + right", hl.dsp.window.move({ monitor = "r" }))
 
--- ── Mouse ────────────────────────────────────────────────────
-
 hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- ── Media keys ───────────────────────────────────────────────
 -- locked = fires while the screen is locked
 -- repeating = repeats while held
 
@@ -115,8 +88,6 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl --class=backligh
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"),       { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
-
--- ── Screenshots ──────────────────────────────────────────────
 
 -- `-z` freezes the screen before the selection overlay appears, which
 -- is what GNOME and KDE do: without it you're selecting against a live
@@ -133,7 +104,5 @@ hl.bind("ALT + Print",         hl.dsp.exec_cmd("hyprshot -z -m region --clipboar
 
 -- Same set on SUPER, since Print is awkward on some laptop layouts.
 hl.bind(mod .. " + Print",     hl.dsp.exec_cmd("hyprshot -z -m region -o ~/Pictures/Screenshots"))
-
--- ── Session ──────────────────────────────────────────────────
 
 hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))

@@ -4,14 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Battery
-//
-// Read straight from sysfs rather than upower: the two files this
-// needs are always there, need no daemon, and cost nothing to poll.
-// Handles BAT0/BAT1 and machines with no battery at all.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 

@@ -5,21 +5,6 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Wm
-//
-// What the compositor is doing: which workspaces exist, which is
-// focused, how many windows are on it, and whether anything is
-// fullscreen.
-//
-// Hyprland's event socket is only a trigger — the state itself comes
-// from hyprctl's JSON, whose shape is stable. Parsing event payloads
-// would mean tracking window counts by hand and drifting out of sync.
-//
-// "auto" visibility leans on `empty`: a workspace with nothing on it
-// has nothing to be in the way of, so the island stays put.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 

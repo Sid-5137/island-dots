@@ -4,16 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Wallpaper
-//
-// Owns which wallpaper is current, the list of available ones, and
-// the matugen call. Nothing here draws — WallpaperLayer binds to
-// `current` and handles the crossfade.
-//
-// The chosen path is persisted so the next login restores it.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 
@@ -24,8 +14,6 @@ Singleton {
     property string current: ""
     property var list: []
     property bool busy: false
-
-    // ── Actions ──────────────────────────────────────────────
 
     function set(path) {
         if (!path || path === current)
@@ -63,12 +51,6 @@ Singleton {
     // Re-scan when the configured directory changes.
     onDirChanged: refresh()
 
-    // Regenerate the palette. scheme-monochrome keeps everything
-    // greyscale while still tracking the wallpaper's luminance.
-    // Drop the -t flag for full color.
-    // Queued rather than fired directly: reassigning a Process that
-    // is still running silently drops the new command, which is why
-    // changing wallpapers quickly used to apply only some of them.
     property string pending: ""
 
     function generate(path) {
@@ -88,8 +70,6 @@ Singleton {
         matugen.running = true;
     }
 
-    // ── Persistence ──────────────────────────────────────────
-
     FileView {
         id: stateFile
         path: root.statePath
@@ -104,8 +84,6 @@ Singleton {
                 root.current = saved;
         }
     }
-
-    // ── Listing ──────────────────────────────────────────────
 
     Process {
         id: lister
@@ -156,8 +134,6 @@ Singleton {
         }
     }
 
-    // ── Matugen ──────────────────────────────────────────────
-
     Process {
         id: matugen
         running: false
@@ -185,10 +161,6 @@ Singleton {
             }
         }
     }
-
-    // ── IPC ──────────────────────────────────────────────────
-    // Wired to SUPER+SHIFT+W in binds.conf:
-    //   qs -c island ipc call wallpaper next
 
     IpcHandler {
         target: "wallpaper"

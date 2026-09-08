@@ -4,24 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Compositor
-//
-// Pushes Config.appearance into Hyprland at runtime with
-// `hyprctl eval`, so a slider in the settings app changes blur or
-// gaps immediately without editing look.lua or reloading.
-//
-// `hyprctl keyword` does NOT work with the Lua config parser — it
-// errors with "keyword can\'t work with non-legacy parsers". eval
-// takes Lua instead, which means the whole appearance block goes in
-// one call rather than ten separate processes.
-//
-// These are runtime overrides — they do NOT persist to look.lua.
-// On the next Hyprland restart the .lua values apply again, and
-// then this reapplies Config on top. That's deliberate: look.lua
-// stays the checked-in default, settings.json is this machine.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 

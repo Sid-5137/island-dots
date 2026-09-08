@@ -5,20 +5,6 @@ import Quickshell.Io
 import Quickshell.Services.Notifications
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Notifications
-//
-// The shell IS the notification daemon — it claims
-// org.freedesktop.Notifications, so mako or dunst must not be
-// running alongside it.
-//
-// The server's own list is not used for history. Notifications are
-// Retainable: they're destroyed once dismissed or expired, which
-// would take them out of a history list too. Each one is copied to a
-// plain object on arrival, and the live object kept alongside only
-// while it's still valid, for invoking actions.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 

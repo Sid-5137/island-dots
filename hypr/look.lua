@@ -1,10 +1,8 @@
--- ─────────────────────────────────────────────────────────────
 -- Look and feel
 -- https://wiki.hypr.land/Configuring/Basics/Variables/
 --
 -- Monochrome: near-white active border, near-black inactive.
 -- Colors accept "#rrggbb", "#rrggbbaa" or "rgba(rrggbbaa)".
--- ─────────────────────────────────────────────────────────────
 
 local mono = {
     active   = "#e8e8ec",
@@ -80,10 +78,8 @@ hl.config({
     },
 })
 
--- ─────────────────────────────────────────────────────────────
 -- Animations
 -- https://wiki.hypr.land/Configuring/Animations/
--- ─────────────────────────────────────────────────────────────
 
 hl.curve("spring",   { type = "bezier", points = { {0.46, 1.0},  {0.29, 1} } })
 hl.curve("closeOut", { type = "bezier", points = { {0.08, 0.92}, {0, 1}    } })

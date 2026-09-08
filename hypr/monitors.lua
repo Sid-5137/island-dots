@@ -1,8 +1,6 @@
--- ─────────────────────────────────────────────────────────────
 -- Monitors
 -- https://wiki.hypr.land/Configuring/Basics/Monitors/
 -- List outputs and modes with: hyprctl monitors
--- ─────────────────────────────────────────────────────────────
 
 hl.monitor({
     output   = "eDP-1",
@@ -20,10 +18,8 @@ hl.monitor({
     scale    = "auto",
 })
 
--- ─────────────────────────────────────────────────────────────
 -- Workspace rules
 -- https://wiki.hypr.land/Configuring/Basics/Workspace-Rules/
--- ─────────────────────────────────────────────────────────────
 
 -- Persistent workspaces keep empty slots visible in a bar that only
 -- renders workspaces which exist. Uncomment once the island shows them.

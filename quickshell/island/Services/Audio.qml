@@ -4,13 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Audio & backlight
-//
-// wpctl for volume, brightnessctl for the panel. Both are polled
-// because neither pushes changes, and both are cheap.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 

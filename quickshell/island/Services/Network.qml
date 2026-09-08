@@ -4,17 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Network
-//
-// Wraps nmcli. Polled rather than event-driven: NetworkManager's
-// D-Bus surface is large and this needs a handful of facts, so a
-// short poll is less to maintain than a property watcher.
-//
-// The island only toggles the radio. Scanning, listing and
-// connecting live here too, for the settings page.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 
@@ -81,8 +70,6 @@ Singleton {
         act.running = true;
     }
 
-    // ── Status ───────────────────────────────────────────────
-
     Process {
         id: poll
         running: true
@@ -125,8 +112,6 @@ Singleton {
             }
         }
     }
-
-    // ── Scan ─────────────────────────────────────────────────
 
     Process {
         id: lister

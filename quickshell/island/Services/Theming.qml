@@ -4,33 +4,12 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Theming
-//
-// One setting, three toolkits. Changing the icon theme here writes
-// it to all of:
-//
-//   · GTK  — via gsettings (dconf), which GTK3 and GTK4 both read
-//   · Qt   — via qt6ct's config file
-//   · Shell — Qt's icon lookup, which is what Quickshell.iconPath
-//             resolves against
-//
-// Without this you'd set the same value in three places and they'd
-// drift apart, which is what QS_ICON_THEME was patching over before.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 
     property var available: []
     property var cursors: []
     property var gtkThemes: []
-
-    // ── Apply ────────────────────────────────────────────────
-    //
-    // Everything goes in ONE command. An earlier version called three
-    // functions that each reassigned the same Process — the first two
-    // were clobbered before they ran, and only the last took effect.
 
     function applyAll() {
         const a = Config.appearance;
@@ -93,11 +72,6 @@ Singleton {
             }
         }
     }
-
-    // ── Discovery ────────────────────────────────────────────
-    // Anything with an index.theme is an icon theme. Listing them
-    // means the settings app can offer what's actually installed
-    // rather than a hardcoded list.
 
     // Search every standard location, including Flatpak's exports and
     // anything on XDG_DATA_DIRS — a scan of /usr/share/icons alone

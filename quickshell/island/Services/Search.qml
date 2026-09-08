@@ -4,24 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Search
-//
-// Scores desktop entries against a query. Kept out of the UI so the
-// launcher panel is purely presentation, and so other surfaces (the
-// island, later) can reuse the same matching.
-//
-// Scoring, highest first:
-//   · exact name match
-//   · name starts with the query
-//   · query appears as a substring in the name
-//   · subsequence match — "fx" finds "Firefox"
-//   · match in generic name or keywords
-//
-// Ties break on shorter names, so "Files" beats "File Roller" for
-// the query "fi".
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 

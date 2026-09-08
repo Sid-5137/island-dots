@@ -4,18 +4,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// ─────────────────────────────────────────────────────────────
-// Session
-//
-// Power actions. Each resolves through logind first and falls back
-// to the older tools, so this works whether or not systemd owns the
-// session.
-//
-// Nothing here confirms — the island asks before running anything
-// destructive, so the confirmation lives with the UI rather than
-// being baked into the action.
-// ─────────────────────────────────────────────────────────────
-
 Singleton {
     id: root
 

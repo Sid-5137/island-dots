@@ -4,19 +4,6 @@ import QtQuick
 
 import "root:/Services"
 
-// ─────────────────────────────────────────────────────────────
-// WallpaperLayer
-//
-// One background surface per monitor. Two stacked Images crossfade
-// between them: the back one holds what's showing, the front one
-// loads the new image and fades in over it. Once the fade finishes
-// the front is copied to the back and reset, so the next change
-// starts from the same state.
-//
-// Loading into the hidden layer first is what avoids a flash of
-// nothing while a large image decodes.
-// ─────────────────────────────────────────────────────────────
-
 Variants {
     model: Quickshell.screens
 

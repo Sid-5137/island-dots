@@ -7,16 +7,6 @@ import "root:/Services"
 import "root:/Widgets"
 import "root:/Settings/Pages"
 
-// ─────────────────────────────────────────────────────────────
-// Settings
-//
-// A centred modal panel with a sidebar. Everything it shows is
-// bound to Config, so changes apply live and persist to
-// settings.json without an explicit save.
-//
-// Opened by SUPER+S:  qs -c island ipc call settings toggle
-// ─────────────────────────────────────────────────────────────
-
 PanelWindow {
     id: root
 
@@ -69,8 +59,6 @@ PanelWindow {
         }
     }
 
-    // ── Panel ────────────────────────────────────────────────
-
     // Two surfaces with a gap, not one box divided by a line. The
     // sidebar is navigation and the pane is content; giving each its
     // own shape says so, and it matches the island's language.
@@ -96,8 +84,6 @@ PanelWindow {
 
         // Swallow clicks so they don't reach the dismiss area behind.
         MouseArea { anchors.fill: parent }
-
-        // ── Sidebar ──────────────────────────────────────────
 
         Rectangle {
             id: sidebar
@@ -174,8 +160,6 @@ PanelWindow {
             }
         }
 
-        // ── Content ──────────────────────────────────────────
-
         Rectangle {
             id: pane
             anchors.left: sidebar.right
@@ -242,8 +226,6 @@ PanelWindow {
     Component { id: appearancePage; AppearancePage { width: scroll.width } }
     Component { id: networkPage;    NetworkPage { width: scroll.width } }
     Component { id: inputPage;      InputPage { width: scroll.width } }
-
-    // ── IPC ──────────────────────────────────────────────────
 
     IpcHandler {
         target: "settings"

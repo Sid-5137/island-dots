@@ -16,13 +16,6 @@ import "root:/Background"
 import "root:/Island"
 import "root:/Settings"
 
-// ─────────────────────────────────────────────────────────────
-// Island — root
-//
-// Instantiates surfaces and nothing else. Logic lives in Services/,
-// reusable controls in Widgets/, and each surface owns its folder.
-// ─────────────────────────────────────────────────────────────
-
 ShellRoot {
     WallpaperLayer {}
     Island {}
@@ -44,5 +37,6 @@ ShellRoot {
         // else references it until a notification arrives, so without
         // this line the shell would never register as the daemon.
         Notifications.count;
+        Clock.time;
     }
 }

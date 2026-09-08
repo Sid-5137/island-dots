@@ -54,8 +54,6 @@ Item {
         }
     }
 
-    // ── Closed state ─────────────────────────────────────────
-
     Rectangle {
         id: field
         anchors.right: parent.right
@@ -113,8 +111,6 @@ Item {
             }
         }
     }
-
-    // ── Popup ────────────────────────────────────────────────
 
     Rectangle {
         id: popup

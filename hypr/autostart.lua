@@ -1,4 +1,3 @@
--- ─────────────────────────────────────────────────────────────
 -- Autostart
 --
 -- Lua has no exec-once; you subscribe to the session start event.
@@ -6,7 +5,6 @@
 --
 -- The shell owns wallpaper, notifications, OSD and the launcher, so
 -- there is deliberately no swaybg / mako / fuzzel here.
--- ─────────────────────────────────────────────────────────────
 
 hl.on("hyprland.start", function()
     -- Export the session environment to systemd and D-Bus. Without

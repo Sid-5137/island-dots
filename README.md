@@ -30,6 +30,8 @@ One shape, several modes. Nothing else is on screen.
 | search | `Super+R` | application launcher, inside the pill |
 | picker | `Super+Shift+W/T/I` | wallpapers, palettes, icon themes |
 | session | `Super+Shift+Q` | lock, log out, suspend, reboot, shut down |
+| notify | on arrival | a notification, briefly |
+| centre | `Super+N` | notification history |
 | hidden | auto visibility | slides away when windows are present |
 
 The pill's collapsed width is derived from its content plus a padding
@@ -44,7 +46,8 @@ it.
       Services/           Singletons. No UI.
       Widgets/            Reusable controls. No state.
       Background/         Wallpaper layer
-      Island/             The pill and every mode
+      Island/             The pill, its geometry and mode resolution
+      Island/Modes/       One file per mode
       Settings/           Settings window and its pages
 
 `Services/Config.qml` is the spine: every preference lives there,
@@ -114,12 +117,13 @@ Things that cost time to work out:
 
 ## Status
 
-Working: wallpaper with crossfade, the island and all its modes,
-MPRIS, settings app, network and Bluetooth management, live
+Working: wallpaper with crossfade, every island mode, MPRIS,
+notifications, settings app, network and Bluetooth management, live
 compositor control, cross-toolkit theming.
 
-Not built yet: notifications, clipboard panel. Their keybinds are
-commented out in `hypr/binds.lua`.
+The shell is the notification daemon — it claims
+`org.freedesktop.Notifications`, so mako or dunst must not be running
+alongside it.
 
 ## Credits
 
@@ -142,3 +146,29 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 General Public License for more details.
 
 See [LICENSE](LICENSE) for the full text.
+
+## TODO
+
+Ordered by what would block someone else installing this.
+
+- [ ] **Config upgrade path.** `JsonAdapter` does not merge new keys
+      into an existing `settings.json`, so every release that adds a
+      setting currently requires deleting the file. Either merge
+      defaults on load, or version the config and migrate.
+- [ ] **Clipboard panel.** `cliphist` already runs; the island needs a
+      mode to read it. `Super+V` is reserved and commented out in
+      `hypr/binds.lua`.
+- [ ] **Multi-monitor.** `Variants` creates one island per screen, but
+      Settings and the notification popup are pinned to
+      `Quickshell.screens[0]`.
+- [ ] **OSD.** Volume and brightness changes from the media keys don't
+      surface anywhere. `demandsAttention` is the hook.
+- [ ] **`ScriptModel` for search results.** A plain JS array as a
+      `ListView` model destroys and recreates every delegate on each
+      keystroke.
+- [ ] **Notification actions beyond the first.** Only `actions[0]` is
+      invokable; the rest are listed but not offered.
+- [ ] **Inline reply.** `NotificationServer.inlineReplySupported` is
+      off; chat apps would use it.
+- [ ] **Idle and lock.** `hypridle` isn't wired, and `Super+L` shells
+      out to `loginctl` rather than a shell lock surface.

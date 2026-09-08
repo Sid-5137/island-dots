@@ -1,7 +1,5 @@
--- ─────────────────────────────────────────────────────────────
 -- Environment
 -- https://wiki.hypr.land/Configuring/Environment-variables/
--- ─────────────────────────────────────────────────────────────
 
 -- Default programs. Lua has no hyprlang-style $variables, so these
 -- live in a global table that binds.lua reads.
@@ -15,13 +13,10 @@ Apps = {
 -- spawning separate programs.
 Shell = "qs -c island ipc call "
 
--- ── Session ──────────────────────────────────────────────────
-
 hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
 hl.env("XDG_SESSION_TYPE", "wayland")
 hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 
--- ── Toolkits ─────────────────────────────────────────────────
 -- QT_QPA_PLATFORM keeps an xcb fallback so Qt apps shipped without
 -- the Wayland plugin start under XWayland instead of failing.
 
