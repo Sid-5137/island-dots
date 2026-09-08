@@ -114,6 +114,14 @@ Column {
     }
 
     SliderRow {
+        label: "Opacity"
+        description: "Below 1.0 the wallpaper shows through and is blurred by the compositor."
+        from: 0.5; to: 1.0; stepSize: 0.02; decimals: 2
+        value: Config.island.opacity
+        onMoved: function(v) { Config.island.opacity = v }
+    }
+
+    SliderRow {
         label: "Padding"
         description: "Space inside the pill. The collapsed width is derived from the content plus this."
         from: 8; to: 40; stepSize: 1; suffix: " px"

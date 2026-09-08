@@ -118,18 +118,62 @@ Item {
     // Click runs the first action if there is one, and
     // dismisses either way — a notification you've
     // acted on shouldn't linger.
+    Row {
+        id: actions
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        spacing: 6
+        visible: root.n && root.n.actions.length > 0
+
+        Repeater {
+            model: root.n ? root.n.actions : []
+
+            Rectangle {
+                required property var modelData
+                required property int index
+
+                width: actionLabel.implicitWidth + 22
+                height: 26
+                radius: 7
+                color: index === 0
+                    ? (actHover.containsMouse ? Theme.primary : Qt.rgba(1, 1, 1, 0.14))
+                    : (actHover.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.06))
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                Text {
+                    id: actionLabel
+                    anchors.centerIn: parent
+                    text: modelData
+                    color: (index === 0 && actHover.containsMouse)
+                        ? Theme.textOnPrimary : Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    font.weight: Font.DemiBold
+                    renderType: Text.NativeRendering
+                }
+
+                MouseArea {
+                    id: actHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        Notifications.invoke(root.n, index);
+                        win.dismissNotice();
+                    }
+                }
+            }
+        }
+    }
+
+    // Clicking the body dismisses. Actions have their own buttons, so
+    // the whole popup being one big button would make a stray click
+    // run whatever the sender put first.
     MouseArea {
         anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
+        anchors.bottomMargin: actions.visible ? 32 : 0
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-        onClicked: function(mouse) {
-            const n = root.n;
-            if (mouse.button === Qt.LeftButton && n
-                && n.actions.length > 0) {
-                Notifications.invoke(n, 0);
-            }
-            win.dismissNotice();
-        }
+        onClicked: win.dismissNotice()
     }
 }

@@ -42,5 +42,8 @@ ShellRoot {
         Clock.time;
         Osd.active;
         Idle.apply();
+        Devices.refresh();
+        Polkit.active;
+        Clipboard.refresh();
     }
 }

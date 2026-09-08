@@ -26,7 +26,7 @@ Row {
     // hasn't grown to fit it, however the morph is tuned.
     opacity: (!island.isExpanded && !island.isSearching
               && !island.isSession && !island.isControl && !island.isPicker
-              && !island.isNotify && !island.isCentre && !island.isOsd
+              && !island.isNotify && !island.isCentre && !island.isOsd && !island.isAuth && !island.isClipboard
               && pill.height < Config.island.compactHeight + 8) ? 1 : 0
     scale: opacity > 0.5 ? 1.0 : 0.94
     visible: opacity > 0.01

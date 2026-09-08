@@ -25,7 +25,8 @@ Variants {
         // focus the rest of the time would swallow every keystroke
         // meant for the focused app.
         WlrLayershell.keyboardFocus: (searching || sessionOpen || centreOpen
-                                      || picker !== "" || root.expanded)
+                                      || picker !== "" || Polkit.active || clipOpen
+                                      || root.expanded)
             ? WlrKeyboardFocus.Exclusive
             : WlrKeyboardFocus.None
 
@@ -34,6 +35,54 @@ Variants {
         property bool expanded: false
 
         property string picker: ""          // "" | wallpaper | theme | icon
+
+        // The mode's own filtered list isn't reachable from the
+        // geometry table, so the count is computed here too.
+        readonly property int clipRows: {
+            const q = clipQuery.trim().toLowerCase();
+            if (q === "") return Clipboard.entries.length;
+            return Clipboard.entries.filter(
+                e => e.preview.toLowerCase().includes(q)).length;
+        }
+
+        property bool clipOpen: false
+        property string clipQuery: ""
+        property Item clipInput: null
+        property Item clipList: null
+
+        function openClipboard() {
+            clipOpen = true;
+            searching = false;
+            sessionOpen = false;
+            centreOpen = false;
+            picker = "";
+            expanded = false;
+            clipQuery = "";
+            Clipboard.refresh();
+            if (clipInput) {
+                clipInput.text = "";
+                clipInput.forceActiveFocus();
+            }
+            if (clipList) clipList.currentIndex = 0;
+        }
+
+        function closeClipboard() {
+            clipOpen = false;
+            clipQuery = "";
+        }
+
+        function copySelected() {
+            if (!clipList) return;
+            const q = clipQuery.trim().toLowerCase();
+            const list = q === ""
+                ? Clipboard.entries
+                : Clipboard.entries.filter(e => e.preview.toLowerCase().includes(q));
+            const e = list[clipList.currentIndex];
+            if (e) {
+                Clipboard.copy(e.id);
+                closeClipboard();
+            }
+        }
 
         property var notice: null
         property bool centreOpen: false
@@ -162,6 +211,9 @@ Variants {
                             Config.island.controlHeight + Config.island.mediaStripHeight,
                             Config.island.pickerHeight,
                             Config.island.centreHeight,
+                            Config.island.authHeight,
+                            Config.island.searchFieldHeight
+                              + Config.island.clipMaxRows * Config.island.clipRowHeight,
                             Config.island.searchFieldHeight
                               + Config.island.searchMaxRows * Config.island.searchRowHeight)
                       + Config.island.topMargin
@@ -322,6 +374,7 @@ Variants {
             // instead, so the machinery bought nothing and cost a
             // binding-replacement bug on every transition.
             readonly property string mode: {
+                if (Polkit.active) return "auth";
                 if (Osd.active && !root.searching && !root.sessionOpen
                     && !root.centreOpen && root.picker === "")
                     return "osd";
@@ -330,6 +383,7 @@ Variants {
                 if (root.notice !== null && !root.searching && !root.sessionOpen
                     && !root.centreOpen && root.picker === "")
                     return "notify";
+                if (root.clipOpen) return "clipboard";
                 if (root.centreOpen) return "centre";
                 if (root.picker !== "") return "picker";
                 if (root.sessionOpen) return "session";
@@ -374,6 +428,8 @@ Variants {
             readonly property bool isNotify: mode === "notify"
             readonly property bool isCentre: mode === "centre"
             readonly property bool isOsd: mode === "osd"
+            readonly property bool isAuth: mode === "auth"
+            readonly property bool isClipboard: mode === "clipboard"
             // Expanded and control are the same thing.
             readonly property bool isControl: mode === "expanded"
 
@@ -420,17 +476,33 @@ Variants {
                                    + (Search.results.length > 0 ? 10 : 0) },
                     session:  { w: Config.island.sessionWidth, h: Config.island.sessionHeight },
                     picker:   { w: Config.island.pickerWidth,  h: Config.island.pickerHeight },
-                    notify:   { w: Config.island.notifyWidth,  h: Config.island.notifyHeight },
+                    notify:   { w: Config.island.notifyWidth,
+                                h: Config.island.notifyHeight
+                                   + ((root.notice && root.notice.actions.length > 0)
+                                      ? Config.island.notifyActionHeight : 0) },
                     centre:   { w: Config.island.centreWidth,  h: Config.island.centreHeight },
-                    osd:      { w: Config.island.osdWidth,     h: Config.island.osdHeight }
+                    osd:      { w: Config.island.osdWidth,     h: Config.island.osdHeight },
+                    auth:     { w: Config.island.authWidth,    h: Config.island.authHeight },
+                    clipboard: { w: Config.island.clipWidth,
+                                 h: Config.island.searchFieldHeight
+                                    + Math.min(root.clipRows, Config.island.clipMaxRows)
+                                      * Config.island.clipRowHeight
+                                    + (root.clipRows > 0 ? 10 : 0) }
                 })
 
                 width:  (geometry[island.mode] || geometry.idle).w
                 height: (geometry[island.mode] || geometry.idle).h
 
-                color: island.mode === "idle" || island.mode === "hidden"
+                // Theme colours carry no alpha, so it's applied here.
+                // The island-bar layer rule blurs whatever shows through.
+                function tint(c) {
+                    const col = Qt.color(c);
+                    return Qt.rgba(col.r, col.g, col.b, Config.island.opacity);
+                }
+
+                color: tint(island.mode === "idle" || island.mode === "hidden"
                     ? Theme.surfaceLowest
-                    : Theme.surfaceContainer
+                    : Theme.surfaceContainer)
 
                 radius: Config.island.radius
                 // Confines content to the pill's bounds, so the album
@@ -475,6 +547,8 @@ Variants {
                 ControlMode { win: root; island: island; pill: pill }
                 MediaStrip  { win: root; island: island; pill: pill }
                 OsdMode     { win: root; island: island; pill: pill }
+                AuthMode    { win: root; island: island; pill: pill }
+                ClipboardMode { win: root; island: island; pill: pill }
 
                 HoverHandler {
                     id: pillHover
@@ -542,6 +616,17 @@ Variants {
             }
             function show(): void { root.openCentre() }
             function hide(): void { root.closeCentre() }
+        }
+
+        IpcHandler {
+            target: "clipboard-ui"
+
+            function toggle(): void {
+                if (root.clipOpen) root.closeClipboard();
+                else root.openClipboard();
+            }
+            function show(): void { root.openClipboard() }
+            function hide(): void { root.closeClipboard() }
         }
 
         IpcHandler {

@@ -20,9 +20,6 @@ Singleton {
         const i = Config.input;
         return "hl.config({"
             + "  input = {"
-            + "    sensitivity = "   + i.mouseSensitivity + ","
-            + "    accel_profile = \"" + i.mouseAccel + "\","
-            + "    natural_scroll = " + (i.naturalScrollMouse ? "true" : "false") + ","
             + "    repeat_rate = "   + i.repeatRate + ","
             + "    repeat_delay = "  + i.repeatDelay + ","
             + "    touchpad = {"
@@ -31,20 +28,6 @@ Singleton {
             + "      drag_lock = "            + (i.dragLock ? "true" : "false") + ","
             + "      disable_while_typing = " + (i.disableWhileTyping ? "true" : "false") + ","
             + "      scroll_factor = "        + i.scrollFactor
-            + "    }"
-            + "  },"
-            + "  general = {"
-            + "    gaps_in = "      + a.gapsIn + ","
-            + "    gaps_out = "     + a.gapsOut + ","
-            + "    border_size = "  + a.borderSize + ","
-            // Border colours come from Theme, which tracks
-            // colors.json — so a new wallpaper retints window borders
-            // along with everything else. look.lua's hardcoded values
-            // remain the checked-in fallback for when the shell
-            // isn't running.
-            + "    col = {"
-            + "      active_border = \"" + Theme.primary + "\","
-            + "      inactive_border = \"" + Theme.outlineVariant + "\""
             + "    }"
             + "  },"
             + "  decoration = {"
@@ -61,8 +44,40 @@ Singleton {
             + "})";
     }
 
+    // Sensitivity and acceleration are set per device rather than
+    // globally, so a mouse and a touchpad can differ. Every input
+    // option except force_no_accel is valid inside hl.device().
+    function buildDevices() {
+        const i = Config.input;
+        let out = "";
+
+        for (const name of Devices.mice) {
+            out += "hl.device({ name = \"" + name + "\","
+                +  " sensitivity = " + i.mouseSensitivity + ","
+                +  " accel_profile = \"" + i.mouseAccel + "\","
+                +  " natural_scroll = " + (i.naturalScrollMouse ? "true" : "false")
+                +  " }) ";
+        }
+
+        for (const name of Devices.touchpads) {
+            out += "hl.device({ name = \"" + name + "\","
+                +  " enabled = " + (i.touchpadEnabled ? "true" : "false") + ","
+                +  " sensitivity = " + i.touchpadSensitivity + ","
+                +  " accel_profile = \"" + i.touchpadAccel + "\","
+                +  " natural_scroll = " + (i.naturalScroll ? "true" : "false") + ","
+                +  " tap_to_click = " + (i.tapToClick ? "true" : "false") + ","
+                +  " drag_lock = " + (i.dragLock ? "true" : "false") + ","
+                +  " disable_while_typing = " + (i.disableWhileTyping ? "true" : "false") + ","
+                +  " scroll_factor = " + i.scrollFactor
+                +  " }) ";
+        }
+
+        return out;
+    }
+
     function buildCommand() {
-        return "hyprctl eval " + JSON.stringify(buildLua());
+        const lua = buildLua() + " " + buildDevices();
+        return "hyprctl eval " + JSON.stringify(lua);
     }
 
     Process {
@@ -89,10 +104,31 @@ Singleton {
     // each property on a JsonObject.
     // Includes the palette, so a wallpaper change re-sends the
     // border colours without waiting for an appearance setting to move.
-    readonly property string watched: root.buildLua()
-    onWatchedChanged: debounce.restart()
+    // Not readonly, and re-read on every change. A readonly binding
+    // that nothing reads is evaluated lazily, so its change signal
+    // never fired — which left stored appearance settings unapplied
+    // until a slider was touched.
+    property string watched: root.buildLua() + root.buildDevices()
+
+    onWatchedChanged: {
+        if (ready) debounce.restart();
+    }
+
+    // Config loads asynchronously, so the startup apply can run before
+    // the file is in. This re-applies once it is.
+    Connections {
+        target: Config
+        function onMergedChanged() {
+            if (Config.merged) {
+                root.ready = true;
+                root.apply();
+            }
+        }
+    }
 
     // Apply once at startup, after Config has loaded from disk.
+    // Fallback for the case where Config was already loaded before
+    // this singleton was instantiated, so onMergedChanged never fires.
     Timer {
         running: true
         interval: 600
@@ -105,6 +141,6 @@ Singleton {
     IpcHandler {
         target: "appearance"
         function apply(): void { root.apply() }
-        function preview(): string { return root.buildLua() }
+        function preview(): string { return root.buildLua() + "\n" + root.buildDevices() }
     }
 }

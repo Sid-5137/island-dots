@@ -41,9 +41,6 @@ PanelWindow {
     }
     color: "transparent"
 
-    // A scrim, at a level the blur can still work through. Removing
-    // it entirely made the panel read as floating in the desktop
-    // rather than over it — blur separates texture, but not tone.
     Rectangle {
         anchors.fill: parent
         color: "#000000"

@@ -140,6 +140,11 @@ Singleton {
                 property int fontWeight: 700
                 property bool showWorkspaces: true
 
+                // Below 1.0 the wallpaper shows through and the
+                // island-bar layer rule blurs it. At 1.0 the pill is
+                // solid and the blur costs nothing but does nothing.
+                property real opacity: 0.88
+
                 property int radius: 12
                 property int topMargin: 8
 
@@ -176,11 +181,19 @@ Singleton {
                 // Notification popup and history panel.
                 property int notifyWidth: 460
                 property int notifyHeight: 104
+                property int notifyActionHeight: 36
                 property int notifyDuration: 5000
                 property int notifyCriticalDuration: 12000
                 property int centreWidth: 480
                 property int centreHeight: 440
                 property int centreRowHeight: 88
+
+                property int clipWidth: 620
+                property int clipRowHeight: 40
+                property int clipMaxRows: 9
+
+                property int authWidth: 460
+                property int authHeight: 176
 
                 property int osdWidth: 300
                 property int osdHeight: 56
@@ -209,12 +222,12 @@ Singleton {
 
             property JsonObject appearance: JsonObject {
                 // Shell panels
-                property real panelOpacity: 1.0
+                property real panelOpacity: 0.78
                 property int panelRadius: 16
                 // How far the desktop dims behind the settings window.
                 // Blur alone doesn't separate a panel from a busy
                 // wallpaper; a little scrim does.
-                property real panelScrim: 0.30
+                property real panelScrim: 0.0
                 property int fontScale: 100      // percent
 
                 // Applied to GTK, Qt and the shell together.
@@ -236,6 +249,10 @@ Singleton {
                 property bool shadows: true
             }
 
+            // Mouse and touchpad are configured per device, not
+            // globally: every input option except force_no_accel can go
+            // in an hl.device() block, so the two need not share a
+            // sensitivity or an acceleration profile.
             property JsonObject input: JsonObject {
                 // "adaptive" accelerates with speed; "flat" is 1:1.
                 property string mouseAccel: "flat"
@@ -243,13 +260,13 @@ Singleton {
                 property bool naturalScrollMouse: false
 
                 property bool touchpadEnabled: true
+                property string touchpadAccel: "adaptive"
+                property real touchpadSensitivity: 0.0
                 property bool tapToClick: true
                 property bool naturalScroll: true
                 property bool dragLock: true
                 property bool disableWhileTyping: true
                 property real scrollFactor: 0.6
-                property string touchpadAccel: "adaptive"
-                property real touchpadSensitivity: 0.0
 
                 property int repeatRate: 25
                 property int repeatDelay: 600

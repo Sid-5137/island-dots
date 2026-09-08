@@ -148,7 +148,9 @@ Singleton {
     }
 
     // Reapply whenever any of the three change.
-    readonly property string watched:
+    // Not readonly, for the same reason as Compositor: an unread
+    // readonly binding is evaluated lazily and never signals.
+    property string watched:
         Config.appearance.iconTheme + "|"
         + Config.appearance.cursorTheme + "|"
         + Config.appearance.cursorSize + "|"

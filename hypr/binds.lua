@@ -92,12 +92,8 @@ hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = tru
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"),       { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
 
--- `-z` freezes the screen before the selection overlay appears, which
--- is what GNOME and KDE do: without it you're selecting against a live
--- desktop, so menus close and animations keep running while you drag.
---
--- Region shots go to the clipboard AND to disk — losing a screenshot
--- to the next copy is a worse failure than an extra file.
+hl.bind(mod .. " + V", hl.dsp.exec_cmd(Shell .. "clipboard-ui toggle"))
+
 hl.bind("Print",               hl.dsp.exec_cmd("hyprshot -z -m region -o ~/Pictures/Screenshots"))
 hl.bind("SHIFT + Print",       hl.dsp.exec_cmd("hyprshot -z -m output -o ~/Pictures/Screenshots"))
 hl.bind("CTRL + Print",        hl.dsp.exec_cmd("hyprshot -z -m window -o ~/Pictures/Screenshots"))

@@ -2,14 +2,29 @@ import QtQuick
 import "root:/Services"
 import "root:/Widgets"
 
-// Mouse, touchpad and keyboard. Everything here is pushed to Hyprland
-// at runtime via Services/Compositor.qml, so changes apply as you move
-// the slider rather than on reload.
+// Mouse, touchpad and keyboard. Pointer settings are applied per
+// device via hl.device(), so the two pointers are independent.
 
 Column {
     spacing: 4
 
     SectionHeader { text: "Mouse" }
+
+    Item {
+        width: parent.width
+        height: 34
+        visible: !Devices.hasMouse
+
+        Text {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            text: "No mouse detected. These apply when one is connected."
+            color: Theme.outline
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+            renderType: Text.NativeRendering
+        }
+    }
 
     ChoiceRow {
         label: "Acceleration"
@@ -24,7 +39,7 @@ Column {
 
     SliderRow {
         label: "Speed"
-        description: "0 is the driver's own rate. Negative is slower, positive faster."
+        description: "0 is the driver's own rate."
         from: -1.0; to: 1.0; stepSize: 0.05; decimals: 2
         value: Config.input.mouseSensitivity
         onMoved: function(v) { Config.input.mouseSensitivity = v }
@@ -32,36 +47,37 @@ Column {
 
     ToggleRow {
         label: "Natural scrolling"
-        description: "Content follows the wheel rather than the scrollbar."
         checked: Config.input.naturalScrollMouse
         onToggled: function(v) { Config.input.naturalScrollMouse = v }
     }
 
     SectionHeader { text: "Touchpad" }
 
+    ToggleRow {
+        label: "Touchpad"
+        description: Devices.hasTouchpad
+            ? Devices.touchpads[0]
+            : "None detected"
+        checked: Config.input.touchpadEnabled
+        onToggled: function(v) { Config.input.touchpadEnabled = v }
+    }
+
     ChoiceRow {
         label: "Acceleration"
-        description: "Hyprland applies one acceleration profile to all pointers, so this and the mouse setting above follow whichever you changed last."
+        description: "Independent of the mouse setting above."
         current: Config.input.touchpadAccel
         options: [
             { value: "flat",     label: "Flat" },
             { value: "adaptive", label: "Adaptive" }
         ]
-        onSelected: function(v) {
-            Config.input.touchpadAccel = v;
-            Config.input.mouseAccel = v;
-        }
+        onSelected: function(v) { Config.input.touchpadAccel = v }
     }
 
     SliderRow {
-        label: "Pointer speed"
-        description: "How far the cursor travels per unit of finger movement."
+        label: "Speed"
         from: -1.0; to: 1.0; stepSize: 0.05; decimals: 2
         value: Config.input.touchpadSensitivity
-        onMoved: function(v) {
-            Config.input.touchpadSensitivity = v;
-            Config.input.mouseSensitivity = v;
-        }
+        onMoved: function(v) { Config.input.touchpadSensitivity = v }
     }
 
     ToggleRow {
@@ -92,7 +108,8 @@ Column {
 
     SliderRow {
         label: "Scroll speed"
-        from: 0.1; to: 2.0; stepSize: 0.05; decimals: 2
+        description: "Also affects how far a two-finger scroll moves in terminals, which scroll by whole lines."
+        from: 0.1; to: 3.0; stepSize: 0.05; decimals: 2
         value: Config.input.scrollFactor
         onMoved: function(v) { Config.input.scrollFactor = v }
     }
@@ -109,18 +126,29 @@ Column {
 
     SliderRow {
         label: "Repeat delay"
-        description: "How long a key is held before it starts repeating."
         from: 150; to: 1000; stepSize: 25; suffix: " ms"
         value: Config.input.repeatDelay
         onMoved: function(v) { Config.input.repeatDelay = v }
     }
 
-    SectionHeader { text: "Cursor" }
+    SectionHeader { text: "Detected" }
 
-    SliderRow {
-        label: "Size"
-        from: 16; to: 48; stepSize: 4; suffix: " px"
-        value: Config.appearance.cursorSize
-        onMoved: function(v) { Config.appearance.cursorSize = v }
+    Item {
+        width: parent.width
+        height: devList.implicitHeight + 16
+
+        Text {
+            id: devList
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Touchpads: " + (Devices.touchpads.join(", ") || "none")
+                + "\nMice: " + (Devices.mice.join(", ") || "none")
+            color: Theme.outline
+            font.family: Theme.fontMono
+            font.pixelSize: Theme.fontSizeSmall - 1
+            wrapMode: Text.WordWrap
+            renderType: Text.NativeRendering
+        }
     }
 }

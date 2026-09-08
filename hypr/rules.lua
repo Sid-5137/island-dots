@@ -85,13 +85,13 @@ end
 hl.window_rule({
     name    = "kitty-opacity",
     match   = { class = "kitty" },
-    opacity = "0.92 override 0.88 override",
+    opacity = "1.0 override 1.0 override",
 })
 
 hl.window_rule({
     name    = "nautilus-opacity",
     match   = { class = "org.gnome.Nautilus" },
-    opacity = "0.94 override 0.90 override",
+    opacity = "0.85 override 0.80 override",
 })
 
 -- Hide credential managers from screen capture.
@@ -128,15 +128,16 @@ hl.layer_rule({
     ignore_alpha = 0.1,
 })
 
--- The settings window draws its own opaque panel and dims the desktop
--- itself, so there's nothing here to blur — a blur behind a solid
--- surface is wasted GPU, and blurring the desktop as well made the
--- whole screen soft rather than just dimmed.
+-- ignore_alpha is low so nothing gets skipped for being too
+-- transparent. The panels set their own opacity; blur only shows
+-- through if they are actually translucent.
 for _, ns in ipairs({ "island-launcher", "island-settings" }) do
     hl.layer_rule({
-        name    = ns,
-        match   = { namespace = "^" .. ns .. "$" },
-        no_anim = true,
+        name         = ns,
+        match        = { namespace = "^" .. ns .. "$" },
+        blur         = true,
+        ignore_alpha = 0.1,
+        no_anim      = true,
     })
 end
 

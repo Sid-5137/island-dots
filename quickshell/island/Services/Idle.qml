@@ -92,7 +92,7 @@ Singleton {
 
     // Rewriting the file and restarting the daemon on every slider
     // frame would be absurd, so this waits for the drag to settle.
-    readonly property string watched:
+    property string watched:
         Config.idle.enabled + "|" + Config.idle.dimTimeout + "|"
         + Config.idle.dimLevel + "|" + Config.idle.lockTimeout + "|"
         + Config.idle.screenOffTimeout + "|" + Config.idle.suspendTimeout
