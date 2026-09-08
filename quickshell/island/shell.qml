@@ -40,5 +40,9 @@ ShellRoot {
         Bluetooth.refresh();
         Audio.refresh();
         Battery.refresh();
+        // Touching this claims org.freedesktop.Notifications. Nothing
+        // else references it until a notification arrives, so without
+        // this line the shell would never register as the daemon.
+        Notifications.count;
     }
 }

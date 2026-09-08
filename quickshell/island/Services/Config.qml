@@ -64,9 +64,17 @@ Singleton {
 
             property JsonObject island: JsonObject {
                 // "always" — on screen at all times
-                // "auto"   — hidden until revealed or something
-                //            demands attention
+                // "always" — on screen at all times
+                // "smart"  — hidden only when a window actually reaches
+                //            the strip the island sits in
+                // "auto"   — hidden whenever any window is open
                 property string visibility: "always"
+
+                // How long the island stays revealed after the cursor
+                // leaves. Without a grace period hover and geometry
+                // fight each other: the pill moves out from under the
+                // cursor, hover drops, the pill hides, hover returns.
+                property int hoverGrace: 400
 
                 // Height in px of the hover strip at the top edge
                 // that brings the island back in "auto" mode.
@@ -142,6 +150,15 @@ Singleton {
                 // the ones it doesn't, so it's a slider rather than a
                 // recompile.
                 property int tileIconOffset: 0
+
+                // Notification popup and history panel.
+                property int notifyWidth: 460
+                property int notifyHeight: 104
+                property int notifyDuration: 5000
+                property int notifyCriticalDuration: 12000
+                property int centreWidth: 480
+                property int centreHeight: 440
+                property int centreRowHeight: 88
 
                 property bool dnd: false
                 property bool caffeine: false

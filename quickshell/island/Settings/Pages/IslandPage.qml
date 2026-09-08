@@ -9,13 +9,22 @@ Column {
 
     ChoiceRow {
         label: "Mode"
-        description: "Auto hides the island until you reach for it, or something needs your attention."
+        description: "Smart hides only when a window actually reaches the island. Auto hides whenever anything is open."
         current: Config.island.visibility
         options: [
             { value: "always", label: "Always" },
+            { value: "smart",  label: "Smart" },
             { value: "auto",   label: "Auto" }
         ]
         onSelected: function(v) { Config.island.visibility = v }
+    }
+
+    SliderRow {
+        label: "Hover grace"
+        description: "How long the island stays out after the cursor leaves."
+        from: 0; to: 1200; stepSize: 50; suffix: " ms"
+        value: Config.island.hoverGrace
+        onMoved: function(v) { Config.island.hoverGrace = v }
     }
 
     SliderRow {

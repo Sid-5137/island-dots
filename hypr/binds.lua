@@ -22,8 +22,7 @@ hl.bind(mod .. " + R",         hl.dsp.exec_cmd(Shell .. "launcher toggle"))
 hl.bind("ALT + Space",         hl.dsp.exec_cmd(Shell .. "launcher toggle"))
 -- Not built yet — the shell has no clipboard target.
 -- hl.bind(mod .. " + V",         hl.dsp.exec_cmd(Shell .. "clipboard toggle"))
--- Not built yet — the shell has no notifications target.
--- hl.bind(mod .. " + N",         hl.dsp.exec_cmd(Shell .. "notifications toggle"))
+hl.bind(mod .. " + N",         hl.dsp.exec_cmd(Shell .. "notifications-ui toggle"))
 hl.bind(mod .. " + S",         hl.dsp.exec_cmd(Shell .. "settings toggle"))
 hl.bind(mod .. " + SHIFT + C", hl.dsp.exec_cmd(Shell .. "control toggle"))
 hl.bind(mod .. " + SHIFT + W", hl.dsp.exec_cmd(Shell .. "picker wallpapers"))

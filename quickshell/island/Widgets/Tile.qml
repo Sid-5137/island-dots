@@ -15,10 +15,6 @@ Rectangle {
     signal triggered()
     signal secondary()
 
-    // The tile can't draw its own tooltip: the pill clips its
-    // children, so anything overflowing the tile gets cut at the
-    // panel edge. It reports hover instead and the island draws the
-    // label outside the clipped area.
     signal hoverChanged(bool inside)
 
     // Shares the panel radius so one slider shapes the settings

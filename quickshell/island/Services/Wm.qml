@@ -31,6 +31,12 @@ Singleton {
     // [{ id, name, windows }], sorted, for the island's indicator.
     property var workspaces: []
 
+    // Geometry of every window on the focused workspace, so the island
+    // can tell whether anything actually reaches the strip it sits in
+    // rather than hiding whenever any window exists at all.
+    // [{ x, y, w, h }]
+    property var windows: []
+
     readonly property bool empty: windowCount === 0
 
     function refresh() {
@@ -47,7 +53,8 @@ Singleton {
         running: true
         // Two JSON blobs, separated by a marker so one read gets both.
         command: ["sh", "-c",
-            "hyprctl activeworkspace -j; echo '###'; hyprctl workspaces -j"]
+            "hyprctl activeworkspace -j; echo '###'; " +
+            "hyprctl workspaces -j; echo '###'; hyprctl clients -j"]
 
         stdout: StdioCollector {
             onStreamFinished: {
@@ -62,6 +69,19 @@ Singleton {
                     root.activeId = ws.id ?? 1;
                 } catch (e) {
                     console.warn("[Wm] activeworkspace parse failed:", e);
+                }
+
+                try {
+                    const clients = JSON.parse(parts[2] || "[]");
+                    root.windows = clients
+                        .filter(c => c.workspace && c.workspace.id === root.activeId
+                                     && c.mapped && !c.hidden)
+                        .map(c => ({
+                            x: c.at[0], y: c.at[1],
+                            w: c.size[0], h: c.size[1]
+                        }));
+                } catch (e) {
+                    console.warn("[Wm] clients parse failed:", e);
                 }
 
                 try {
@@ -89,6 +109,21 @@ Singleton {
         onTriggered: root.refresh()
     }
 
+    // Hyprland's socket has no resize event: openwindow, closewindow,
+    // movewindow and the workspace events all fire, but dragging a
+    // tiled window's edge fires nothing. Geometry therefore goes stale
+    // after a resize until some unrelated event happens to refresh it.
+    //
+    // A slow poll covers the gap, and only while something is reading
+    // the geometry — the other visibility modes need nothing but the
+    // window count, which the events do cover.
+    Timer {
+        running: Config.island.visibility === "smart"
+        interval: 1200
+        repeat: true
+        onTriggered: root.refresh()
+    }
+
     Connections {
         target: Hyprland
 
@@ -103,6 +138,11 @@ Singleton {
                 case "focusedmon":
                 case "fullscreen":
                 case "changefloatingmode":
+                case "activewindow":
+                case "activewindowv2":
+                case "movewindowv2":
+                case "togglegroup":
+                case "pin":
                     debounce.restart();
                     break;
             }
@@ -116,6 +156,7 @@ Singleton {
             return "workspace " + root.workspaceName
                 + " · " + root.windowCount + " windows"
                 + " · " + root.workspaces.length + " total"
+                + " · " + root.windows.length + " mapped"
                 + (root.fullscreen ? " · fullscreen" : "");
         }
 

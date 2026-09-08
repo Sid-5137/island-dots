@@ -41,7 +41,8 @@ Variants {
         // Only grab the keyboard while searching. Holding exclusive
         // focus the rest of the time would swallow every keystroke
         // meant for the focused app.
-        WlrLayershell.keyboardFocus: (searching || sessionOpen || picker !== "" || win.expanded)
+        WlrLayershell.keyboardFocus: (searching || sessionOpen || centreOpen
+                                      || picker !== "" || win.expanded)
             ? WlrKeyboardFocus.Exclusive
             : WlrKeyboardFocus.None
 
@@ -49,16 +50,34 @@ Variants {
         property bool sessionOpen: false
         property bool expanded: false
 
-        // Tooltip state for the control-centre tiles. It lives out
-        // here because the pill clips its children — a label drawn
-        // inside a tile is cut off at the panel edge.
-        property Item tipTarget: null
-        property string tipText: ""
 
         // Picker: a horizontal strip of wallpapers, themes or icon sets
         // scrolled inside the pill. Same idea as search — the island is
         // the surface, not a launcher for other windows.
         property string picker: ""          // "" | wallpaper | theme | icon
+
+        // A notification popup takes the island over briefly, then
+        // hands it back to whatever it was doing. The centre is a
+        // deliberate mode you open and close.
+        property var notice: null
+        property bool centreOpen: false
+
+        function openCentre() {
+            centreOpen = true;
+            picker = "";
+            searching = false;
+            sessionOpen = false;
+            expanded = false;
+            notice = null;
+            Notifications.markRead();
+        }
+
+        function closeCentre() { centreOpen = false }
+
+        function dismissNotice() {
+            notice = null;
+            noticeTimer.stop();
+        }
 
         function openPicker(kind) {
             picker = kind;
@@ -169,6 +188,7 @@ Variants {
         implicitHeight: Math.max(
                             Config.island.controlHeight + Config.island.mediaStripHeight,
                             Config.island.pickerHeight,
+                            Config.island.centreHeight,
                             Config.island.searchFieldHeight
                               + Config.island.searchMaxRows * Config.island.searchRowHeight)
                       + Config.island.topMargin
@@ -190,10 +210,54 @@ Variants {
         readonly property int revealZone: Config.island.revealZone
         property bool demandsAttention: false
 
-        // Something is covering the strip the island sits in. An empty
-        // workspace isn't in anyone's way, so "auto" leaves the island
-        // out until a window actually appears.
-        readonly property bool occluded: Wm.fullscreen || !Wm.empty
+        // ── Occlusion ────────────────────────────────────────
+        //
+        // "smart" asks whether a window actually reaches the strip the
+        // island sits in. Hiding because *any* window exists means the
+        // island vanishes on a workspace where nothing is anywhere
+        // near it, which is most of them.
+
+        readonly property rect islandRect: Qt.rect(
+            (screen.width - pill.width) / 2,
+            Config.island.topMargin,
+            pill.width,
+            pill.height)
+
+        readonly property bool overlapped: {
+            const r = islandRect;
+            for (const w of Wm.windows) {
+                if (w.x < r.x + r.width && w.x + w.w > r.x
+                    && w.y < r.y + r.height && w.y + w.h > r.y)
+                    return true;
+            }
+            return false;
+        }
+
+        readonly property bool occluded:
+            Wm.fullscreen
+            || (visibilityMode === "smart" ? overlapped : !Wm.empty)
+
+        // Hover is latched with a grace period. Raw hover state and
+        // geometry feed each other: the pill grows or shrinks out from
+        // under the cursor, hover drops, the pill hides, the cursor is
+        // over it again — which is the flicker that only showed up
+        // with windows present, because that's when hiding is live.
+        property bool hoverLatch: false
+
+        Timer {
+            id: unlatch
+            interval: Config.island.hoverGrace
+            onTriggered: win.hoverLatch = false
+        }
+
+        function touch(inside) {
+            if (inside) {
+                hoverLatch = true;
+                unlatch.stop();
+            } else {
+                unlatch.restart();
+            }
+        }
 
         // Depends only on plain booleans. Referencing island.mode here
         // would be circular, since state reads `revealed`.
@@ -201,12 +265,13 @@ Variants {
             visibilityMode === "always"
             || !occluded
             || demandsAttention
-            || revealArea.containsMouse
-            || pillHover.hovered
+            || hoverLatch
             || win.expanded
             || searching
             || sessionOpen
             || picker !== ""
+            || notice !== null
+            || centreOpen
 
         // One Region with an explicit item. A nested pair of child
         // Regions produced a mask that didn't cover the pill, so
@@ -241,6 +306,22 @@ Variants {
             id: armTimer
             interval: 3000
             onTriggered: win.armed = ""
+        }
+
+        Connections {
+            target: Notifications
+            function onArrived(entry) {
+                win.notice = entry;
+                noticeTimer.interval = entry.critical
+                    ? Config.island.notifyCriticalDuration
+                    : Config.island.notifyDuration;
+                noticeTimer.restart();
+            }
+        }
+
+        Timer {
+            id: noticeTimer
+            onTriggered: win.notice = null
         }
 
         Timer {
@@ -279,6 +360,7 @@ Variants {
                 id: revealArea
                 anchors.fill: parent
                 hoverEnabled: true
+                onContainsMouseChanged: win.touch(containsMouse)
             }
         }
 
@@ -298,6 +380,12 @@ Variants {
             // instead, so the machinery bought nothing and cost a
             // binding-replacement bug on every transition.
             readonly property string mode: {
+                // A popup outranks everything except an interaction
+                // already in progress — it's brief and it's news.
+                if (win.notice !== null && !win.searching && !win.sessionOpen
+                    && !win.centreOpen && win.picker === "")
+                    return "notify";
+                if (win.centreOpen) return "centre";
                 if (win.picker !== "") return "picker";
                 if (win.sessionOpen) return "session";
                 if (win.searching) return "search";
@@ -338,6 +426,8 @@ Variants {
             readonly property bool isSearching: mode === "search"
             readonly property bool isSession: mode === "session"
             readonly property bool isPicker: mode === "picker"
+            readonly property bool isNotify: mode === "notify"
+            readonly property bool isCentre: mode === "centre"
             // Expanded and control are the same thing.
             readonly property bool isControl: mode === "expanded"
 
@@ -394,7 +484,9 @@ Variants {
                                      * Config.island.searchRowHeight
                                    + (Search.results.length > 0 ? 10 : 0) },
                     session:  { w: Config.island.sessionWidth, h: Config.island.sessionHeight },
-                    picker:   { w: Config.island.pickerWidth,  h: Config.island.pickerHeight }
+                    picker:   { w: Config.island.pickerWidth,  h: Config.island.pickerHeight },
+                    notify:   { w: Config.island.notifyWidth,  h: Config.island.notifyHeight },
+                    centre:   { w: Config.island.centreWidth,  h: Config.island.centreHeight }
                 })
 
                 width:  (geometry[island.mode] || geometry.idle).w
@@ -422,6 +514,373 @@ Variants {
                 // horizontal strip inside the pill. Scroll to browse,
                 // click to apply — the choice lands immediately rather
                 // than after a trip through a settings window.
+
+
+                // ── Notification popup ───────────────────────
+                // Brief, and gone. The island takes it over for a few
+                // seconds rather than a card appearing in a corner —
+                // if the shell has one shape, news arrives in it too.
+
+                Item {
+                    id: noticeContent
+                    anchors.fill: parent
+                    anchors.margins: 16
+
+                    opacity: (island.isNotify
+                              && pill.width > Config.island.notifyWidth * 0.8) ? 1 : 0
+                    visible: opacity > 0.01
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
+                    }
+
+                    readonly property var n: win.notice
+
+                    Rectangle {
+                        id: noticeIcon
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 46
+                        height: 46
+                        radius: 10
+                        color: noticeContent.n && noticeContent.n.critical
+                            ? Theme.error : Theme.surfaceHigh
+                        clip: true
+
+                        Image {
+                            id: noticeImg
+                            anchors.fill: parent
+                            anchors.margins: noticeContent.n && noticeContent.n.image ? 0 : 11
+                            source: {
+                                if (!noticeContent.n) return "";
+                                if (noticeContent.n.image) return noticeContent.n.image;
+                                if (noticeContent.n.appIcon)
+                                    return Quickshell.iconPath(noticeContent.n.appIcon, true);
+                                return "";
+                            }
+                            fillMode: noticeContent.n && noticeContent.n.image
+                                ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+                            asynchronous: true
+                            visible: status === Image.Ready
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            visible: !noticeImg.visible
+                            text: "\uf0f3"
+                            color: noticeContent.n && noticeContent.n.critical
+                                ? Theme.textOnError : Theme.textDim
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 20
+                        }
+                    }
+
+                    Column {
+                        anchors.left: noticeIcon.right
+                        anchors.leftMargin: 14
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 3
+
+                        Text {
+                            width: parent.width
+                            text: noticeContent.n ? noticeContent.n.summary : ""
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeNormal
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                            renderType: Text.NativeRendering
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: noticeContent.n ? noticeContent.n.body : ""
+                            visible: text !== ""
+                            color: Theme.textDim
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeSmall
+                            // Senders send markup whether or not it's
+                            // advertised; rendering it raw shows tags.
+                            textFormat: Text.StyledText
+                            wrapMode: Text.WordWrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
+                            renderType: Text.NativeRendering
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: noticeContent.n ? noticeContent.n.appName : ""
+                            color: Theme.outline
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeSmall - 2
+                            elide: Text.ElideRight
+                            renderType: Text.NativeRendering
+                        }
+                    }
+
+                    // Click runs the first action if there is one, and
+                    // dismisses either way — a notification you've
+                    // acted on shouldn't linger.
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                        onClicked: function(mouse) {
+                            const n = noticeContent.n;
+                            if (mouse.button === Qt.LeftButton && n
+                                && n.actions.length > 0) {
+                                Notifications.invoke(n, 0);
+                            }
+                            win.dismissNotice();
+                        }
+                    }
+                }
+
+                // ── Notification centre ──────────────────────
+
+                Item {
+                    id: centreContent
+                    anchors.fill: parent
+                    anchors.margins: 16
+
+                    opacity: (island.isCentre
+                              && pill.width > Config.island.centreWidth * 0.8) ? 1 : 0
+                    visible: opacity > 0.01
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
+                    }
+
+                    Item {
+                        id: centreHeader
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: 30
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Notifications.count > 0
+                                ? Notifications.count + (Notifications.count === 1
+                                    ? " notification" : " notifications")
+                                : "Notifications"
+                            color: Theme.primary
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeNormal
+                            font.weight: Font.Bold
+                            font.letterSpacing: 1.2
+                            renderType: Text.NativeRendering
+                        }
+
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: Notifications.count > 0
+                            width: 66
+                            height: 24
+                            radius: 7
+                            color: clearHover.containsMouse
+                                ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.06)
+
+                            Behavior on color { ColorAnimation { duration: 120 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Clear"
+                                color: Theme.textDim
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                renderType: Text.NativeRendering
+                            }
+
+                            MouseArea {
+                                id: clearHover
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: Notifications.clear()
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.bottom: parent.bottom
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: 1
+                            color: Theme.outlineVariant
+                        }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        visible: Notifications.count === 0
+                        text: "Nothing to catch up on"
+                        color: Theme.outline
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        renderType: Text.NativeRendering
+                    }
+
+                    ListView {
+                        id: centreList
+                        anchors.top: centreHeader.bottom
+                        anchors.topMargin: 8
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        clip: true
+                        spacing: 6
+                        model: Notifications.history
+
+                        delegate: Rectangle {
+                            required property var modelData
+
+                            width: centreList.width
+                            height: Config.island.centreRowHeight
+                            radius: 10
+                            color: rowHover.containsMouse
+                                ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.04)
+
+                            Behavior on color { ColorAnimation { duration: 120 } }
+
+                            // Critical keeps a mark in history, not
+                            // just in the popup that already went by.
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 10
+                                width: 3
+                                radius: 1.5
+                                visible: modelData.critical
+                                color: Theme.error
+                            }
+
+                            Rectangle {
+                                id: rowIconBox
+                                anchors.left: parent.left
+                                anchors.leftMargin: 18
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 38
+                                height: 38
+                                radius: 9
+                                color: Theme.surfaceHigh
+                                clip: true
+
+                                Image {
+                                    id: rowImg
+                                    anchors.fill: parent
+                                    anchors.margins: modelData.image ? 0 : 9
+                                    source: modelData.image
+                                        ? modelData.image
+                                        : (modelData.appIcon
+                                           ? Quickshell.iconPath(modelData.appIcon, true) : "")
+                                    fillMode: modelData.image
+                                        ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+                                    asynchronous: true
+                                    visible: status === Image.Ready
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: !rowImg.visible
+                                    text: "\uf0f3"
+                                    color: Theme.outline
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 16
+                                }
+                            }
+
+                            Column {
+                                anchors.left: rowIconBox.right
+                                anchors.leftMargin: 12
+                                anchors.right: rowDismiss.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 2
+
+                                Text {
+                                    width: parent.width
+                                    text: modelData.summary
+                                    color: Theme.text
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    text: modelData.body
+                                    visible: text !== ""
+                                    color: Theme.textDim
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeSmall - 1
+                                    textFormat: Text.StyledText
+                                    wrapMode: Text.WordWrap
+                                    maximumLineCount: 2
+                                    elide: Text.ElideRight
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    text: modelData.appName
+                                    color: Theme.outline
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeSmall - 2
+                                    elide: Text.ElideRight
+                                    renderType: Text.NativeRendering
+                                }
+                            }
+
+                            Text {
+                                id: rowDismiss
+                                anchors.right: parent.right
+                                anchors.rightMargin: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "\u00d7"
+                                color: dismissHover.containsMouse
+                                    ? Theme.text : Theme.outline
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 18
+
+                                MouseArea {
+                                    id: dismissHover
+                                    anchors.fill: parent
+                                    anchors.margins: -8
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: Notifications.dismiss(modelData)
+                                }
+                            }
+
+                            MouseArea {
+                                id: rowHover
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: modelData.actions.length > 0
+                                    ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: {
+                                    if (modelData.actions.length > 0)
+                                        Notifications.invoke(modelData, 0);
+                                    Notifications.dismiss(modelData);
+                                }
+                            }
+                        }
+                    }
+
+                    Item {
+                        anchors.fill: parent
+                        focus: island.isCentre
+                        Keys.onEscapePressed: win.closeCentre()
+                    }
+                }
 
                 Item {
                     id: pickerContent
@@ -653,6 +1112,7 @@ Variants {
                     // hasn't grown to fit it, however the morph is tuned.
                     opacity: (!island.isExpanded && !island.isSearching
                               && !island.isSession && !island.isControl && !island.isPicker
+                              && !island.isNotify && !island.isCentre
                               && pill.height < Config.island.compactHeight + 8) ? 1 : 0
                     scale: opacity > 0.5 ? 1.0 : 0.94
                     visible: opacity > 0.01
@@ -1200,18 +1660,6 @@ Variants {
                         charging: Battery.charging
                         low: Battery.low
 
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onContainsMouseChanged: {
-                                if (containsMouse) {
-                                    win.tipTarget = batteryRing;
-                                    win.tipText = Battery.level + "% · " + Battery.label;
-                                } else if (win.tipTarget === batteryRing) {
-                                    win.tipTarget = null;
-                                }
-                            }
-                        }
                     }
 
                     // ── Calendar ─────────────────────────────
@@ -1428,6 +1876,7 @@ Variants {
                                         case "bt":       return Bluetooth.icon;
                                         case "mic":      return Audio.micIcon;
                                         case "dnd":      return Config.island.dnd ? "\uf1f6" : "\uf0f3";
+                                        case "notif":    return Notifications.count > 0 ? "\uf0f3" : "\uf1f6";
                                         case "caffeine": return "\uf0f4";
                                         default:         return "\uf013";
                                     }
@@ -1462,15 +1911,6 @@ Variants {
                                     settingsIpc.open("network");
                                 }
 
-                                onHoverChanged: function(inside) {
-                                    if (inside) {
-                                        win.tipTarget = this;
-                                        win.tipText = sub !== ""
-                                            ? label + " · " + sub : label;
-                                    } else if (win.tipTarget === this) {
-                                        win.tipTarget = null;
-                                    }
-                                }
                             }
                         }
                     }
@@ -1749,49 +2189,11 @@ Variants {
                     id: pillHover
 
                     onHoveredChanged: {
+                        win.touch(hovered);
                         if (hovered) collapseTimer.stop();
                         else if (win.expanded && Config.island.collapseDelay > 0)
                             collapseTimer.restart();
                     }
-                }
-            }
-
-            // Sibling of the pill, not a child — `island` doesn't clip,
-            // so the label can extend past the panel edge. Inside the
-            // pill it was cut off at the border.
-            Rectangle {
-                id: tooltip
-
-                readonly property point at: win.tipTarget
-                    ? win.tipTarget.mapToItem(island,
-                          win.tipTarget.width / 2, win.tipTarget.height)
-                    : Qt.point(0, 0)
-
-                x: Math.round(at.x - width / 2)
-                y: Math.round(at.y + 8)
-
-                width: tipLabel.implicitWidth + 22
-                height: 28
-                radius: 8
-                color: Theme.surfaceHighest
-                border.width: 1
-                border.color: Theme.outlineVariant
-                z: 20
-
-                visible: opacity > 0.01
-                opacity: (win.tipTarget !== null && island.isControl) ? 1 : 0
-
-                Behavior on opacity { NumberAnimation { duration: 140 } }
-
-                Text {
-                    id: tipLabel
-                    anchors.centerIn: parent
-                    text: win.tipText
-                    color: Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    font.weight: Font.DemiBold
-                    renderType: Text.NativeRendering
                 }
             }
 
@@ -1840,6 +2242,42 @@ Variants {
             function search(): void { win.openSearch() }
             function attention(on: bool): void { win.demandsAttention = on }
             function state(): string { return island.mode }
+
+            // Everything the visibility decision depends on, in one
+            // line. Guessing at which term is wrong costs more than
+            // printing them.
+            function why(): string {
+                const r = win.islandRect;
+                return "mode=" + island.mode
+                    + " visibility=" + win.visibilityMode
+                    + " revealed=" + win.revealed
+                    + " occluded=" + win.occluded
+                    + " overlapped=" + win.overlapped
+                    + " fullscreen=" + Wm.fullscreen
+                    + " empty=" + Wm.empty
+                    + " windows=" + Wm.windows.length
+                    + " latch=" + win.hoverLatch
+                    + " islandRect=" + Math.round(r.x) + "," + Math.round(r.y)
+                    + " " + Math.round(r.width) + "x" + Math.round(r.height)
+                    + " screen=" + win.screen.width + "x" + win.screen.height;
+            }
+
+            function windows(): string {
+                if (Wm.windows.length === 0) return "none";
+                return Wm.windows.map(w =>
+                    w.x + "," + w.y + " " + w.w + "x" + w.h).join("  |  ");
+            }
+        }
+
+        IpcHandler {
+            target: "notifications-ui"
+
+            function toggle(): void {
+                if (win.centreOpen) win.closeCentre();
+                else win.openCentre();
+            }
+            function show(): void { win.openCentre() }
+            function hide(): void { win.closeCentre() }
         }
 
         IpcHandler {
