@@ -8,6 +8,16 @@ Everything is themed from the wallpaper: matugen derives a palette,
 and the shell, GTK3, GTK4 and Hyprland's own window borders all read
 from it.
 
+![control centre](docs/control-centre.png)
+
+The control centre — calendar and battery on the left, quick toggles
+and sliders on the right. This is the pill expanded; at rest it's a
+small bar showing the time.
+
+![settings](docs/settings.png)
+
+Settings, as two surfaces rather than one divided box.
+
 ## The island
 
 One shape, several modes. Nothing else is on screen.
