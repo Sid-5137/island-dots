@@ -32,6 +32,7 @@ One shape, several modes. Nothing else is on screen.
 | session | `Super+Shift+Q` | lock, log out, suspend, reboot, shut down |
 | notify | on arrival | a notification, briefly |
 | centre | `Super+N` | notification history |
+| osd | media keys | volume, brightness, mic |
 | hidden | auto visibility | slides away when windows are present |
 
 The pill's collapsed width is derived from its content plus a padding
@@ -48,6 +49,7 @@ it.
       Background/         Wallpaper layer
       Island/             The pill, its geometry and mode resolution
       Island/Modes/       One file per mode
+      Lock/               Session lock surface
       Settings/           Settings window and its pages
 
 `Services/Config.qml` is the spine: every preference lives there,
@@ -118,8 +120,14 @@ Things that cost time to work out:
 ## Status
 
 Working: wallpaper with crossfade, every island mode, MPRIS,
-notifications, settings app, network and Bluetooth management, live
-compositor control, cross-toolkit theming.
+notifications, OSD, session lock, idle handling, settings app, network
+and Bluetooth management, live compositor control, cross-toolkit
+theming.
+
+The lock is a real `ext-session-lock` surface with PAM authentication,
+not a shell-out to hyprlock. If quickshell exits while locked, a
+conformant compositor leaves the screen locked — that is the protocol
+working as intended.
 
 The shell is the notification daemon — it claims
 `org.freedesktop.Notifications`, so mako or dunst must not be running
@@ -161,8 +169,6 @@ Ordered by what would block someone else installing this.
 - [ ] **Multi-monitor.** `Variants` creates one island per screen, but
       Settings and the notification popup are pinned to
       `Quickshell.screens[0]`.
-- [ ] **OSD.** Volume and brightness changes from the media keys don't
-      surface anywhere. `demandsAttention` is the hook.
 - [ ] **`ScriptModel` for search results.** A plain JS array as a
       `ListView` model destroys and recreates every delegate on each
       keystroke.
@@ -170,5 +176,9 @@ Ordered by what would block someone else installing this.
       invokable; the rest are listed but not offered.
 - [ ] **Inline reply.** `NotificationServer.inlineReplySupported` is
       off; chat apps would use it.
-- [ ] **Idle and lock.** `hypridle` isn't wired, and `Super+L` shells
-      out to `loginctl` rather than a shell lock surface.
+- [ ] **Lock PAM config.** Uses `/etc/pam.d/login`. A dedicated file
+      would let a fingerprint reader work at the lock screen without
+      also enabling it for tty logins.
+- [ ] **Idle timings are duplicated.** `hypridle.conf` has its own
+      format and can't read `settings.json`, so the timeouts are kept
+      in step by hand.

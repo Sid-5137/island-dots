@@ -26,7 +26,7 @@ Singleton {
         let cmd = "";
         switch (id) {
             case "lock":
-                cmd = "loginctl lock-session || hyprlock";
+                cmd = "qs -c island ipc call lock activate";
                 break;
             case "logout":
                 // Ask the compositor first; it exits cleanly and lets

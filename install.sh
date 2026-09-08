@@ -32,6 +32,9 @@ echo "Linking:"
 link "$DOTS/hypr" "$CONFIG/hypr"
 link "$DOTS/quickshell/island" "$CONFIG/quickshell/island"
 
+# hypridle reads an explicit path from autostart.lua, so it just needs
+# to exist next to the rest of the hypr config.
+
 mkdir -p "$HOME/.local/state/island" "$HOME/Pictures/Screenshots"
 
 echo
@@ -40,7 +43,7 @@ missing=()
 for cmd in \
     hyprland quickshell matugen kitty nautilus firefox \
     wpctl brightnessctl playerctl nmcli bluetoothctl \
-    cliphist wl-paste hyprshot slurp gsettings
+    cliphist wl-paste hyprshot slurp gsettings hypridle
 do
     if command -v "$cmd" >/dev/null 2>&1; then
         printf '  ok   %s\n' "$cmd"
@@ -56,7 +59,7 @@ if [ ${#missing[@]} -gt 0 ]; then
     echo "On Fedora, most of these are:"
     echo "  sudo dnf install hyprland quickshell matugen kitty nautilus \\"
     echo "      wireplumber brightnessctl playerctl NetworkManager bluez \\"
-    echo "      cliphist wl-clipboard hyprshot slurp adw-gtk3-theme qt6ct \\"
+    echo "      cliphist wl-clipboard hyprshot slurp adw-gtk3-theme qt6ct hypridle \\"
     echo "      mate-polkit"
 else
     echo "All dependencies present."

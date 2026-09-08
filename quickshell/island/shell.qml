@@ -14,12 +14,14 @@ import QtQuick
 import "root:/Services"
 import "root:/Background"
 import "root:/Island"
+import "root:/Lock"
 import "root:/Settings"
 
 ShellRoot {
     WallpaperLayer {}
     Island {}
     Settings {}
+    LockScreen {}
 
     // QML creates singletons lazily, on first reference. These have no
     // visual component, so without touching them here they would only
@@ -38,5 +40,6 @@ ShellRoot {
         // this line the shell would never register as the daemon.
         Notifications.count;
         Clock.time;
+        Osd.active;
     }
 }

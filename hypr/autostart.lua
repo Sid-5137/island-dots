@@ -33,4 +33,7 @@ hl.on("hyprland.start", function()
 
     -- The shell itself.
     hl.exec_cmd("quickshell -c island")
+
+    -- Idle, dimming and suspend. Its config is hypr/hypridle.conf.
+    hl.exec_cmd("hypridle -c ~/.config/hypr/hypridle.conf")
 end)

@@ -21,7 +21,7 @@ hl.bind(mod .. " + SHIFT + W", hl.dsp.exec_cmd(Shell .. "picker wallpapers"))
 hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd(Shell .. "picker palettes"))
 hl.bind(mod .. " + SHIFT + I", hl.dsp.exec_cmd(Shell .. "picker icons"))
 hl.bind(mod .. " + CTRL + W",  hl.dsp.exec_cmd(Shell .. "wallpaper next"))
-hl.bind(mod .. " + L",         hl.dsp.exec_cmd("loginctl lock-session || hyprlock"))
+hl.bind(mod .. " + L",         hl.dsp.exec_cmd(Shell .. "lock activate"))
 hl.bind(mod .. " + SHIFT + Q", hl.dsp.exec_cmd(Shell .. "session toggle"))
 
 hl.bind(mod .. " + Q",         hl.dsp.window.close())
@@ -77,13 +77,16 @@ hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 -- locked = fires while the screen is locked
 -- repeating = repeats while held
 
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0"), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),        { locked = true, repeating = true })
-hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),       { locked = true })
-hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),     { locked = true })
+-- Routed through the shell so the change and the readout happen
+-- together. Calling wpctl directly leaves the OSD waiting on Audio's
+-- 2s poll, which is far too slow to read as feedback.
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd(Shell .. "osd volumeUp"),       { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd(Shell .. "osd volumeDown"),     { locked = true, repeating = true })
+hl.bind("XF86AudioMute",        hl.dsp.exec_cmd(Shell .. "osd volumeMute"),     { locked = true })
+hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd(Shell .. "osd micMute"),        { locked = true })
 
-hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl --class=backlight set +5%"), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl --class=backlight set 5%-"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(Shell .. "osd brightnessUp"),   { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(Shell .. "osd brightnessDown"), { locked = true, repeating = true })
 
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"),       { locked = true })

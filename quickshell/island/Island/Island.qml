@@ -322,6 +322,9 @@ Variants {
             // instead, so the machinery bought nothing and cost a
             // binding-replacement bug on every transition.
             readonly property string mode: {
+                if (Osd.active && !root.searching && !root.sessionOpen
+                    && !root.centreOpen && root.picker === "")
+                    return "osd";
                 // A popup outranks everything except an interaction
                 // already in progress — it's brief and it's news.
                 if (root.notice !== null && !root.searching && !root.sessionOpen
@@ -370,6 +373,7 @@ Variants {
             readonly property bool isPicker: mode === "picker"
             readonly property bool isNotify: mode === "notify"
             readonly property bool isCentre: mode === "centre"
+            readonly property bool isOsd: mode === "osd"
             // Expanded and control are the same thing.
             readonly property bool isControl: mode === "expanded"
 
@@ -417,7 +421,8 @@ Variants {
                     session:  { w: Config.island.sessionWidth, h: Config.island.sessionHeight },
                     picker:   { w: Config.island.pickerWidth,  h: Config.island.pickerHeight },
                     notify:   { w: Config.island.notifyWidth,  h: Config.island.notifyHeight },
-                    centre:   { w: Config.island.centreWidth,  h: Config.island.centreHeight }
+                    centre:   { w: Config.island.centreWidth,  h: Config.island.centreHeight },
+                    osd:      { w: Config.island.osdWidth,     h: Config.island.osdHeight }
                 })
 
                 width:  (geometry[island.mode] || geometry.idle).w
@@ -469,6 +474,7 @@ Variants {
                 CentreMode  { win: root; island: island; pill: pill }
                 ControlMode { win: root; island: island; pill: pill }
                 MediaStrip  { win: root; island: island; pill: pill }
+                OsdMode     { win: root; island: island; pill: pill }
 
                 HoverHandler {
                     id: pillHover

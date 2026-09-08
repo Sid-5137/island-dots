@@ -144,6 +144,16 @@ Singleton {
                 property int centreHeight: 440
                 property int centreRowHeight: 88
 
+                property int osdWidth: 300
+                property int osdHeight: 56
+                property int osdDuration: 1600
+                property int osdStep: 5
+
+                // A file under /etc/pam.d. "login" exists everywhere;
+                // a dedicated one would let a fingerprint reader work
+                // here without enabling it for tty logins too.
+                property string pamConfig: "login"
+
                 property bool dnd: false
                 property bool caffeine: false
             }
