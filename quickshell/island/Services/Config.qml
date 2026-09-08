@@ -12,9 +12,28 @@ Singleton {
     readonly property alias motion: adapter.motion
     readonly property alias appearance: adapter.appearance
     readonly property alias input: adapter.input
+    readonly property alias idle: adapter.idle
 
     // Force a write. Most changes save automatically via
     // onAdapterUpdated, but this is here for explicit saves.
+    // Bump when a key changes meaning rather than merely appearing.
+    // New keys need no migration — the merge on load handles those.
+    readonly property int currentVersion: 1
+
+    // Set once the startup merge has run, so the file watcher's reload
+    // doesn't start writing in a loop.
+    property bool merged: false
+
+    function migrate(from) {
+        // No migrations yet. When one is needed:
+        //
+        //   if (from < 2) { adapter.island.foo = adapter.island.oldFoo }
+        //
+        // then set adapter.version and write.
+        adapter.version = currentVersion;
+        file.writeAdapter();
+    }
+
     function save() {
         file.writeAdapter();
     }
@@ -37,17 +56,36 @@ Singleton {
         // Persist whenever any property changes.
         onAdapterUpdated: writeAdapter()
 
+        onLoaded: {
+            // Write the adapter straight back out once, at startup.
+            // Properties the file didn't contain are still at their
+            // declared defaults, so this merges new keys in — which is
+            // what stops an added setting from requiring the file to be
+            // deleted. Keys the adapter no longer declares are dropped
+            // by the same write.
+            //
+            // Guarded: the write trips the file watcher, which reloads,
+            // which would write again.
+            if (!root.merged) {
+                root.merged = true;
+                if (adapter.version < root.currentVersion)
+                    root.migrate(adapter.version);
+                else
+                    file.writeAdapter();
+            }
+        }
+
         onLoadFailed: function(error) {
-            // First run — write the defaults out so there's a file to edit.
-            console.log("[Config] no settings.json, writing defaults");
+            root.merged = true;
             file.writeAdapter();
         }
 
         JsonAdapter {
             id: adapter
 
+            property int version: 1
+
             property JsonObject island: JsonObject {
-                // "always" — on screen at all times
                 // "always" — on screen at all times
                 // "smart"  — hidden only when a window actually reaches
                 //            the strip the island sits in
@@ -215,6 +253,17 @@ Singleton {
 
                 property int repeatRate: 25
                 property int repeatDelay: 600
+            }
+
+            // Timeouts in seconds. Services/Idle.qml turns these into
+            // hypridle.conf, so this is the only place they live.
+            property JsonObject idle: JsonObject {
+                property bool enabled: true
+                property int dimTimeout: 240
+                property int dimLevel: 10          // percent
+                property int lockTimeout: 300
+                property int screenOffTimeout: 360
+                property int suspendTimeout: 1800
             }
 
             property JsonObject wallpaper: JsonObject {

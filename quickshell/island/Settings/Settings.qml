@@ -118,6 +118,7 @@ PanelWindow {
                         { id: "island",     label: "Island" },
                         { id: "network",    label: "Network" },
                         { id: "input",      label: "Input" },
+                        { id: "session",    label: "Session" },
                         { id: "appearance", label: "Appearance" },
                         { id: "motion",     label: "Motion" },
                         { id: "wallpaper",  label: "Wallpaper" }
@@ -191,6 +192,7 @@ PanelWindow {
                     switch (root.page) {
                         case "network":    return networkPage;
                         case "input":      return inputPage;
+                        case "session":    return sessionPage;
                         case "appearance": return appearancePage;
                         case "motion":     return motionPage;
                         case "wallpaper":  return wallpaperPage;
@@ -226,6 +228,7 @@ PanelWindow {
     Component { id: appearancePage; AppearancePage { width: scroll.width } }
     Component { id: networkPage;    NetworkPage { width: scroll.width } }
     Component { id: inputPage;      InputPage { width: scroll.width } }
+    Component { id: sessionPage;    SessionPage { width: scroll.width } }
 
     IpcHandler {
         target: "settings"

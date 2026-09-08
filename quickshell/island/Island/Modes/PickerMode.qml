@@ -124,8 +124,9 @@ Item {
         orientation: ListView.Horizontal
         spacing: 10
         clip: true
-        model: root.items
-
+        model: ScriptModel {
+            values: root.items
+        }
         // Wheel scrolls the strip; a horizontal list
         // with no visible scrollbar is otherwise only
         // reachable by dragging.

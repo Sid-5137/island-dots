@@ -137,7 +137,11 @@ Item {
         anchors.topMargin: 4
         anchors.bottomMargin: 6
 
-        model: Search.results
+        model: ScriptModel {
+
+            values: Search.results
+
+        }
         clip: true
         currentIndex: 0
         highlightMoveDuration: 110

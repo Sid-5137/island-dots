@@ -50,6 +50,11 @@ it.
       Island/             The pill, its geometry and mode resolution
       Island/Modes/       One file per mode
       Lock/               Session lock surface
+
+`settings.json` is merged against the defaults on every start, so an
+update that adds a setting picks it up without the file being deleted.
+`Config.currentVersion` and `migrate()` handle keys that change
+meaning rather than merely appearing.
       Settings/           Settings window and its pages
 
 `Services/Config.qml` is the spine: every preference lives there,
@@ -159,19 +164,12 @@ See [LICENSE](LICENSE) for the full text.
 
 Ordered by what would block someone else installing this.
 
-- [ ] **Config upgrade path.** `JsonAdapter` does not merge new keys
-      into an existing `settings.json`, so every release that adds a
-      setting currently requires deleting the file. Either merge
-      defaults on load, or version the config and migrate.
 - [ ] **Clipboard panel.** `cliphist` already runs; the island needs a
       mode to read it. `Super+V` is reserved and commented out in
       `hypr/binds.lua`.
 - [ ] **Multi-monitor.** `Variants` creates one island per screen, but
       Settings and the notification popup are pinned to
       `Quickshell.screens[0]`.
-- [ ] **`ScriptModel` for search results.** A plain JS array as a
-      `ListView` model destroys and recreates every delegate on each
-      keystroke.
 - [ ] **Notification actions beyond the first.** Only `actions[0]` is
       invokable; the rest are listed but not offered.
 - [ ] **Inline reply.** `NotificationServer.inlineReplySupported` is
@@ -179,6 +177,5 @@ Ordered by what would block someone else installing this.
 - [ ] **Lock PAM config.** Uses `/etc/pam.d/login`. A dedicated file
       would let a fingerprint reader work at the lock screen without
       also enabling it for tty logins.
-- [ ] **Idle timings are duplicated.** `hypridle.conf` has its own
-      format and can't read `settings.json`, so the timeouts are kept
-      in step by hand.
+- [ ] **Fingerprint at the lock screen.** Needs a dedicated
+      `/etc/pam.d` file; `Config.island.pamConfig` selects it.

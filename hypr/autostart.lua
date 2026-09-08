@@ -34,6 +34,7 @@ hl.on("hyprland.start", function()
     -- The shell itself.
     hl.exec_cmd("quickshell -c island")
 
-    -- Idle, dimming and suspend. Its config is hypr/hypridle.conf.
-    hl.exec_cmd("hypridle -c ~/.config/hypr/hypridle.conf")
+    -- hypridle is started by Services/Idle.qml, which generates its
+    -- config from settings.json first. Starting it here would race
+    -- that and run against a stale or missing file.
 end)

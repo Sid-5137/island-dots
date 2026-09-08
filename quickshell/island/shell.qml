@@ -41,5 +41,6 @@ ShellRoot {
         Notifications.count;
         Clock.time;
         Osd.active;
+        Idle.apply();
     }
 }

@@ -108,8 +108,13 @@ Item {
         anchors.bottom: parent.bottom
         clip: true
         spacing: 6
-        model: Notifications.history
-
+        model: ScriptModel {
+            // Notifications are plain objects rebuilt on every change,
+            // so identity comparison would see them all as new. The id
+            // is what actually distinguishes them.
+            objectProp: "id"
+            values: Notifications.history
+        }
         delegate: Rectangle {
             required property var modelData
 
