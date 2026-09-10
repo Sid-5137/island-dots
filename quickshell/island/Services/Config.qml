@@ -216,7 +216,7 @@ Singleton {
                 // Below 1.0 the wallpaper shows through and the
                 // island-bar layer rule blurs it. At 1.0 the pill is
                 // solid and the blur costs nothing but does nothing.
-                property real opacity: 0.88
+                property real opacity: 0.85
 
                 property int radius: 8
                 property int topMargin: 8
@@ -238,7 +238,7 @@ Singleton {
 
                 // Control centre: calendar plus quick toggles.
                 property int controlWidth: 528
-                property int controlHeight: 396
+                property int controlHeight: 390
                 // Added to the expanded height when media is playing.
                 property int mediaStripHeight: 88
 
@@ -307,7 +307,7 @@ Singleton {
 
             property JsonObject appearance: JsonObject {
                 // Shell panels
-                property real panelOpacity: 0.78
+                property real panelOpacity: 0.85
                 property int panelRadius: 8
                 // How far the desktop dims behind the settings window.
                 // Blur alone doesn't separate a panel from a busy

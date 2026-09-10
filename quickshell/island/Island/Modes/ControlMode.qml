@@ -244,6 +244,11 @@ Item {
         Math.floor((rightCardWidth - 28 - 24) / 3)
     readonly property int tilesCardHeight: tileCell * 2 + 12 + 28
 
+    // Two 38px slider rows and the gap between them, plus the tray
+    // when it is present, inside 14px of padding.
+    readonly property int controlsCardHeight:
+        14 + (38 * 2 + 12) + (Tray.count > 0 ? 12 + 30 : 0) + 14
+
     readonly property int eventRows:
         Calendar.available ? Math.min(Calendar.today.length, 3) : 0
     readonly property int eventsHeight: eventRows * 20 + 20
@@ -299,8 +304,11 @@ Item {
         anchors.right: tilesCard.right
         anchors.top: tilesCard.bottom
         anchors.topMargin: root.cardGap
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: -root.cardInset
+        // Sized to its content rather than stretched to the panel
+        // floor. Filling the height left two sliders sitting at the
+        // top of a mostly empty card; the right column simply ends
+        // higher than the calendar, which is fine.
+        height: root.controlsCardHeight
     }
 
     Grid {
