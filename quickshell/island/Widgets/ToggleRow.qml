@@ -14,6 +14,8 @@ Item {
 
     signal toggled(bool value)
 
+    property string configKey: ""
+
     implicitWidth: parent ? parent.width : 400
     implicitHeight: Math.max(44, text.implicitHeight + 20)
 
@@ -46,6 +48,14 @@ Item {
             wrapMode: Text.WordWrap
             renderType: Text.NativeRendering
         }
+    }
+
+    ResetDot {
+        anchors.right: knob.left
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        configKey: root.configKey
+        current: root.checked
     }
 
     Rectangle {

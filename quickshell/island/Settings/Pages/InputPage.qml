@@ -8,7 +8,7 @@ import "root:/Widgets"
 Column {
     spacing: 4
 
-    SectionHeader { text: "Mouse" }
+    SectionHeader { text: "Mouse"; section: "input" }
 
     Item {
         width: parent.width
@@ -27,6 +27,7 @@ Column {
     }
 
     ChoiceRow {
+        configKey: "input.mouseAccel"
         label: "Acceleration"
         description: "Flat is 1:1 — the pointer moves exactly as far as the mouse. Adaptive speeds up as you move faster."
         current: Config.input.mouseAccel
@@ -38,6 +39,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "input.mouseSensitivity"
         label: "Speed"
         description: "0 is the driver's own rate."
         from: -1.0; to: 1.0; stepSize: 0.05; decimals: 2
@@ -46,6 +48,7 @@ Column {
     }
 
     ToggleRow {
+        configKey: "input.naturalScrollMouse"
         label: "Natural scrolling"
         checked: Config.input.naturalScrollMouse
         onToggled: function(v) { Config.input.naturalScrollMouse = v }
@@ -54,6 +57,7 @@ Column {
     SectionHeader { text: "Touchpad" }
 
     ToggleRow {
+        configKey: "input.touchpadEnabled"
         label: "Touchpad"
         description: Devices.hasTouchpad
             ? Devices.touchpads[0]
@@ -63,6 +67,7 @@ Column {
     }
 
     ChoiceRow {
+        configKey: "input.touchpadAccel"
         label: "Acceleration"
         description: "Independent of the mouse setting above."
         current: Config.input.touchpadAccel
@@ -74,6 +79,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "input.touchpadSensitivity"
         label: "Speed"
         from: -1.0; to: 1.0; stepSize: 0.05; decimals: 2
         value: Config.input.touchpadSensitivity
@@ -81,18 +87,21 @@ Column {
     }
 
     ToggleRow {
+        configKey: "input.tapToClick"
         label: "Tap to click"
         checked: Config.input.tapToClick
         onToggled: function(v) { Config.input.tapToClick = v }
     }
 
     ToggleRow {
+        configKey: "input.naturalScroll"
         label: "Natural scrolling"
         checked: Config.input.naturalScroll
         onToggled: function(v) { Config.input.naturalScroll = v }
     }
 
     ToggleRow {
+        configKey: "input.dragLock"
         label: "Drag lock"
         description: "Keeps a drag alive if your finger lifts briefly."
         checked: Config.input.dragLock
@@ -100,6 +109,7 @@ Column {
     }
 
     ToggleRow {
+        configKey: "input.disableWhileTyping"
         label: "Disable while typing"
         description: "Ignores the touchpad for a moment after a keystroke, so your palm doesn't move the cursor."
         checked: Config.input.disableWhileTyping
@@ -107,6 +117,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "input.scrollFactor"
         label: "Scroll speed"
         description: "Also affects how far a two-finger scroll moves in terminals, which scroll by whole lines."
         from: 0.1; to: 3.0; stepSize: 0.05; decimals: 2
@@ -117,6 +128,7 @@ Column {
     SectionHeader { text: "Keyboard" }
 
     SliderRow {
+        configKey: "input.repeatRate"
         label: "Repeat rate"
         description: "Characters per second once a key starts repeating."
         from: 10; to: 60; stepSize: 1; suffix: "/s"
@@ -125,6 +137,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "input.repeatDelay"
         label: "Repeat delay"
         from: 150; to: 1000; stepSize: 25; suffix: " ms"
         value: Config.input.repeatDelay

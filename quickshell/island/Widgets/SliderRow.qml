@@ -18,6 +18,10 @@ Item {
 
     signal moved(real value)
 
+    // Set to "section.key" and a revert control appears whenever the
+    // value differs from the shipped default.
+    property string configKey: ""
+
     implicitWidth: parent ? parent.width : 400
     implicitHeight: 62
 
@@ -36,7 +40,17 @@ Item {
         renderType: Text.NativeRendering
     }
 
+    ResetDot {
+        id: revert
+        anchors.right: valueText.left
+        anchors.rightMargin: 6
+        anchors.verticalCenter: labelText.verticalCenter
+        configKey: root.configKey
+        current: root.value
+    }
+
     Text {
+        id: valueText
         anchors.right: parent.right
         anchors.verticalCenter: labelText.verticalCenter
         text: root.value.toFixed(root.decimals) + root.suffix

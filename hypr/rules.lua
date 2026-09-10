@@ -125,7 +125,10 @@ hl.layer_rule({
     match        = { namespace = "^island-bar$" },
     no_anim      = true,
     blur         = true,
-    ignore_alpha = 0.1,
+    -- Low, because the control centre's cards are translucent and
+    -- anything under the threshold is skipped entirely rather than
+    -- blurred faintly.
+    ignore_alpha = 0.03,
 })
 
 -- ignore_alpha is low so nothing gets skipped for being too

@@ -236,6 +236,7 @@ Item {
     readonly property int calWidth: 266
     readonly property int cardGap: 10
     readonly property int cardInset: 12
+
     readonly property int leftCardWidth: calWidth + 24
     readonly property int rightCardWidth:
         width + cardInset * 2 - leftCardWidth - cardGap
@@ -266,8 +267,8 @@ Item {
         id: calendarCard
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: -root.cardInset
-        anchors.topMargin: -root.cardInset
+        anchors.leftMargin: -12
+        anchors.topMargin: -12
         width: root.leftCardWidth
         // Clock line, gap, then the calendar's own fixed height.
         height: 52 + 16 + root.calendarHeight + 24
@@ -298,9 +299,9 @@ Item {
         anchors.left: tilesCard.left
         anchors.right: tilesCard.right
         anchors.top: tilesCard.bottom
-        anchors.topMargin: root.cardGap
+        anchors.topMargin: 10
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: -root.cardInset
+        anchors.bottomMargin: -12
     }
 
     Grid {

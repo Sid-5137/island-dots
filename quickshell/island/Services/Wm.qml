@@ -143,7 +143,7 @@ Singleton {
     // the geometry — the other visibility modes need nothing but the
     // window count, which the events do cover.
     Timer {
-        running: Config.island.visibility === "smart"
+        running: Config.island.visibility !== "always"
         interval: 1200
         repeat: true
         onTriggered: root.refresh()

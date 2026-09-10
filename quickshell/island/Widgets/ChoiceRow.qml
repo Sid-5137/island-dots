@@ -14,6 +14,8 @@ Item {
 
     signal selected(string value)
 
+    property string configKey: ""
+
     implicitWidth: parent ? parent.width : 400
     implicitHeight: Math.max(48, text.implicitHeight + 20)
 
@@ -46,6 +48,14 @@ Item {
             wrapMode: Text.WordWrap
             renderType: Text.NativeRendering
         }
+    }
+
+    ResetDot {
+        anchors.right: segments.left
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        configKey: root.configKey
+        current: root.current
     }
 
     Row {

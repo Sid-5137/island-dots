@@ -34,6 +34,74 @@ Singleton {
         file.writeAdapter();
     }
 
+    // Reset needs the shipped values, but JsonAdapter holds only the
+    // live ones once settings.json has been read over them.
+    //
+    // Rather than duplicating every default — which would drift from
+    // the declarations below — they are snapshotted here at startup.
+    // Component.onCompleted runs before the FileView's async load
+    // completes, so what is captured is what the code declares.
+    property var defaults: ({})
+
+    Component.onCompleted: {
+        for (const name of sections) {
+            const src = adapter[name];
+            if (!src) continue;
+            const copy = {};
+            for (const key of Object.keys(src)) {
+                if (typeof src[key] !== "function") copy[key] = src[key];
+            }
+            defaults[name] = copy;
+        }
+    }
+
+    readonly property var sections:
+        ["island", "motion", "appearance", "input", "idle", "wallpaper"]
+
+    // "island.hoverGrace" -> the shipped value, or undefined if the
+    // path isn't one we declare.
+    function defaultFor(path) {
+        if (!path) return undefined;
+        const parts = path.split(".");
+        if (parts.length !== 2) return undefined;
+        const section = defaults[parts[0]];
+        return section ? section[parts[1]] : undefined;
+    }
+
+    function resetKey(path) {
+        const parts = path.split(".");
+        if (parts.length !== 2) return;
+        const live = adapter[parts[0]];
+        const shipped = defaults[parts[0]];
+        if (!live || !shipped) return;
+        if (shipped[parts[1]] === undefined) return;
+        live[parts[1]] = shipped[parts[1]];
+        file.writeAdapter();
+    }
+
+    function resetSection(name) {
+        const live = adapter[name];
+        const shipped = defaults[name];
+        if (!live || !shipped) return;
+
+        // Machine-specific keys are left alone: resetting Appearance
+        // should not throw away an icon theme the user picked, and
+        // resetting Wallpaper should not point at a directory that
+        // may not exist.
+        const keep = ["iconTheme", "cursorTheme", "gtkTheme", "directory"];
+
+        for (const key of Object.keys(shipped)) {
+            if (keep.indexOf(key) !== -1) continue;
+            if (typeof shipped[key] === "function") continue;
+            live[key] = shipped[key];
+        }
+        file.writeAdapter();
+    }
+
+    function resetAll() {
+        for (const name of sections) resetSection(name);
+    }
+
     function save() {
         file.writeAdapter();
     }
@@ -86,20 +154,20 @@ Singleton {
             property int version: 1
 
             property JsonObject island: JsonObject {
-                // "always" — on screen at all times
-                // "smart"  — hidden only when a window actually reaches
-                //            the strip the island sits in
-                // "auto"   — hidden whenever any window is open
-                property string visibility: "smart"
+                // "always" — on screen at all times, with the strip
+                //            reserved so windows start below it
+                // "smart"  — hidden until a window reaches the strip
+                //            it sits in, then out of the way
+                property string visibility: "always"
 
                 // How long the island stays revealed after the cursor
                 // leaves. Without a grace period hover and geometry
                 // fight each other: the pill moves out from under the
                 // cursor, hover drops, the pill hides, hover returns.
-                property int hoverGrace: 400
+                property int hoverGrace: 600
 
                 // Height in px of the hover strip at the top edge
-                // that brings the island back in "auto" mode.
+                // that brings the island back once hidden.
                 property int revealZone: 12
 
                 // Hide while a window is fullscreen.
@@ -116,7 +184,7 @@ Singleton {
                 property bool expandOnTrackChange: false
 
                 // Collapsed pill geometry.
-                property int idleWidth: 150
+                property int idleWidth: 152
                 property int idleHeight: 34
                 property int compactWidth: 200
                 property int compactHeight: 40
@@ -145,13 +213,6 @@ Singleton {
                 property string face: "clock"
                 property bool faceIndicator: false
 
-                // Reserve the collapsed height so windows start below
-                // the island instead of running under it. Only the
-                // collapsed height is ever reserved — reserving the
-                // expanded height would shift every window on screen
-                // each time the pill opens.
-                property bool reserveSpace: false
-
                 // Below 1.0 the wallpaper shows through and the
                 // island-bar layer rule blurs it. At 1.0 the pill is
                 // solid and the blur costs nothing but does nothing.
@@ -176,8 +237,8 @@ Singleton {
                 property int sessionHeight: 128
 
                 // Control centre: calendar plus quick toggles.
-                property int controlWidth: 504
-                property int controlHeight: 332
+                property int controlWidth: 528
+                property int controlHeight: 396
                 // Added to the expanded height when media is playing.
                 property int mediaStripHeight: 88
 

@@ -5,11 +5,12 @@ import "root:/Widgets"
 Column {
     spacing: 4
 
-    SectionHeader { text: "Themes" }
+    SectionHeader { text: "Themes"; section: "appearance" }
 
     // Populated from what's actually installed, so this can't offer
     // a theme that doesn't exist.
     SelectRow {
+        configKey: "appearance.iconTheme"
         label: "Icons"
         description: "Applied to GTK, Qt and the shell together."
         options: Theming.available
@@ -18,6 +19,7 @@ Column {
     }
 
     SelectRow {
+        configKey: "appearance.gtkTheme"
         label: "GTK theme"
         options: Theming.gtkThemes
         current: Config.appearance.gtkTheme
@@ -25,6 +27,7 @@ Column {
     }
 
     SelectRow {
+        configKey: "appearance.cursorTheme"
         label: "Cursor"
         options: Theming.cursors
         current: Config.appearance.cursorTheme
@@ -32,6 +35,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.cursorSize"
         label: "Cursor size"
         from: 16; to: 48; stepSize: 4; suffix: " px"
         value: Config.appearance.cursorSize
@@ -41,6 +45,7 @@ Column {
     SectionHeader { text: "Panels" }
 
     SliderRow {
+        configKey: "appearance.panelOpacity"
         label: "Panel opacity"
         description: "1.0 is solid. Below that the desktop shows through, which needs the blur layer rule in hypr/rules.lua to look right."
         from: 0.4; to: 1.0; stepSize: 0.02; decimals: 2
@@ -49,6 +54,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.panelScrim"
         label: "Backdrop dim"
         description: "How far the desktop darkens behind the settings window."
         from: 0.0; to: 0.8; stepSize: 0.05; decimals: 2
@@ -57,6 +63,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.panelRadius"
         label: "Panel radius"
         description: "Shapes the settings window and the control centre tiles together."
         from: 0; to: 32; stepSize: 1; suffix: " px"
@@ -67,6 +74,7 @@ Column {
     SectionHeader { text: "Blur" }
 
     SliderRow {
+        configKey: "appearance.blurSize"
         label: "Size"
         description: "Blur radius. Applies to windows and shell panels."
         from: 0; to: 20; stepSize: 1
@@ -75,6 +83,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.blurPasses"
         label: "Passes"
         description: "More passes is smoother but costs GPU. 3 is a good default."
         from: 1; to: 6; stepSize: 1
@@ -83,6 +92,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.blurBrightness"
         label: "Brightness"
         from: 0.3; to: 1.5; stepSize: 0.05; decimals: 2
         value: Config.appearance.blurBrightness
@@ -90,6 +100,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.blurContrast"
         label: "Contrast"
         from: 0.3; to: 2.0; stepSize: 0.05; decimals: 2
         value: Config.appearance.blurContrast
@@ -99,6 +110,7 @@ Column {
     SectionHeader { text: "Windows" }
 
     SliderRow {
+        configKey: "appearance.windowRounding"
         label: "Corner radius"
         from: 0; to: 24; stepSize: 1; suffix: " px"
         value: Config.appearance.windowRounding
@@ -106,6 +118,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.borderSize"
         label: "Border size"
         from: 0; to: 6; stepSize: 1; suffix: " px"
         value: Config.appearance.borderSize
@@ -113,6 +126,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.inactiveOpacity"
         label: "Inactive opacity"
         description: "How much unfocused windows fade back."
         from: 0.6; to: 1.0; stepSize: 0.02; decimals: 2
@@ -121,6 +135,7 @@ Column {
     }
 
     ToggleRow {
+        configKey: "appearance.shadows"
         label: "Window shadows"
         checked: Config.appearance.shadows
         onToggled: function(v) { Config.appearance.shadows = v }
@@ -129,6 +144,7 @@ Column {
     SectionHeader { text: "Gaps" }
 
     SliderRow {
+        configKey: "appearance.gapsIn"
         label: "Inner"
         from: 0; to: 32; stepSize: 1; suffix: " px"
         value: Config.appearance.gapsIn
@@ -136,6 +152,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "appearance.gapsOut"
         label: "Outer"
         from: 0; to: 48; stepSize: 1; suffix: " px"
         value: Config.appearance.gapsOut

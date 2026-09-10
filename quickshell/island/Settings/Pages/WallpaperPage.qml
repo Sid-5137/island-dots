@@ -6,7 +6,7 @@ Column {
     id: page
     spacing: 4
 
-    SectionHeader { text: "Source" }
+    SectionHeader { text: "Source"; section: "wallpaper" }
 
     Item {
         width: parent.width
@@ -51,6 +51,7 @@ Column {
     }
 
     ChoiceRow {
+        configKey: "wallpaper.scheme"
         label: "Colour scheme"
         description: "How the palette is derived from the wallpaper."
         current: Config.wallpaper.scheme
@@ -68,6 +69,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "wallpaper.crossfadeDuration"
         label: "Crossfade"
         from: 0; to: 2000; stepSize: 50; suffix: " ms"
         value: Config.wallpaper.crossfadeDuration
@@ -75,6 +77,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "wallpaper.rotateMinutes"
         label: "Rotate every"
         description: "0 disables automatic rotation."
         from: 0; to: 120; stepSize: 5; suffix: " min"

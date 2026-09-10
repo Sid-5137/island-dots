@@ -8,9 +8,10 @@ import "root:/Widgets"
 Column {
     spacing: 4
 
-    SectionHeader { text: "Idle" }
+    SectionHeader { text: "Idle"; section: "idle" }
 
     ToggleRow {
+        configKey: "idle.enabled"
         label: "Idle actions"
         description: "Dim, lock, blank and suspend after inactivity."
         checked: Config.idle.enabled
@@ -18,6 +19,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "idle.dimTimeout"
         label: "Dim after"
         description: "Lowers the backlight as a warning. 0 to skip."
         from: 0; to: 900; stepSize: 30; suffix: " s"
@@ -26,6 +28,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "idle.dimLevel"
         label: "Dim level"
         from: 1; to: 50; stepSize: 1; suffix: "%"
         value: Config.idle.dimLevel
@@ -33,6 +36,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "idle.lockTimeout"
         label: "Lock after"
         from: 0; to: 1800; stepSize: 30; suffix: " s"
         value: Config.idle.lockTimeout
@@ -40,6 +44,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "idle.screenOffTimeout"
         label: "Screen off after"
         from: 0; to: 1800; stepSize: 30; suffix: " s"
         value: Config.idle.screenOffTimeout
@@ -47,6 +52,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "idle.suspendTimeout"
         label: "Suspend after"
         description: "0 never suspends."
         from: 0; to: 7200; stepSize: 300; suffix: " s"

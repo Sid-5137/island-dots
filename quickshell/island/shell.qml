@@ -46,5 +46,9 @@ ShellRoot {
         Devices.refresh();
         Polkit.active;
         Clipboard.refresh();
+        // Referencing this is what registers the StatusNotifierItem
+        // host; without it no tray application can connect.
+        Tray.count;
+        Calendar.refresh();
     }
 }

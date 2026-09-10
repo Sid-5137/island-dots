@@ -5,9 +5,10 @@ import "root:/Widgets"
 Column {
     spacing: 4
 
-    SectionHeader { text: "Morph" }
+    SectionHeader { text: "Morph"; section: "motion" }
 
     SliderRow {
+        configKey: "motion.morphDuration"
         label: "Duration"
         description: "How long the island takes to change shape."
         from: 100; to: 800; stepSize: 10; suffix: " ms"
@@ -16,6 +17,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "motion.morphOvershoot"
         label: "Overshoot"
         description: "How far the shape springs past its target. 0 is a flat decelerate."
         from: 0; to: 2; stepSize: 0.05; decimals: 2
@@ -26,6 +28,7 @@ Column {
     SectionHeader { text: "Content" }
 
     SliderRow {
+        configKey: "motion.fadeIn"
         label: "Fade in"
         from: 40; to: 400; stepSize: 10; suffix: " ms"
         value: Config.motion.fadeIn
@@ -33,6 +36,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "motion.fadeOut"
         label: "Fade out"
         from: 20; to: 300; stepSize: 10; suffix: " ms"
         value: Config.motion.fadeOut
@@ -40,6 +44,7 @@ Column {
     }
 
     SliderRow {
+        configKey: "motion.contentThreshold"
         label: "Reveal threshold"
         description: "How far the pill must grow before its contents appear. Higher means the shape leads more."
         from: 0.3; to: 1.0; stepSize: 0.05; decimals: 2

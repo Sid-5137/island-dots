@@ -57,7 +57,7 @@ from it.
 - 📋 **Clipboard history** — filterable, keyboard-driven, backed by cliphist
 - 🎛️ **Live compositor control** — blur, gaps, borders and input applied without a reload
 - ✋ **Continuous gestures** — four-finger swipes that track your fingers, not just fire on release
-- 🖥️ **Smart visibility** — hides only when a window actually reaches it
+- 🖥️ **Two visibility modes** — reserve the strip, or let windows use the whole screen and move aside when they reach it
 - 🎵 **Media** — MPRIS with artwork and transport
 - 🔋 **Circular battery** — a gauge, not a battery outline
 - ⚙️ **Settings app** — six pages, everything adjustable, no config file editing

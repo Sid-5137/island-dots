@@ -642,13 +642,10 @@ Variants {
                         : Theme.surfaceContainer)
 
                 radius: Config.island.radius
-                // Clipping reveals content by the growing shape, which
-                // is right for every mode whose content sits inside the
-                // pill. The control centre's cards deliberately extend
-                // past it, so a growing clip rectangle sweeps across
-                // their edges and cuts them frame by frame — which is
-                // the flicker around the outline. Off for that mode.
-                clip: island.mode !== "expanded"
+                // Confines content to the pill's bounds, so the album
+                // art and text are revealed BY the growing shape rather
+                // than drawing outside it while it's still small.
+                clip: true
 
                 // The border fades rather than switching off. Toggling
                 // width mid-morph snaps a 1px outline away partway
