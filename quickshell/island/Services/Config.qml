@@ -90,7 +90,7 @@ Singleton {
                 // "smart"  — hidden only when a window actually reaches
                 //            the strip the island sits in
                 // "auto"   — hidden whenever any window is open
-                property string visibility: "always"
+                property string visibility: "smart"
 
                 // How long the island stays revealed after the cursor
                 // leaves. Without a grace period hover and geometry
@@ -113,7 +113,7 @@ Singleton {
                 property int attentionDuration: 2500
 
                 // Expand automatically when a new track starts.
-                property bool expandOnTrackChange: true
+                property bool expandOnTrackChange: false
 
                 // Collapsed pill geometry.
                 property int idleWidth: 150
@@ -143,7 +143,7 @@ Singleton {
                 // Which face the collapsed pill shows. Scrolling over
                 // the pill cycles it; the choice persists.
                 property string face: "clock"
-                property bool faceIndicator: true
+                property bool faceIndicator: false
 
                 // Reserve the collapsed height so windows start below
                 // the island instead of running under it. Only the
@@ -157,7 +157,7 @@ Singleton {
                 // solid and the blur costs nothing but does nothing.
                 property real opacity: 0.88
 
-                property int radius: 12
+                property int radius: 8
                 property int topMargin: 8
 
                 // Search / launcher, drawn inside the island itself
@@ -176,8 +176,8 @@ Singleton {
                 property int sessionHeight: 128
 
                 // Control centre: calendar plus quick toggles.
-                property int controlWidth: 962
-                property int controlHeight: 556
+                property int controlWidth: 504
+                property int controlHeight: 332
                 // Added to the expanded height when media is playing.
                 property int mediaStripHeight: 88
 
@@ -201,7 +201,9 @@ Singleton {
                 property int centreRowHeight: 88
 
                 // How long after the last Tab the switcher commits.
-                property int switcherCommitDelay: 700
+                // Long enough to keep tabbing, short enough not to
+                // feel like a wait once you have chosen.
+                property int switcherCommitDelay: 650
 
                 property int switcherWidth: 900
                 property int switcherHeight: 176
@@ -245,7 +247,7 @@ Singleton {
             property JsonObject appearance: JsonObject {
                 // Shell panels
                 property real panelOpacity: 0.78
-                property int panelRadius: 16
+                property int panelRadius: 8
                 // How far the desktop dims behind the settings window.
                 // Blur alone doesn't separate a panel from a busy
                 // wallpaper; a little scrim does.
@@ -266,7 +268,7 @@ Singleton {
                 property int gapsIn: 4
                 property int gapsOut: 8
                 property int borderSize: 1
-                property int windowRounding: 0
+                property int windowRounding: 8
                 property real inactiveOpacity: 0.94
                 property bool shadows: true
             }
@@ -278,12 +280,12 @@ Singleton {
             property JsonObject input: JsonObject {
                 // "adaptive" accelerates with speed; "flat" is 1:1.
                 property string mouseAccel: "flat"
-                property real mouseSensitivity: 0.0
+                property real mouseSensitivity: 1.0
                 property bool naturalScrollMouse: false
 
                 property bool touchpadEnabled: true
-                property string touchpadAccel: "adaptive"
-                property real touchpadSensitivity: 0.0
+                property string touchpadAccel: "flat"
+                property real touchpadSensitivity: 1.0
                 property bool tapToClick: true
                 property bool naturalScroll: true
                 property bool dragLock: true
@@ -311,7 +313,7 @@ Singleton {
 
                 // matugen scheme: scheme-monochrome, scheme-tonal-spot,
                 // scheme-vibrant, scheme-content, scheme-expressive…
-                property string scheme: "scheme-monochrome"
+                property string scheme: "scheme-tonal-spot"
 
                 // Cycle wallpapers on a timer. 0 disables.
                 property int rotateMinutes: 0

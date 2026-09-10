@@ -71,9 +71,9 @@ Two things this script deliberately does not do:
 
   · It doesn't write ~/.config/island/settings.json. That file is
     machine state and is created on first run from the defaults in
-    Services/Config.qml. Deleting it is also how you pick up new
-    config keys after an update — JsonAdapter does not merge them
-    into an existing file.
+    Services/Config.qml. New keys merge in automatically on start;
+    delete the file only if you want to take new defaults for keys
+    you already have. settings.example.json shows every key.
 
   · It doesn't set your GTK theme. The matugen colour overrides need
     the theme to be adw-gtk3 (not adw-gtk3-dark) with

@@ -27,15 +27,24 @@ Singleton {
     property var allWindows: []
     property string focusedAddress: ""
 
-    function focusWindow(address) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "focuswindow", "address:" + address]);
+    // Dispatchers take Lua now, not a bare command string. `hyprctl
+    // dispatch workspace 2` is wrapped as `hl.dispatch(workspace 2)`,
+    // which is not valid Lua and fails silently — so every switch and
+    // every Alt+Tab did nothing at all.
+    function dispatch(lua) {
+        Hyprland.dispatch(lua);
         refreshLater.restart();
     }
 
+    // The key is `window`, and its value carries the address: prefix.
+    // A bare `address =` is accepted and silently ignored.
+    function focusWindow(address) {
+        dispatch("hl.dsp.focus({ window = \"address:" + address + "\" })");
+    }
+
     function moveWindowTo(address, workspaceId) {
-        Quickshell.execDetached(["hyprctl", "dispatch",
-                       "movetoworkspacesilent", workspaceId + ",address:" + address]);
-        refreshLater.restart();
+        dispatch("hl.dsp.window.move({ workspace = " + workspaceId
+                 + ", window = \"address:" + address + "\", follow = false })");
     }
 
     readonly property bool empty: windowCount === 0
@@ -45,8 +54,7 @@ Singleton {
     }
 
     function switchTo(id) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "workspace", String(id)]);
-        refreshLater.restart();
+        dispatch("hl.dsp.focus({ workspace = " + id + " })");
     }
 
     Process {
@@ -178,6 +186,17 @@ Singleton {
         }
 
         function refresh(): void { root.refresh() }
+
+        function windows(): string {
+            if (root.allWindows.length === 0) return "none";
+            return root.allWindows.map(w =>
+                w.address + "  ws" + w.workspaceId + "  " + w.cls).join("\n");
+        }
+
+        function focus(address: string): void { root.focusWindow(address) }
+        function go(id: int): void { root.switchTo(id) }
+
+        function lua(code: string): void { root.dispatch(code) }
     }
 
     // Actions run detached rather than through a shared Process: a

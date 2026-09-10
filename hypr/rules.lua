@@ -152,16 +152,6 @@ for _, ns in ipairs({ "hyprshot", "selection", "slurp" }) do
     })
 end
 
--- The backdrop is what gets blurred during the switcher and overview:
--- the island itself is a small pill with nothing behind it to blur.
-hl.layer_rule({
-    name         = "island-backdrop",
-    match        = { namespace = "^island-backdrop$" },
-    blur         = true,
-    ignore_alpha = 0.05,
-    no_anim      = true,
-})
-
 for _, ns in ipairs({ "island-notifications", "island-osd" }) do
     hl.layer_rule({
         name         = ns,

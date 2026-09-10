@@ -62,13 +62,15 @@ Variants {
         property int switchIndex: 0
         property bool overviewOpen: false
 
-        readonly property bool backdrop: switcherOpen || overviewOpen
-
         readonly property var switchTarget:
             Wm.allWindows.length > switchIndex ? Wm.allWindows[switchIndex] : null
 
         function openSwitcher(step) {
-            Wm.refresh();
+            // Only refresh when opening. Refreshing on each Tab
+            // re-sorts allWindows by focus history while you are
+            // stepping through it, which moves the selection out from
+            // under you mid-gesture.
+            if (!switcherOpen) Wm.refresh();
             if (!switcherOpen) {
                 switcherOpen = true;
                 // Start on the previously focused window, which is what
@@ -91,9 +93,14 @@ Variants {
         }
 
         function activateSwitch() {
+            if (!switcherOpen) return;
             switchCommit.stop();
-            if (switchTarget) Wm.focusWindow(switchTarget.address);
+            const target = switchTarget;
             switcherOpen = false;
+            // Dispatch after the surface is down. Focusing while the
+            // island is still up lets the compositor restore focus
+            // over the top of it a moment later.
+            if (target) Qt.callLater(() => Wm.focusWindow(target.address));
         }
 
         function cancelSwitch() {
@@ -314,7 +321,7 @@ Variants {
         // margin, or the bottom edge gets clipped by the window.
         //
         //   control centre + media strip + top margin + slack
-        implicitHeight: backdrop ? screen.height : Math.max(
+        implicitHeight: Math.max(
                             Config.island.controlHeight + Config.island.mediaStripHeight,
                             Config.island.pickerHeight,
                             Config.island.centreHeight,
@@ -389,8 +396,7 @@ Variants {
             || centreOpen
 
         mask: Region {
-            item: root.backdrop ? backdropArea
-                : (root.revealed ? island : revealStrip)
+            item: root.revealed ? island : revealStrip
         }
 
         property bool autoExpanded: false
@@ -451,31 +457,6 @@ Variants {
             onTriggered: {
                 if (!pillHover.hovered && !root.autoExpanded)
                     root.expanded = false;
-            }
-        }
-
-        // Behind the pill, only while the switcher or overview is up.
-        // In the same window as the island so it can never stack above
-        // it — a separate Top-layer surface had no guaranteed order and
-        // ended up covering the pill, which is what made those modes
-        // look frozen.
-        Rectangle {
-            id: backdropArea
-            anchors.fill: parent
-            color: "#000000"
-            opacity: root.backdrop ? Config.island.backdropDim : 0
-            visible: opacity > 0.01
-
-            Behavior on opacity {
-                NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    root.cancelSwitch();
-                    root.closeOverview();
-                }
             }
         }
 

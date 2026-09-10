@@ -139,6 +139,14 @@ It's written on first run from the defaults in `Services/Config.qml`,
 and merged against them on every start — so an update that adds a
 setting picks it up without the file being deleted.
 
+`settings.example.json` shows every key and its shipped default. It is
+generated from `Services/Config.qml` and is documentation only; the
+shell never reads it.
+
+One consequence of the merge worth knowing: it preserves values you
+already have. If a release changes a *default*, your existing file
+keeps the old value. Delete `settings.json` to take the new defaults.
+
 ```
 bin/                  island-gestures, the libinput gesture daemon
 hypr/                 Hyprland config, one module per concern

@@ -36,6 +36,7 @@ hl.bind("ALT + Tab",         hl.dsp.exec_cmd(Shell .. "switcher next"),     { re
 hl.bind("ALT + SHIFT + Tab", hl.dsp.exec_cmd(Shell .. "switcher previous"), { repeating = true })
 hl.bind("ALT + Escape",      hl.dsp.exec_cmd(Shell .. "switcher cancel"))
 
+
 hl.bind(mod .. " + W",         hl.dsp.exec_cmd(Shell .. "overview toggle"))
 hl.bind(mod .. " + Tab",       hl.dsp.window.cycle_next())
 

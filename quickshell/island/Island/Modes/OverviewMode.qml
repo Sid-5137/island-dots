@@ -66,19 +66,6 @@ Item {
                 Behavior on color { ColorAnimation { duration: 140 } }
                 Behavior on border.color { ColorAnimation { duration: 140 } }
 
-                // Declared first so the thumbnails above it take their
-                // own clicks; this only catches presses on the card.
-                MouseArea {
-                    id: cardHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        Wm.switchTo(card.modelData.id);
-                        win.closeOverview();
-                    }
-                }
-
                 Text {
                     anchors.top: parent.top
                     anchors.left: parent.left
@@ -105,6 +92,21 @@ Item {
                 // Thumbnails tile the card. One window fills it; more
                 // split it into a grid, which is how GNOME lays out an
                 // overview cell.
+                // Below the thumbnail grid. A Grid does not accept
+                // mouse events itself, so this still catches every
+                // click that isn't on a thumbnail.
+                MouseArea {
+                    id: cardHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        const id = card.modelData.id;
+                        win.closeOverview();
+                        Qt.callLater(() => Wm.switchTo(id));
+                    }
+                }
+
                 Grid {
                     id: thumbs
                     anchors.fill: parent
@@ -163,8 +165,9 @@ Item {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    Wm.focusWindow(thumb.modelData.address);
+                                    const addr = thumb.modelData.address;
                                     win.closeOverview();
+                                    Qt.callLater(() => Wm.focusWindow(addr));
                                 }
                             }
                         }
