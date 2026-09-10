@@ -41,6 +41,7 @@ ShellRoot {
         Notifications.count;
         Clock.time;
         Osd.active;
+        GestureBridge.path;
         Idle.apply();
         Devices.refresh();
         Polkit.active;

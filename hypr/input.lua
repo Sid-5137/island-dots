@@ -36,18 +36,9 @@ hl.config({
 
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 
-hl.gesture({
-    fingers   = 4,
-    direction = "up",
-    action    = function()
-        hl.dispatch(hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0"))
-    end,
-})
+-- Four-finger swipes are handled by bin/island-gestures, which reads
+-- libinput directly. Hyprland's gesture action fires once on release;
+-- reading the events gives a value that follows the fingers instead.
+-- A gesture defined here as well would fire on top of it.
 
-hl.gesture({
-    fingers   = 4,
-    direction = "down",
-    action    = function()
-        hl.dispatch(hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"))
-    end,
-})
+

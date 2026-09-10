@@ -28,6 +28,15 @@ hl.bind(mod .. " + Q",         hl.dsp.window.close())
 hl.bind(mod .. " + Space",     hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + F",         hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized" }))
+-- Alt+Tab steps through the switcher; it commits itself once you stop
+-- tabbing. There is deliberately no bind on the bare Alt key: binding
+-- a modifier alone makes the compositor capture it, which breaks every
+-- other Alt shortcut and leaves the session feeling frozen.
+hl.bind("ALT + Tab",         hl.dsp.exec_cmd(Shell .. "switcher next"),     { repeating = true })
+hl.bind("ALT + SHIFT + Tab", hl.dsp.exec_cmd(Shell .. "switcher previous"), { repeating = true })
+hl.bind("ALT + Escape",      hl.dsp.exec_cmd(Shell .. "switcher cancel"))
+
+hl.bind(mod .. " + W",         hl.dsp.exec_cmd(Shell .. "overview toggle"))
 hl.bind(mod .. " + Tab",       hl.dsp.window.cycle_next())
 
 hl.bind("ALT + left",  hl.dsp.focus({ direction = "left" }))

@@ -2,19 +2,32 @@ pragma Singleton
 
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Pipewire
 import QtQuick
+
+// Volume through PipeWire directly rather than by spawning wpctl.
+// A process spawn per step caps the rate at roughly one every 20ms,
+// which is what made gesture control feel coarse. Setting the node
+// property is immediate.
+//
+// Backlight still shells out: there is no equivalent binding, and
+// brightness changes are far less frequent.
 
 Singleton {
     id: root
 
-    property int volume: 0
-    property bool muted: false
-    property int brightness: 0
-    property bool micMuted: false
+    readonly property PwNode sink: Pipewire.defaultAudioSink
+    readonly property PwNode source: Pipewire.defaultAudioSource
 
-    // Font Awesome codepoints rather than Material: they're present in
-    // every Nerd Font patch, and the Material set renders as boxes on
-    // some builds.
+    readonly property int volume:
+        (sink && sink.audio) ? Math.round(sink.audio.volume * 100) : 0
+    readonly property bool muted:
+        (sink && sink.audio) ? sink.audio.muted : false
+    readonly property bool micMuted:
+        (source && source.audio) ? source.audio.muted : false
+
+    property int brightness: 0
+
     readonly property string volumeIcon:
         muted ? "\uf6a9"
         : volume > 66 ? "\uf028"
@@ -22,66 +35,61 @@ Singleton {
         : "\uf026"
 
     readonly property string micIcon: micMuted ? "\uf131" : "\uf130"
-
     readonly property string brightnessIcon: "\uf185"
 
     function setVolume(v) {
-        run("wpctl set-volume @DEFAULT_AUDIO_SINK@ " + Math.round(v) + "%");
-        volume = v;
+        if (!sink || !sink.audio) return;
+        sink.audio.volume = Math.max(0, Math.min(100, v)) / 100;
+    }
+
+    function stepVolume(delta) {
+        setVolume(volume + delta);
     }
 
     function toggleMute() {
-        run("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle");
-        muted = !muted;
+        if (sink && sink.audio) sink.audio.muted = !sink.audio.muted;
     }
 
     function toggleMic() {
-        run("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle");
-        micMuted = !micMuted;
+        if (source && source.audio) source.audio.muted = !source.audio.muted;
     }
 
     function setBrightness(v) {
-        run("brightnessctl --class=backlight set " + Math.round(v) + "%");
-        brightness = v;
+        const b = Math.max(0, Math.min(100, Math.round(v)));
+        brightness = b;
+        Quickshell.execDetached(
+            ["brightnessctl", "--class=backlight", "set", b + "%"]);
     }
 
-    function run(cmd) {
-        act.command = ["sh", "-c", cmd];
-        act.running = true;
+    function stepBrightness(delta) {
+        setBrightness(brightness + delta);
     }
 
     function refresh() { poll.running = true }
 
+    // Binding the nodes is what makes their audio properties readable
+    // and writable; without it they report defaults.
+    PwObjectTracker {
+        objects: [root.sink, root.source]
+    }
+
+    // Only the backlight needs polling now — PipeWire pushes volume.
     Process {
         id: poll
         running: true
-        command: ["sh", "-c",
-            "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null; " +
-            "wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | sed 's/^Volume:/Mic:/'; " +
-            "brightnessctl -m 2>/dev/null | cut -d, -f4"
-        ]
+        command: ["sh", "-c", "brightnessctl -m 2>/dev/null | cut -d, -f4"]
+
         stdout: StdioCollector {
             onStreamFinished: {
-                const lines = this.text.trim().split("\n");
-                for (const l of lines) {
-                    if (l.startsWith("Volume:")) {
-                        root.volume = Math.round(parseFloat(l.split(" ")[1]) * 100);
-                        root.muted = l.includes("MUTED");
-                    } else if (l.startsWith("Mic:")) {
-                        root.micMuted = l.includes("MUTED");
-                    } else if (l.endsWith("%")) {
-                        root.brightness = parseInt(l) || 0;
-                    }
-                }
+                const t = this.text.trim();
+                if (t.endsWith("%")) root.brightness = parseInt(t) || 0;
             }
         }
     }
 
-    Process { id: act; running: false }
-
     Timer {
         running: true
-        interval: 2000
+        interval: 5000
         repeat: true
         onTriggered: root.refresh()
     }

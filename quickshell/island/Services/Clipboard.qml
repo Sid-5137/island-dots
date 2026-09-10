@@ -28,21 +28,21 @@ Singleton {
     // cliphist decode writes the original bytes, so this round-trips
     // through wl-copy rather than trying to handle content in QML.
     function copy(id) {
-        act.command = ["sh", "-c",
-            "cliphist decode " + id + " | wl-copy"];
-        act.running = true;
+        Quickshell.execDetached(["sh", "-c",
+            "cliphist decode " + id + " | wl-copy"]);
+        refreshLater.restart();
     }
 
     function remove(id) {
-        act.command = ["sh", "-c",
-            "cliphist decode " + id + " | cliphist delete"];
-        act.running = true;
+        Quickshell.execDetached(["sh", "-c",
+            "cliphist decode " + id + " | cliphist delete"]);
+        refreshLater.restart();
         entries = entries.filter(e => e.id !== id);
     }
 
     function wipe() {
-        act.command = ["cliphist", "wipe"];
-        act.running = true;
+        Quickshell.execDetached(["cliphist", "wipe"]);
+        refreshLater.restart();
         entries = [];
     }
 
@@ -85,5 +85,14 @@ Singleton {
         function count(): int { return root.entries.length }
         function wipe(): void { root.wipe() }
         function refresh(): void { root.refresh() }
+    }
+
+    // Actions run detached rather than through a shared Process: a
+    // Process that is still running drops the next command assigned
+    // to it. State is re-read shortly after instead of on exit.
+    Timer {
+        id: refreshLater
+        interval: 400
+        onTriggered: root.refresh()
     }
 }

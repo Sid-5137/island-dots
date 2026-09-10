@@ -140,6 +140,18 @@ Singleton {
                 property int fontWeight: 700
                 property bool showWorkspaces: true
 
+                // Which face the collapsed pill shows. Scrolling over
+                // the pill cycles it; the choice persists.
+                property string face: "clock"
+                property bool faceIndicator: true
+
+                // Reserve the collapsed height so windows start below
+                // the island instead of running under it. Only the
+                // collapsed height is ever reserved — reserving the
+                // expanded height would shift every window on screen
+                // each time the pill opens.
+                property bool reserveSpace: false
+
                 // Below 1.0 the wallpaper shows through and the
                 // island-bar layer rule blurs it. At 1.0 the pill is
                 // solid and the blur costs nothing but does nothing.
@@ -187,6 +199,16 @@ Singleton {
                 property int centreWidth: 480
                 property int centreHeight: 440
                 property int centreRowHeight: 88
+
+                // How long after the last Tab the switcher commits.
+                property int switcherCommitDelay: 700
+
+                property int switcherWidth: 900
+                property int switcherHeight: 176
+                property int switcherTile: 84
+                property int overviewWidth: 640
+                property int overviewCard: 220
+                property real backdropDim: 0.45
 
                 property int clipWidth: 620
                 property int clipRowHeight: 40

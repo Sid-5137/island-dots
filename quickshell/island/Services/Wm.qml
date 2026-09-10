@@ -22,6 +22,22 @@ Singleton {
     // [{ x, y, w, h }]
     property var windows: []
 
+    // Every mapped window, across all workspaces, for the switcher.
+    // [{ address, cls, title, workspaceId, workspaceName, focused }]
+    property var allWindows: []
+    property string focusedAddress: ""
+
+    function focusWindow(address) {
+        Quickshell.execDetached(["hyprctl", "dispatch", "focuswindow", "address:" + address]);
+        refreshLater.restart();
+    }
+
+    function moveWindowTo(address, workspaceId) {
+        Quickshell.execDetached(["hyprctl", "dispatch",
+                       "movetoworkspacesilent", workspaceId + ",address:" + address]);
+        refreshLater.restart();
+    }
+
     readonly property bool empty: windowCount === 0
 
     function refresh() {
@@ -29,8 +45,8 @@ Singleton {
     }
 
     function switchTo(id) {
-        act.command = ["hyprctl", "dispatch", "workspace", String(id)];
-        act.running = true;
+        Quickshell.execDetached(["hyprctl", "dispatch", "workspace", String(id)]);
+        refreshLater.restart();
     }
 
     Process {
@@ -58,13 +74,31 @@ Singleton {
 
                 try {
                     const clients = JSON.parse(parts[2] || "[]");
-                    root.windows = clients
-                        .filter(c => c.workspace && c.workspace.id === root.activeId
-                                     && c.mapped && !c.hidden)
+                    const mapped = clients.filter(c => c.mapped && !c.hidden);
+
+                    root.windows = mapped
+                        .filter(c => c.workspace && c.workspace.id === root.activeId)
                         .map(c => ({
                             x: c.at[0], y: c.at[1],
                             w: c.size[0], h: c.size[1]
                         }));
+
+                    // Most-recently-focused first, so Alt+Tab lands on
+                    // the previous window rather than an arbitrary one.
+                    root.allWindows = mapped
+                        .filter(c => c.workspace && c.workspace.id > 0)
+                        .sort((a, b) => (a.focusHistoryID ?? 99) - (b.focusHistoryID ?? 99))
+                        .map(c => ({
+                            address: c.address,
+                            cls: c.class || c.initialClass || "",
+                            title: c.title || "",
+                            workspaceId: c.workspace.id,
+                            workspaceName: c.workspace.name,
+                            focused: c.focusHistoryID === 0
+                        }));
+
+                    const f = mapped.find(c => c.focusHistoryID === 0);
+                    root.focusedAddress = f ? f.address : "";
                 } catch (e) {
                     console.warn("[Wm] clients parse failed:", e);
                 }
@@ -83,8 +117,6 @@ Singleton {
             }
         }
     }
-
-    Process { id: act; running: false; onExited: root.refresh() }
 
     // Opening a window fires several events at once; coalesce them so
     // one action doesn't spawn five hyprctl calls.
@@ -146,5 +178,14 @@ Singleton {
         }
 
         function refresh(): void { root.refresh() }
+    }
+
+    // Actions run detached rather than through a shared Process: a
+    // Process that is still running drops the next command assigned
+    // to it. State is re-read shortly after instead of on exit.
+    Timer {
+        id: refreshLater
+        interval: 400
+        onTriggered: root.refresh()
     }
 }

@@ -65,6 +65,34 @@ Column {
         onMoved: function(v) { Config.island.attentionDuration = v }
     }
 
+    ToggleRow {
+        label: "Reserve space"
+        description: "Windows start below the island rather than under it. Only the collapsed height is reserved, so expanding never moves them."
+        checked: Config.island.reserveSpace
+        onToggled: function(v) { Config.island.reserveSpace = v }
+    }
+
+    SectionHeader { text: "Faces" }
+
+    ChoiceRow {
+        label: "Collapsed pill shows"
+        description: "Scroll over the pill to cycle."
+        current: Config.island.face
+        options: [
+            { value: "clock",  label: "Clock" },
+            { value: "media",  label: "Media" },
+            { value: "system", label: "System" }
+        ]
+        onSelected: function(v) { Config.island.face = v }
+    }
+
+    ToggleRow {
+        label: "Face indicator"
+        description: "Dots on hover showing which face is active."
+        checked: Config.island.faceIndicator
+        onToggled: function(v) { Config.island.faceIndicator = v }
+    }
+
     SectionHeader { text: "Appearance" }
 
     SliderRow {

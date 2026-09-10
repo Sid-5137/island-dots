@@ -43,7 +43,7 @@ missing=()
 for cmd in \
     hyprland quickshell matugen kitty nautilus firefox \
     wpctl brightnessctl playerctl nmcli bluetoothctl \
-    cliphist wl-paste hyprshot slurp gsettings hypridle
+    cliphist wl-paste hyprshot slurp gsettings hypridle libinput
 do
     if command -v "$cmd" >/dev/null 2>&1; then
         printf '  ok   %s\n' "$cmd"
@@ -81,6 +81,13 @@ Two things this script deliberately does not do:
 
       gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3'
       gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+
+Continuous four-finger gestures need read access to the input devices:
+
+    sudo usermod -aG input "$USER"
+
+That takes effect at your next login. Without it bin/island-gestures
+exits quietly and the gestures simply do nothing.
 
 Log out and pick Hyprland at your display manager.
 NOTE

@@ -33,8 +33,8 @@ Singleton {
     }
 
     function toggle() {
-        act.command = ["nmcli", "radio", "wifi", wifiEnabled ? "off" : "on"];
-        act.running = true;
+        Quickshell.execDetached(["nmcli", "radio", "wifi", wifiEnabled ? "off" : "on"]);
+        refreshLater.restart();
     }
 
     function refresh() { poll.running = true }
@@ -58,16 +58,16 @@ Singleton {
     }
 
     function disconnect() {
-        act.command = ["sh", "-c",
+        Quickshell.execDetached(["sh", "-c",
             "nmcli -t -f DEVICE,TYPE device status | grep ':wifi$' | cut -d: -f1 "
-            + "| xargs -r -n1 nmcli device disconnect"];
-        act.running = true;
+            + "| xargs -r -n1 nmcli device disconnect"]);
+        refreshLater.restart();
     }
 
     function forget(name) {
         const q = name.replace(/'/g, "'\\''");
-        act.command = ["sh", "-c", "nmcli connection delete id '" + q + "'"];
-        act.running = true;
+        Quickshell.execDetached(["sh", "-c", "nmcli connection delete id '" + q + "'"]);
+        refreshLater.restart();
     }
 
     Process {
@@ -174,5 +174,14 @@ Singleton {
         target: "network"
         function status(): string { return root.label + " (" + root.strength + "%)" }
         function scan(): void { root.scan() }
+    }
+
+    // Actions run detached rather than through a shared Process: a
+    // Process that is still running drops the next command assigned
+    // to it. State is re-read shortly after instead of on exit.
+    Timer {
+        id: refreshLater
+        interval: 400
+        onTriggered: { root.refresh(); root.scan(); }
     }
 }

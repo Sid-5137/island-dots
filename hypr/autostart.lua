@@ -18,6 +18,10 @@ hl.on("hyprland.start", function()
     -- Clipboard history daemon.
     hl.exec_cmd("wl-paste --watch cliphist store")
 
+    -- Continuous four-finger gestures. Needs membership of the input
+    -- group; it exits quietly if it cannot read the devices.
+    hl.exec_cmd("~/island-dots/bin/island-gestures")
+
     -- The shell itself.
     hl.exec_cmd("quickshell -c island")
 

@@ -56,6 +56,7 @@ from it.
 - 🛡️ **Polkit agent** — authorization prompts in the island, no GTK dialog
 - 📋 **Clipboard history** — filterable, keyboard-driven, backed by cliphist
 - 🎛️ **Live compositor control** — blur, gaps, borders and input applied without a reload
+- ✋ **Continuous gestures** — four-finger swipes that track your fingers, not just fire on release
 - 🖥️ **Smart visibility** — hides only when a window actually reaches it
 - 🎵 **Media** — MPRIS with artwork and transport
 - 🔋 **Circular battery** — a gauge, not a battery outline
@@ -105,6 +106,12 @@ hypridle NetworkManager bluez
 
 Fonts: JetBrainsMono Nerd Font.
 
+Four-finger gestures need input device access:
+
+```bash
+sudo usermod -aG input "$USER"
+```
+
 **Two things that will bite you**
 
 The shell is the notification daemon and the polkit agent. mako, dunst
@@ -133,6 +140,7 @@ and merged against them on every start — so an update that adds a
 setting picks it up without the file being deleted.
 
 ```
+bin/                  island-gestures, the libinput gesture daemon
 hypr/                 Hyprland config, one module per concern
 matugen/              Wallpaper → palette templates
 quickshell/island/
@@ -217,6 +225,10 @@ Things that cost real time to work out:
       `/etc/pam.d` file; `Config.island.pamConfig` selects it.
 - [ ] **Per-monitor wallpapers.** One wallpaper is applied to every
       screen.
+- [ ] **Continuous gestures upstream.** `bin/island-gestures` reads
+      libinput directly because Hyprland's `gesture` action fires once
+      on release. A progress callback for custom gestures would make
+      the daemon unnecessary.
 
 ---
 

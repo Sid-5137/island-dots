@@ -23,8 +23,8 @@ Singleton {
         : "On"
 
     function toggle() {
-        act.command = ["bluetoothctl", "power", powered ? "off" : "on"];
-        act.running = true;
+        Quickshell.execDetached(["bluetoothctl", "power", powered ? "off" : "on"]);
+        refreshLater.restart();
     }
 
     function refresh() { poll.running = true }
@@ -44,8 +44,8 @@ Singleton {
     function forget(mac)     { runCtl("remove " + mac) }
 
     function runCtl(args) {
-        act.command = ["sh", "-c", "bluetoothctl " + args];
-        act.running = true;
+        Quickshell.execDetached(["sh", "-c", "bluetoothctl " + args]);
+        refreshLater.restart();
     }
 
     Process {
@@ -88,8 +88,6 @@ Singleton {
         onExited: { root.scanning = false; root.refresh(); }
     }
 
-    Process { id: act; running: false; onExited: root.refresh() }
-
     Timer {
         running: true
         interval: 6000
@@ -101,5 +99,14 @@ Singleton {
         target: "bluetooth"
         function status(): string { return root.label }
         function scan(): void { root.scan() }
+    }
+
+    // Actions run detached rather than through a shared Process: a
+    // Process that is still running drops the next command assigned
+    // to it. State is re-read shortly after instead of on exit.
+    Timer {
+        id: refreshLater
+        interval: 400
+        onTriggered: root.refresh()
     }
 }

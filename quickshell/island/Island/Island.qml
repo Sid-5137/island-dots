@@ -19,13 +19,20 @@ Variants {
 
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.namespace: "island-bar"
-        exclusiveZone: 0
+        // Only the collapsed height, and only in "always" mode. A zone
+        // that tracked the pill would shove every window down each time
+        // it expanded.
+        exclusiveZone: (Config.island.reserveSpace
+                        && Config.island.visibility === "always")
+            ? Config.island.idleHeight + Config.island.topMargin * 2
+            : 0
 
         // Only grab the keyboard while searching. Holding exclusive
         // focus the rest of the time would swallow every keystroke
         // meant for the focused app.
         WlrLayershell.keyboardFocus: (searching || sessionOpen || centreOpen
                                       || picker !== "" || Polkit.active || clipOpen
+                                      || switcherOpen || overviewOpen
                                       || root.expanded)
             ? WlrKeyboardFocus.Exclusive
             : WlrKeyboardFocus.None
@@ -35,6 +42,106 @@ Variants {
         property bool expanded: false
 
         property string picker: ""          // "" | wallpaper | theme | icon
+
+        readonly property var faces: ["clock", "media", "system"]
+        readonly property string face: Config.island.face
+
+        // Touchpads deliver a burst of small deltas per gesture, so a
+        // threshold and a cooldown turn one flick into one step rather
+        // than four.
+        property int scrollAccum: 0
+
+        // The indicator is a confirmation of a change, not a permanent
+        // fixture: shown on every hover it reads as a second row of
+        // workspace dashes.
+        property bool faceHint: false
+
+        // ── Switcher and overview ────────────────────────────
+
+        property bool switcherOpen: false
+        property int switchIndex: 0
+        property bool overviewOpen: false
+
+        readonly property bool backdrop: switcherOpen || overviewOpen
+
+        readonly property var switchTarget:
+            Wm.allWindows.length > switchIndex ? Wm.allWindows[switchIndex] : null
+
+        function openSwitcher(step) {
+            Wm.refresh();
+            if (!switcherOpen) {
+                switcherOpen = true;
+                // Start on the previously focused window, which is what
+                // a single Alt+Tab is asking for.
+                switchIndex = Wm.allWindows.length > 1 ? 1 : 0;
+            } else {
+                const n = Wm.allWindows.length;
+                if (n > 0) switchIndex = (switchIndex + step + n) % n;
+            }
+            // Commits itself once tabbing stops. Detecting the Alt
+            // release would need a bind on the bare modifier, which
+            // makes the compositor swallow every other Alt shortcut.
+            switchCommit.restart();
+        }
+
+        Timer {
+            id: switchCommit
+            interval: Config.island.switcherCommitDelay
+            onTriggered: root.activateSwitch()
+        }
+
+        function activateSwitch() {
+            switchCommit.stop();
+            if (switchTarget) Wm.focusWindow(switchTarget.address);
+            switcherOpen = false;
+        }
+
+        function cancelSwitch() {
+            switchCommit.stop();
+            switcherOpen = false;
+        }
+
+        function openOverview() {
+            Wm.refresh();
+            overviewOpen = true;
+            searching = false;
+            sessionOpen = false;
+            centreOpen = false;
+            clipOpen = false;
+            picker = "";
+            expanded = false;
+        }
+
+        function closeOverview() { overviewOpen = false }
+
+        function cycleFace(delta) {
+            if (scrollCooldown.running) return;
+
+            scrollAccum += delta;
+            if (Math.abs(scrollAccum) < 120) return;
+
+            const step = scrollAccum > 0 ? -1 : 1;
+            scrollAccum = 0;
+            scrollCooldown.restart();
+
+            const n = faces.length;
+            const i = faces.indexOf(Config.island.face);
+            Config.island.face = faces[((i < 0 ? 0 : i) + step + n) % n];
+
+            faceHint = true;
+            hintTimer.restart();
+        }
+
+        Timer {
+            id: hintTimer
+            interval: 1400
+            onTriggered: root.faceHint = false
+        }
+
+        Timer {
+            id: scrollCooldown
+            interval: 220
+        }
 
         // The mode's own filtered list isn't reachable from the
         // geometry table, so the count is computed here too.
@@ -207,11 +314,12 @@ Variants {
         // margin, or the bottom edge gets clipped by the window.
         //
         //   control centre + media strip + top margin + slack
-        implicitHeight: Math.max(
+        implicitHeight: backdrop ? screen.height : Math.max(
                             Config.island.controlHeight + Config.island.mediaStripHeight,
                             Config.island.pickerHeight,
                             Config.island.centreHeight,
                             Config.island.authHeight,
+                            Config.island.switcherHeight,
                             Config.island.searchFieldHeight
                               + Config.island.clipMaxRows * Config.island.clipRowHeight,
                             Config.island.searchFieldHeight
@@ -281,7 +389,8 @@ Variants {
             || centreOpen
 
         mask: Region {
-            item: root.revealed ? island : revealStrip
+            item: root.backdrop ? backdropArea
+                : (root.revealed ? island : revealStrip)
         }
 
         property bool autoExpanded: false
@@ -345,6 +454,31 @@ Variants {
             }
         }
 
+        // Behind the pill, only while the switcher or overview is up.
+        // In the same window as the island so it can never stack above
+        // it — a separate Top-layer surface had no guaranteed order and
+        // ended up covering the pill, which is what made those modes
+        // look frozen.
+        Rectangle {
+            id: backdropArea
+            anchors.fill: parent
+            color: "#000000"
+            opacity: root.backdrop ? Config.island.backdropDim : 0
+            visible: opacity > 0.01
+
+            Behavior on opacity {
+                NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.cancelSwitch();
+                    root.closeOverview();
+                }
+            }
+        }
+
         Item {
             id: revealStrip
             anchors.top: parent.top
@@ -383,6 +517,8 @@ Variants {
                 if (root.notice !== null && !root.searching && !root.sessionOpen
                     && !root.centreOpen && root.picker === "")
                     return "notify";
+                if (root.switcherOpen) return "switcher";
+                if (root.overviewOpen) return "overview";
                 if (root.clipOpen) return "clipboard";
                 if (root.centreOpen) return "centre";
                 if (root.picker !== "") return "picker";
@@ -430,6 +566,8 @@ Variants {
             readonly property bool isOsd: mode === "osd"
             readonly property bool isAuth: mode === "auth"
             readonly property bool isClipboard: mode === "clipboard"
+            readonly property bool isSwitcher: mode === "switcher"
+            readonly property bool isOverview: mode === "overview"
             // Expanded and control are the same thing.
             readonly property bool isControl: mode === "expanded"
 
@@ -483,6 +621,15 @@ Variants {
                     centre:   { w: Config.island.centreWidth,  h: Config.island.centreHeight },
                     osd:      { w: Config.island.osdWidth,     h: Config.island.osdHeight },
                     auth:     { w: Config.island.authWidth,    h: Config.island.authHeight },
+                    switcher: { w: Math.min(Config.island.switcherWidth,
+                                            Math.max(260,
+                                                     Wm.allWindows.length
+                                                     * (Config.island.switcherTile + 8) + 32)),
+                                h: Config.island.switcherHeight },
+                    overview: { w: Math.max(260,
+                                            Wm.workspaces.length
+                                            * (Config.island.overviewCard + 12) + 24),
+                                h: Config.island.overviewCard * 0.68 + 36 },
                     clipboard: { w: Config.island.clipWidth,
                                  h: Config.island.searchFieldHeight
                                     + Math.min(root.clipRows, Config.island.clipMaxRows)
@@ -549,6 +696,36 @@ Variants {
                 OsdMode     { win: root; island: island; pill: pill }
                 AuthMode    { win: root; island: island; pill: pill }
                 ClipboardMode { win: root; island: island; pill: pill }
+                SwitcherMode  { win: root; island: island; pill: pill }
+                OverviewMode  { win: root; island: island; pill: pill }
+
+                // Scroll over the collapsed pill cycles the face. While
+                // an OSD is up it adjusts that value instead, which is
+                // what the gesture already means in that moment.
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+
+                    onWheel: function(event) {
+                        const dy = event.angleDelta.y;
+
+                        if (Osd.active) {
+                            const step = dy > 0 ? 5 : -5;
+                            if (Osd.kind === "brightness") {
+                                Audio.setBrightness(
+                                    Math.max(0, Math.min(100, Audio.brightness + step)));
+                                Osd.show("brightness", Audio.brightness, false);
+                            } else {
+                                Audio.setVolume(
+                                    Math.max(0, Math.min(100, Audio.volume + step)));
+                                Osd.show("volume", Audio.volume, Audio.muted);
+                            }
+                            return;
+                        }
+
+                        if (island.mode === "idle" || island.mode === "compact")
+                            root.cycleFace(dy);
+                    }
+                }
 
                 HoverHandler {
                     id: pillHover
@@ -616,6 +793,26 @@ Variants {
             }
             function show(): void { root.openCentre() }
             function hide(): void { root.closeCentre() }
+        }
+
+        IpcHandler {
+            target: "switcher"
+
+            function next(): void { root.openSwitcher(1) }
+            function previous(): void { root.openSwitcher(-1) }
+            function confirm(): void { root.activateSwitch() }
+            function cancel(): void { root.cancelSwitch() }
+        }
+
+        IpcHandler {
+            target: "overview"
+
+            function toggle(): void {
+                if (root.overviewOpen) root.closeOverview();
+                else root.openOverview();
+            }
+            function show(): void { root.openOverview() }
+            function hide(): void { root.closeOverview() }
         }
 
         IpcHandler {

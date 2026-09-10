@@ -56,15 +56,13 @@ Singleton {
         target: "osd"
 
         function volumeUp(): void {
-            const v = Math.min(100, Audio.volume + Config.island.osdStep);
-            Audio.setVolume(v);
-            root.show("volume", v, false);
+            Audio.stepVolume(Config.island.osdStep);
+            root.show("volume", Audio.volume, Audio.muted);
         }
 
         function volumeDown(): void {
-            const v = Math.max(0, Audio.volume - Config.island.osdStep);
-            Audio.setVolume(v);
-            root.show("volume", v, false);
+            Audio.stepVolume(-Config.island.osdStep);
+            root.show("volume", Audio.volume, Audio.muted);
         }
 
         function volumeMute(): void {
@@ -78,15 +76,13 @@ Singleton {
         }
 
         function brightnessUp(): void {
-            const v = Math.min(100, Audio.brightness + Config.island.osdStep);
-            Audio.setBrightness(v);
-            root.show("brightness", v, false);
+            Audio.stepBrightness(Config.island.osdStep);
+            root.show("brightness", Audio.brightness, false);
         }
 
         function brightnessDown(): void {
-            const v = Math.max(0, Audio.brightness - Config.island.osdStep);
-            Audio.setBrightness(v);
-            root.show("brightness", v, false);
+            Audio.stepBrightness(-Config.island.osdStep);
+            root.show("brightness", Audio.brightness, false);
         }
     }
 }
