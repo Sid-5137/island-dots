@@ -114,4 +114,4 @@ hl.bind("ALT + Print",         hl.dsp.exec_cmd("hyprshot -z -m region --clipboar
 -- Same set on SUPER, since Print is awkward on some laptop layouts.
 hl.bind(mod .. " + Print",     hl.dsp.exec_cmd("hyprshot -z -m region -o ~/Pictures/Screenshots"))
 
-hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd("hyprctl dispatch exit"))
+hl.bind(mod .. " + SHIFT + E", hl.dsp.exit())

@@ -31,7 +31,10 @@ Singleton {
             case "logout":
                 // Ask the compositor first; it exits cleanly and lets
                 // apps save. loginctl is the blunt fallback.
-                cmd = "hyprctl dispatch exit || loginctl terminate-user \"$USER\"";
+                // Lua, not a bare dispatcher name: hyprctl wraps the
+                // argument as hl.dispatch(<arg>).
+                cmd = "hyprctl dispatch 'hl.dsp.exit()' "
+                    + "|| loginctl terminate-user \"$USER\"";
                 break;
             case "suspend":
                 cmd = "systemctl suspend || loginctl suspend";

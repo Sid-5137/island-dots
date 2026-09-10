@@ -21,9 +21,9 @@ Item {
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    anchors.leftMargin: 18
-    anchors.rightMargin: 18
-    anchors.bottomMargin: 14
+    anchors.leftMargin: 12
+    anchors.rightMargin: 12
+    anchors.bottomMargin: 12
     height: Config.island.mediaStripHeight - 14
 
     opacity: (island.isControl && island.media
@@ -34,19 +34,21 @@ Item {
         NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
     }
 
+    // Same lift off the shared surface as the control centre's other
+    // modules, so it reads as part of the set rather than as content
+    // dropped onto the panel.
     Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 1
-        color: Theme.outlineVariant
+        anchors.fill: parent
+        radius: Math.max(8, Config.appearance.panelRadius - 2)
+        color: Qt.rgba(1, 1, 1, 0.06)
+        z: -1
     }
 
     Rectangle {
         id: stripArt
         anchors.left: parent.left
+        anchors.leftMargin: 12
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: 6
         width: 48; height: 48
         radius: 8
         color: Theme.surfaceHigh
@@ -102,6 +104,7 @@ Item {
     Row {
         id: stripControls
         anchors.right: parent.right
+        anchors.rightMargin: 14
         anchors.verticalCenter: stripArt.verticalCenter
         spacing: 18
 

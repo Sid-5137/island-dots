@@ -200,8 +200,32 @@ manager, a terminal.
 
 Things that cost real time to work out:
 
-- `hyprctl keyword` does not work with Hyprland's Lua config parser.
-  Use `hyprctl eval` with an `hl.config({...})` block.
+- **Hyprland's Lua migration breaks things silently.** Three separate
+  APIs stopped working with no error and no log line:
+  - `hyprctl keyword` — rejected outright with "keyword can't work
+    with non-legacy parsers". Use `hyprctl eval` with an
+    `hl.config({...})` block.
+  - `hyprctl dispatch workspace 2` — wrapped as
+    `hl.dispatch(workspace 2)`, which is not valid Lua. Dispatchers
+    take Lua now: `hl.dsp.focus({ workspace = 2 })`.
+  - Argument names changed with it. Focusing a window is
+    `hl.dsp.focus({ window = "address:0x..." })`; a top-level
+    `address =` is accepted and silently ignored, which is worse than
+    an error.
+
+  After a Hyprland update, test each of these by hand before assuming
+  the shell is at fault:
+
+  ```bash
+  hyprctl dispatch 'hl.dsp.focus({ workspace = 2 })'
+  hyprctl eval 'hl.config({ decoration = { rounding = 12 } })'
+  qs -c island ipc call wm windows      # then focus one by address
+  ```
+
+- Do not make the pill's own properties conditional per mode. Colour,
+  border width and `clip` switching mid-morph were the cause of every
+  flicker in the control centre. Content inside a mode can vary
+  freely; the surface it sits on should not.
 - A `PropertyChanges` that overrides a *bound* property replaces the
   binding rather than animating through it. The island uses plain
   bindings and no QML `States` for that reason.
@@ -219,6 +243,16 @@ Things that cost real time to work out:
 ---
 
 ## Roadmap
+
+- [ ] **Alt+Tab does not reliably change focus.** The pieces all work
+      in isolation: `wm windows` lists every window with its address,
+      and `wm focus <address>` moves focus correctly both within a
+      workspace and across workspaces. The switcher opens, selects,
+      and calls the same function — but focus often does not move.
+      Suspects not yet ruled out: the commit timer firing between two
+      Tab presses, `repeating: true` on the bind not keeping the
+      switcher open, or `Qt.callLater` dispatching after the surface
+      is down but before the compositor is ready to accept it.
 
 - [ ] **Multi-monitor.** `Variants` creates one island per screen, but
       Settings and the notification popup are pinned to

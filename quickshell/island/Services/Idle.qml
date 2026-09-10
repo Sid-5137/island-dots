@@ -31,7 +31,7 @@ Singleton {
                  + "general {\n"
                  + "    lock_cmd = " + lock + "\n"
                  + "    before_sleep_cmd = " + lock + "\n"
-                 + "    after_sleep_cmd = hyprctl dispatch dpms on\n"
+                 + "    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ state = \"on\" })'\n"
                  + "    ignore_dbus_inhibit = false\n"
                  + "}\n";
 
@@ -52,8 +52,8 @@ Singleton {
             if (i.screenOffTimeout > 0) {
                 conf += "\nlistener {\n"
                      +  "    timeout = " + i.screenOffTimeout + "\n"
-                     +  "    on-timeout = hyprctl dispatch dpms off\n"
-                     +  "    on-resume = hyprctl dispatch dpms on\n"
+                     +  "    on-timeout = hyprctl dispatch 'hl.dsp.dpms({ state = \"off\" })'\n"
+                     +  "    on-resume = hyprctl dispatch 'hl.dsp.dpms({ state = \"on\" })'\n"
                      +  "}\n";
             }
             if (i.suspendTimeout > 0) {

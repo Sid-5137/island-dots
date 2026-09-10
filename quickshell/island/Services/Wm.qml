@@ -95,7 +95,17 @@ Singleton {
                     // the previous window rather than an arbitrary one.
                     root.allWindows = mapped
                         .filter(c => c.workspace && c.workspace.id > 0)
-                        .sort((a, b) => (a.focusHistoryID ?? 99) - (b.focusHistoryID ?? 99))
+                        // Current workspace first, then focus history
+                        // within each group. Pure focus order sends the
+                        // first Tab to whatever you last used, which
+                        // may be on another workspace — so a window
+                        // sitting next to you needs two presses.
+                        .sort((a, b) => {
+                            const aHere = a.workspace.id === root.activeId ? 0 : 1;
+                            const bHere = b.workspace.id === root.activeId ? 0 : 1;
+                            if (aHere !== bHere) return aHere - bHere;
+                            return (a.focusHistoryID ?? 99) - (b.focusHistoryID ?? 99);
+                        })
                         .map(c => ({
                             address: c.address,
                             cls: c.class || c.initialClass || "",
