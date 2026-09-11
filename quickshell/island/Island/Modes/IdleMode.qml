@@ -2,6 +2,8 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
+import Quickshell.Services.SystemTray
+
 import "root:/Services"
 
 // The collapsed pill. Scrolling over it cycles the face; hovering adds
@@ -86,6 +88,52 @@ Row {
             }
         }
 
+        // Playing indicator. Sits beside the workspaces on every face,
+        // so a glance at the collapsed pill says whether something is
+        // running without having to scroll to the media face.
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+            // Not on the media face — that face draws its own bars, and
+            // two sets side by side is just noise.
+            visible: island.media && win.face !== "media"
+            width: visible ? implicitWidth : 0
+
+            Repeater {
+                model: 3
+
+                Rectangle {
+                    id: liveBar
+
+                    // Declared, not assumed: without it the stagger
+                    // below computes a NaN duration and the animation
+                    // never starts.
+                    required property int index
+
+                    width: 2
+                    height: 9
+                    radius: 1
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Player.playing ? Theme.primary : Theme.outline
+
+                    Behavior on color { ColorAnimation { duration: 200 } }
+
+                    SequentialAnimation on height {
+                        running: Player.playing && hoverLeft.shown
+                        loops: Animation.Infinite
+
+                        PauseAnimation { duration: liveBar.index * 120 }
+                        NumberAnimation {
+                            to: 14; duration: 320; easing.type: Easing.InOutQuad
+                        }
+                        NumberAnimation {
+                            to: 5; duration: 320; easing.type: Easing.InOutQuad
+                        }
+                    }
+                }
+            }
+        }
+
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: 1
@@ -137,19 +185,39 @@ Row {
 
             Repeater {
                 model: 3
+
                 Rectangle {
+                    id: bar
+
+                    // Declared, not assumed. A delegate only receives
+                    // `index` implicitly under some conditions in Qt 6;
+                    // where it doesn't, the stagger below computes a
+                    // NaN duration and the whole animation silently
+                    // fails to start.
+                    required property int index
+
                     width: 2
-                    height: 4
+                    // Resting height is what a paused player shows, so
+                    // it has to be legible on its own.
+                    height: 9
                     anchors.verticalCenter: parent.verticalCenter
-                    color: Theme.primary
+                    color: Player.playing ? Theme.primary : Theme.outline
                     radius: 1
+
+                    Behavior on color { ColorAnimation { duration: 200 } }
 
                     SequentialAnimation on height {
                         running: Player.playing && win.face === "media"
                         loops: Animation.Infinite
-                        PauseAnimation { duration: index * 120 }
-                        NumberAnimation { to: 11; duration: 320; easing.type: Easing.InOutQuad }
-                        NumberAnimation { to: 4;  duration: 320; easing.type: Easing.InOutQuad }
+                        alwaysRunToEnd: false
+
+                        PauseAnimation { duration: bar.index * 120 }
+                        NumberAnimation {
+                            to: 13; duration: 320; easing.type: Easing.InOutQuad
+                        }
+                        NumberAnimation {
+                            to: 5; duration: 320; easing.type: Easing.InOutQuad
+                        }
                     }
                 }
             }
@@ -176,39 +244,6 @@ Row {
             font.pixelSize: Config.island.fontSize - 1
             elide: Text.ElideRight
             width: visible ? Math.min(implicitWidth, 130) : 0
-            renderType: Text.NativeRendering
-        }
-    }
-
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 14
-        visible: win.face === "system"
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: Network.icon
-            color: Network.connected ? Theme.primary : Theme.outline
-            font.family: Theme.fontFamily
-            font.pixelSize: Config.island.fontSize
-        }
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: Audio.volumeIcon + "  " + (Audio.muted ? "--" : Audio.volume)
-            color: Theme.textDim
-            font.family: Theme.fontFamily
-            font.pixelSize: Config.island.fontSize - 1
-            renderType: Text.NativeRendering
-        }
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: Battery.present
-            text: Battery.icon + "  " + Battery.level + "%"
-            color: Battery.low ? Theme.error : Theme.textDim
-            font.family: Theme.fontFamily
-            font.pixelSize: Config.island.fontSize - 1
             renderType: Text.NativeRendering
         }
     }
@@ -253,6 +288,89 @@ Row {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Wm.switchTo(modelData.id)
+                }
+            }
+        }
+    }
+
+    Row {
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 10
+        visible: win.face === "tray"
+
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: Tray.count === 0
+            text: "No tray icons"
+            color: Theme.outline
+            font.family: Theme.fontFamily
+            font.pixelSize: Config.island.fontSize - 1
+            renderType: Text.NativeRendering
+        }
+
+        Repeater {
+            model: Tray.items
+
+            Item {
+                id: trayItem
+                required property var modelData
+
+                readonly property bool attention:
+                    modelData.status === SystemTrayStatus.NeedsAttention
+
+                width: 18
+                height: 18
+                anchors.verticalCenter: parent.verticalCenter
+
+                Image {
+                    anchors.fill: parent
+                    source: trayItem.modelData.icon
+                    asynchronous: true
+                    fillMode: Image.PreserveAspectFit
+                    opacity: trayMouse.containsMouse ? 1 : 0.8
+
+                    Behavior on opacity { NumberAnimation { duration: 120 } }
+                }
+
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: -1
+                    width: 6
+                    height: 6
+                    radius: 3
+                    visible: trayItem.attention
+                    color: Theme.error
+                }
+
+                MouseArea {
+                    id: trayMouse
+                    anchors.fill: parent
+                    anchors.margins: -3
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+
+                    onClicked: function(mouse) {
+                        const item = trayItem.modelData;
+
+                        if (mouse.button === Qt.RightButton || item.onlyMenu) {
+                            if (item.hasMenu) {
+                                // Relative to the window, not the icon.
+                                const p = trayItem.mapToItem(
+                                    null, 0, trayItem.height + 8);
+                                item.display(win, p.x, p.y);
+                            }
+                            return;
+                        }
+
+                        if (mouse.button === Qt.MiddleButton) {
+                            item.secondaryActivate();
+                            return;
+                        }
+
+                        item.activate();
+                    }
                 }
             }
         }

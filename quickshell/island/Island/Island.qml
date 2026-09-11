@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
 import Quickshell.Widgets
+import Quickshell.Services.SystemTray
 import QtQuick
 
 import "root:/Services"
@@ -46,8 +47,12 @@ Variants {
 
         property string picker: ""          // "" | wallpaper | theme | icon
 
-        readonly property var faces: ["clock", "media", "system"]
-        readonly property string face: Config.island.face
+        readonly property var faces: ["clock", "media", "tray"]
+        // Falls back if the stored value names a face that no longer
+        // exists — a settings.json written by an older version can.
+        readonly property string face:
+            faces.indexOf(Config.island.face) !== -1
+                ? Config.island.face : "clock"
 
         // Touchpads deliver a burst of small deltas per gesture, so a
         // threshold and a cooldown turn one flick into one step rather
@@ -556,6 +561,8 @@ Variants {
             Rectangle {
                 id: pill
 
+                anchors.left: parent.left
+
                 MouseArea {
                     id: pillClick
                     anchors.fill: parent
@@ -586,12 +593,22 @@ Variants {
                     idle:     { w: collapsedWidth, h: Config.island.idleHeight },
                     compact:  { w: Math.max(Config.island.compactWidth, collapsedWidth),
                                 h: Config.island.compactHeight },
+                    // Every term is coerced and defaulted. One
+                    // undefined value here makes the whole sum NaN,
+                    // which leaves the pill with no height at all —
+                    // and with clip off in this mode, the content then
+                    // renders outside the shape instead of vanishing.
+                    //
+                    // The tray no longer lives in the control centre,
+                    // so its term is gone.
                     expanded: { w: Config.island.controlWidth,
                                 h: Config.island.controlHeight
+                                   + ((Calendar.currentRows || 5) - 5) * 32
                                    + (island.media ? Config.island.mediaStripHeight : 0)
-                                   + (Calendar.available && Calendar.today.length > 0
-                                      ? Math.min(Calendar.today.length, 3) * 20 + 12 : 0)
-                                   + (Tray.count > 0 ? 40 : 0) },
+                                   + (Calendar.available && Calendar.today
+                                      && Calendar.today.length > 0
+                                      ? Math.min(Calendar.today.length, 3) * 20 + 12
+                                      : 0) },
                     search:   { w: Config.island.searchWidth,
                                 h: Config.island.searchFieldHeight
                                    + Math.min(Search.results.length, Config.island.searchMaxRows)
@@ -648,7 +665,7 @@ Variants {
                 // past it, so a growing clip rectangle sweeps across
                 // their edges and cuts them frame by frame — which is
                 // the flicker around the outline. Off for that mode.
-                clip: island.mode !== "expanded"
+                clip: true
 
                 // The border fades rather than switching off. Toggling
                 // width mid-morph snaps a 1px outline away partway
@@ -731,12 +748,30 @@ Variants {
                     }
                 }
 
-                HoverHandler {
+                // A MouseArea rather than a HoverHandler, and declared
+                // last so it sits above every control.
+                //
+                // A child MouseArea with hoverEnabled consumes hover,
+                // so a HoverHandler on the pill stopped reporting
+                // hovered whenever the cursor was over a calendar day
+                // cell or a tile — and the collapse timer started as
+                // if the cursor had left the island entirely.
+                //
+                // acceptedButtons: NoButton means this sees hover but
+                // never takes a click, so everything underneath still
+                // gets its own presses.
+                MouseArea {
                     id: pillHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton
+                    propagateComposedEvents: true
 
-                    onHoveredChanged: {
-                        root.touch(hovered);
-                        if (hovered) collapseTimer.stop();
+                    readonly property bool hovered: containsMouse
+
+                    onContainsMouseChanged: {
+                        root.touch(containsMouse);
+                        if (containsMouse) collapseTimer.stop();
                         else if (root.expanded && Config.island.collapseDelay > 0)
                             collapseTimer.restart();
                     }
@@ -767,6 +802,38 @@ Variants {
             function search(): void { root.openSearch() }
             function attention(on: bool): void { root.demandsAttention = on }
             function state(): string { return island.mode }
+
+            // Everything the collapse decision reads. A closing control
+            // centre is one of: the hover flag dropping, the collapse
+            // timer running, or expanded being cleared elsewhere.
+            function hover(): string {
+                return "expanded=" + root.expanded
+                    + " autoExpanded=" + root.autoExpanded
+                    + " pillHover=" + pillHover.containsMouse
+                    + " revealArea=" + revealArea.containsMouse
+                    + " latch=" + root.hoverLatch
+                    + " revealed=" + root.revealed
+                    + " collapseTimer=" + collapseTimer.running
+                    + " collapseDelay=" + Config.island.collapseDelay
+                    + " mode=" + island.mode;
+            }
+
+            // Every term the media strip's visibility reads, so a
+            // missing strip does not need guessing at.
+            function media(): string {
+                return "available=" + Player.available
+                    + " title='" + Player.title + "'"
+                    + " islandMedia=" + island.media
+                    + " isControl=" + island.isControl
+                    + " mode=" + island.mode
+                    + " pillH=" + Math.round(pill.height)
+                    + " needH=" + Math.round(Config.island.controlHeight * 0.9)
+                    + " controlH=" + Config.island.controlHeight
+                    + " stripH=" + Config.island.mediaStripHeight
+                    + " expectedPillH="
+                    + (Config.island.controlHeight
+                       + (island.media ? Config.island.mediaStripHeight : 0));
+            }
 
             function why(): string {
                 const r = root.islandRect;

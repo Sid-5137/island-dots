@@ -175,7 +175,14 @@ Singleton {
 
                 // Collapse this long after the cursor leaves. 0 keeps
                 // it open until clicked again.
-                property int collapseDelay: 400
+                // 0 disables closing on hover-out, which is the
+                // default: the control centre holds a calendar and
+                // sliders whose own hover areas make the pill's hover
+                // state unreliable, and a panel that closes because
+                // the pointer grazed the wrong pixel is worse than one
+                // you dismiss deliberately. Escape or a second click
+                // on the pill closes it.
+                property int collapseDelay: 0
 
                 // How long a track change pops the island open.
                 property int attentionDuration: 2500
@@ -208,6 +215,7 @@ Singleton {
                 property int fontWeight: 700
                 property bool showWorkspaces: true
 
+
                 // Which face the collapsed pill shows. Scrolling over
                 // the pill cycles it; the choice persists.
                 property string face: "clock"
@@ -237,10 +245,10 @@ Singleton {
                 property int sessionHeight: 128
 
                 // Control centre: calendar plus quick toggles.
-                property int controlWidth: 528
-                property int controlHeight: 390
+                property int controlWidth: 564
+                property int controlHeight: 369
                 // Added to the expanded height when media is playing.
-                property int mediaStripHeight: 88
+                property int mediaStripHeight: 60
 
                 // Quick toggles with no daemon behind them yet. Kept
                 // here so the tiles have somewhere to persist, and so

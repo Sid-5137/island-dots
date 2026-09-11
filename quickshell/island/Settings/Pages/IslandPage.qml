@@ -79,9 +79,9 @@ Column {
         description: "Scroll over the pill to cycle."
         current: Config.island.face
         options: [
-            { value: "clock",  label: "Clock" },
-            { value: "media",  label: "Media" },
-            { value: "system", label: "System" }
+            { value: "clock", label: "Clock" },
+            { value: "media", label: "Media" },
+            { value: "tray",  label: "Tray" }
         ]
         onSelected: function(v) { Config.island.face = v }
     }

@@ -18,16 +18,28 @@ Item {
     required property var win      // the PanelWindow
     required property var island   // mode flags and media state
     required property var pill     // the shape, for geometry gates
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    anchors.leftMargin: 12
-    anchors.rightMargin: 12
-    anchors.bottomMargin: 12
-    height: Config.island.mediaStripHeight - 14
+    // Positioned rather than anchored. anchors.bottom put the strip at
+    // the top of the panel, which means something else was setting the
+    // vertical anchor first — an explicit y cannot be overridden that
+    // way, and reads unambiguously.
+    x: 12
+    width: pill.width - 24
 
-    opacity: (island.isControl && island.media
-              && pill.height > Config.island.controlHeight * 0.9) ? 1 : 0
+    // Positioned from the top of its band rather than from the bottom
+    // of the pill. Deriving both y and height from the same number made
+    // every adjustment cancel itself out: making the band taller moved
+    // the strip down by exactly as much as it grew.
+    //
+    // The band is mediaStripHeight; the strip sits 12 into it and
+    // leaves 12 below.
+    height: Config.island.mediaStripHeight + 2
+    y: pill.height - Config.island.mediaStripHeight - 14
+
+    // No height gate. It was there to hold the strip back until the
+    // pill had grown, but the opacity animation already covers the
+    // morph, and a gate comparing against a configured height fails
+    // silently the moment that height and the real one disagree.
+    opacity: (island.isControl && island.media) ? 1 : 0
     visible: opacity > 0.01
 
     Behavior on opacity {
@@ -39,9 +51,60 @@ Item {
     // dropped onto the panel.
     Rectangle {
         anchors.fill: parent
-        radius: Math.max(8, Config.appearance.panelRadius - 2)
-        color: Qt.rgba(1, 1, 1, 0.06)
+        radius: Config.appearance.panelRadius
+        color: {
+            const c = Qt.color(Theme.surfaceContainer);
+            return Qt.rgba(c.r, c.g, c.b, Config.island.opacity);
+        }
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.12)
         z: -1
+    }
+
+    // A small equaliser between the artwork and the title. Reads as
+    // "this is playing" faster than the transport icons do, and gives
+    // the strip something alive in it while a track runs.
+    Row {
+        id: stripBars
+        anchors.left: stripArt.right
+        anchors.leftMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 3
+        visible: Player.available
+
+        Repeater {
+            model: 4
+
+            Rectangle {
+                id: eqBar
+
+                // Declared rather than assumed: without it the stagger
+                // below computes a NaN duration and the animation
+                // never starts.
+                required property int index
+
+                width: 3
+                height: 10
+                radius: 1.5
+                anchors.verticalCenter: parent.verticalCenter
+                color: Player.playing ? Theme.primary : Theme.outline
+
+                Behavior on color { ColorAnimation { duration: 200 } }
+
+                SequentialAnimation on height {
+                    running: Player.playing && island.isControl
+                    loops: Animation.Infinite
+
+                    PauseAnimation { duration: eqBar.index * 110 }
+                    NumberAnimation {
+                        to: 22; duration: 300; easing.type: Easing.InOutQuad
+                    }
+                    NumberAnimation {
+                        to: 6; duration: 300; easing.type: Easing.InOutQuad
+                    }
+                }
+            }
+        }
     }
 
     Rectangle {
@@ -49,7 +112,7 @@ Item {
         anchors.left: parent.left
         anchors.leftMargin: 12
         anchors.verticalCenter: parent.verticalCenter
-        width: 48; height: 48
+        width: 44; height: 44
         radius: 8
         color: Theme.surfaceHigh
         clip: true
@@ -73,8 +136,8 @@ Item {
     }
 
     Column {
-        anchors.left: stripArt.right
-        anchors.leftMargin: 12
+        anchors.left: stripBars.right
+        anchors.leftMargin: 14
         anchors.right: stripControls.left
         anchors.rightMargin: 12
         anchors.verticalCenter: stripArt.verticalCenter

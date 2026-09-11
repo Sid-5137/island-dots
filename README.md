@@ -5,42 +5,19 @@
 **one shape, everything**
 
 A Hyprland desktop shell built around a single morphing pill.
-No bar, no panels, no tray — the island is the interface.
+No bar. No panels. No tray. The island *is* the interface.
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-4c566a?style=for-the-badge)](LICENSE)
 [![Quickshell](https://img.shields.io/badge/built%20with-Quickshell-5e81ac?style=for-the-badge)](https://quickshell.org)
 [![Hyprland](https://img.shields.io/badge/compositor-Hyprland-81a1c1?style=for-the-badge)](https://hypr.land)
 [![Wayland](https://img.shields.io/badge/wayland-native-8fbcbb?style=for-the-badge)](https://wayland.freedesktop.org)
 
-</div>
+<br>
 
----
+https://github.com/Sid-5137/island-dots/assets/PLACEHOLDER/demo.mp4
 
-## What is this?
-
-Most Wayland setups are a bar, plus a launcher, plus a notification
-daemon, plus a lock screen, plus a wallpaper tool — five programs that
-don't know about each other and never quite match.
-
-island is one surface that becomes whatever it needs to be. At rest
-it's a small pill showing the time. Hover it and workspaces appear.
-Click it and it grows into a control centre. Press `Super+R` and it
-stretches into a launcher. A notification arrives and it becomes the
-notification, then hands the shape back.
-
-Everything is themed from your wallpaper: matugen derives a palette,
-and the shell, GTK3, GTK4 and Hyprland's own window borders all read
-from it.
-
-<div align="center">
-
-![control centre](docs/control-centre.png)
-
-*The control centre — calendar, battery, quick toggles, sliders*
-
-![settings](docs/settings.png)
-
-*Settings, as two surfaces rather than one divided box*
+*One surface. Clock, launcher, control centre, notifications, power —
+it becomes each of them and hands the shape back.*
 
 </div>
 
@@ -48,19 +25,105 @@ from it.
 
 ## Features
 
-- 🏝️ **One morphing surface** — eleven modes, one shape, no separate windows
-- 🎨 **Wallpaper-driven theming** — matugen feeds the shell, GTK3, GTK4 and window borders
-- 🔍 **Launcher inside the pill** — fuzzy application search with subsequence matching
-- 🔔 **Notification daemon** — popup with actions, full history, Focus mode
-- 🔐 **Session lock** — real `ext-session-lock` surface with PAM, not a shell-out
-- 🛡️ **Polkit agent** — authorization prompts in the island, no GTK dialog
-- 📋 **Clipboard history** — filterable, keyboard-driven, backed by cliphist
-- 🎛️ **Live compositor control** — blur, gaps, borders and input applied without a reload
-- ✋ **Continuous gestures** — four-finger swipes that track your fingers, not just fire on release
-- 🖥️ **Two visibility modes** — reserve the strip, or let windows use the whole screen and move aside when they reach it
-- 🎵 **Media** — MPRIS with artwork and transport
-- 🔋 **Circular battery** — a gauge, not a battery outline
-- ⚙️ **Settings app** — six pages, everything adjustable, no config file editing
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**One surface, eleven modes**
+Clock, hover, control centre, launcher, clipboard, wallpaper picker,
+power menu, notifications, notification history, volume OSD and
+authorization prompts — all the same shape, morphing between them.
+
+**Wallpaper-driven theming**
+matugen derives a palette from your wallpaper and feeds the shell,
+GTK3, GTK4 *and* Hyprland's own window borders. Change the wallpaper,
+the desktop follows.
+
+**A launcher in the pill**
+Fuzzy application search with subsequence matching — `fx` finds
+Firefox, `ed` finds Text Editor. Keyboard-first, results scored not
+filtered.
+
+**Notification daemon**
+Not a client of one. The shell claims
+`org.freedesktop.Notifications`: popups with action buttons, full
+history, Focus mode that records without interrupting, and critical
+notifications that ignore it.
+
+**Session lock**
+A real `ext-session-lock` surface with PAM authentication — not a
+shell-out to hyprlock. Clock, wallpaper, battery, and a password field
+that knows when to mask itself.
+
+**Polkit agent**
+Authorization prompts appear in the island rather than a mismatched
+GTK dialog. polkitd still makes every decision; only the asking moved.
+
+</td>
+<td width="50%" valign="top">
+
+**Continuous gestures**
+Four-finger swipes that track your fingers rather than firing once on
+release. Reads libinput directly and drives PipeWire over a persistent
+socket — no process spawned per step.
+
+**Live compositor control**
+Blur, gaps, borders, rounding, pointer acceleration and key repeat,
+applied to Hyprland as you move the slider. No reload, no config edit.
+
+**Window switcher and overview**
+Alt+Tab across every workspace with app icons; `Super+W` for a
+workspace overview with live window thumbnails, captured through the
+compositor.
+
+**Smart visibility**
+Reserve the strip so windows start below it, or let windows use the
+whole screen and have the island move aside only when one actually
+reaches it.
+
+**Clipboard history**
+Filterable, keyboard-driven, backed by cliphist. `Ctrl+D` deletes an
+entry without leaving the field.
+
+**Settings that reset**
+Six pages, every value adjustable. Anything you have changed grows a
+revert control beside it; sections and the whole config can be reset
+too.
+
+</td>
+</tr>
+</table>
+
+<div align="center">
+
+![control centre](docs/control-centre.png)
+
+**The control centre** — one blurred container, modules inside it:
+calendar, battery ring, quick toggles, sliders, media, system tray
+
+![settings](docs/settings.png)
+
+**Settings** — six pages, live preview, per-control revert
+
+</div>
+
+---
+
+## Why
+
+Most Wayland setups are a bar, plus a launcher, plus a notification
+daemon, plus a lock screen, plus a wallpaper tool. Five programs that
+don't know about each other, don't match each other, and each need
+configuring separately.
+
+island is one surface that becomes whatever it needs to be. At rest
+it's a small pill showing the time. Hover it and workspaces appear.
+Click it and it grows into a control centre. Press `Super+R` and it
+stretches into a launcher. A notification arrives and it *becomes* the
+notification, then hands the shape back.
+
+Because it's one program, the palette is shared, the animation is
+shared, and there is one settings app rather than five config files.
 
 ---
 
@@ -254,6 +317,11 @@ Things that cost real time to work out:
       switcher open, or `Qt.callLater` dispatching after the surface
       is down but before the compositor is ready to accept it.
 
+- [ ] **Media face bars do not animate.** `Player.playing` is true and
+      the delegate declares `required property int index`, so the
+      stagger has a real duration, yet the `SequentialAnimation on
+      height` never runs. Everything else on that face renders.
+
 - [ ] **Multi-monitor.** `Variants` creates one island per screen, but
       Settings and the notification popup are pinned to
       `Quickshell.screens[0]`.
@@ -279,6 +347,9 @@ Things that cost real time to work out:
 Early, and tested on one machine. If you try it and something breaks,
 [open an issue](https://github.com/Sid-5137/island-dots/issues/new) —
 that's more useful than a star.
+
+`docs/RECORDING.md` covers how the demo was captured, if you want to
+show a variation.
 
 ---
 

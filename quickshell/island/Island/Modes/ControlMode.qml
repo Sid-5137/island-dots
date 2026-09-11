@@ -20,9 +20,16 @@ Item {
     required property var island   // mode flags and media state
     required property var pill     // the shape, for geometry gates
     anchors.fill: parent
-    anchors.margins: 24
+    anchors.margins: 26
+    // The strip's band plus the content margin. Reserving only the
+    // band left the content box taller than its cards, and that slack
+    // stacked on top of the strip's own gap — which is why the strip
+    // sat so far below everything else.
+    // The band plus the content margin, so the content box is the same
+    // height whether or not the strip is present — otherwise the cards
+    // gain slack below them exactly when the strip appears.
     anchors.bottomMargin: island.media
-        ? Config.island.mediaStripHeight + 8 : 24
+        ? Config.island.mediaStripHeight + 26 : 26
 
     opacity: (island.isControl
               && pill.width > Config.island.controlWidth * 0.97) ? 1 : 0
@@ -32,10 +39,27 @@ Item {
         NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
     }
 
+    // Closes the panel. The clock line has no interactive content of
+    // its own, so it can carry this without stealing anything.
+    MouseArea {
+        anchors.left: parent.left
+        anchors.top: parent.top
+        width: root.leftCardWidth - 60
+        height: 52
+        cursorShape: Qt.PointingHandCursor
+        onClicked: win.closeControl()
+    }
+
     Row {
         id: bigClock
         anchors.left: parent.left
+        anchors.leftMargin: root.cardPad
         anchors.top: parent.top
+        // The card has no padding of its own, so its contents provide
+        // it. Without this the clock sits on the card's top edge and
+        // the battery ring, being taller than the clock line, spills
+        // out above it.
+        anchors.topMargin: root.cardPad
         spacing: 10
         width: 266
 
@@ -70,7 +94,7 @@ Item {
         visible: Battery.present
 
         anchors.left: parent.left
-        anchors.leftMargin: calendar.width - width
+        anchors.leftMargin: root.cardPad + calendar.width - width
         anchors.verticalCenter: bigClock.verticalCenter
 
         // Sized to the clock line rather than standing
@@ -88,6 +112,7 @@ Item {
     Item {
         id: calendar
         anchors.left: parent.left
+        anchors.leftMargin: root.cardPad
         anchors.top: bigClock.bottom
         anchors.topMargin: 16
         height: calHeader.height + 6 + weekdays.height + 4 + dayGrid.height
@@ -235,10 +260,10 @@ Item {
     // open.
     readonly property int calWidth: 266
     readonly property int cardGap: 10
-    readonly property int cardInset: 12
-    readonly property int leftCardWidth: calWidth + 24
+    readonly property int cardPad: 16
+    readonly property int leftCardWidth: calWidth + cardPad * 2
     readonly property int rightCardWidth:
-        width + cardInset * 2 - leftCardWidth - cardGap
+        width - leftCardWidth - cardGap
 
     readonly property int tileCell:
         Math.floor((rightCardWidth - 28 - 24) / 3)
@@ -246,15 +271,22 @@ Item {
 
     // Two 38px slider rows and the gap between them, plus the tray
     // when it is present, inside 14px of padding.
-    readonly property int controlsCardHeight:
-        14 + (38 * 2 + 12) + (Tray.count > 0 ? 12 + 30 : 0) + 14
+    readonly property int controlsCardHeight: 14 + (38 * 2 + 12) + 14
 
     readonly property int eventRows:
         Calendar.available ? Math.min(Calendar.today.length, 3) : 0
     readonly property int eventsHeight: eventRows * 20 + 20
 
     // header + gap + weekday row + gap + six rows of cells
-    readonly property int calendarHeight: 30 + 6 + 17 + 4 + 6 * 32
+    // Sized to the month on screen rather than to the worst case.
+    // From the grid's own numbers rather than a service call. Those
+    // are already correct — the day cells render from them — whereas
+    // a function taking a date fails to zero if the date is undefined
+    // on the frame it is first read, which collapses the card and
+    // leaves the dates drawing outside it.
+    readonly property int calendarRows:
+        Math.ceil((calendar.firstWeekday + calendar.daysInMonth) / 7)
+    readonly property int calendarHeight: 30 + 6 + 17 + 4 + calendarRows * 32
 
     function surface(alpha) {
         const c = Qt.color(Theme.surfaceContainer);
@@ -264,6 +296,11 @@ Item {
     component Card: Rectangle {
         radius: Config.appearance.panelRadius
         color: root.surface(Config.island.opacity)
+        // Faint enough to read as an edge rather than a frame — at the
+        // fill's own contrast the modules start looking like separate
+        // windows instead of groups on one surface.
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.12)
         z: -1
     }
 
@@ -271,11 +308,9 @@ Item {
         id: calendarCard
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: -root.cardInset
-        anchors.topMargin: -root.cardInset
         width: root.leftCardWidth
         // Clock line, gap, then the calendar's own fixed height.
-        height: 52 + 16 + root.calendarHeight + 24
+        height: root.cardPad + 52 + 16 + root.calendarHeight + root.cardPad
     }
 
     Card {
@@ -293,7 +328,6 @@ Item {
         anchors.left: calendarCard.right
         anchors.leftMargin: root.cardGap
         anchors.top: parent.top
-        anchors.topMargin: -root.cardInset
         width: root.rightCardWidth
         height: root.tilesCardHeight
     }
@@ -407,6 +441,7 @@ Item {
     Column {
         id: events
         anchors.left: parent.left
+        anchors.leftMargin: root.cardPad
         anchors.top: calendar.bottom
         anchors.topMargin: 22
         width: calendar.width
@@ -447,63 +482,6 @@ Item {
                     font.pixelSize: Theme.fontSizeSmall - 1
                     elide: Text.ElideRight
                     renderType: Text.NativeRendering
-                }
-            }
-        }
-    }
-
-    // System tray. Hidden entirely when nothing is registered, so it
-    // costs no space on a desktop with no tray apps.
-    Row {
-        id: tray
-        anchors.horizontalCenter: controlsCard.horizontalCenter
-        anchors.bottom: controlsCard.bottom
-        anchors.bottomMargin: 12
-        spacing: 10
-        visible: Tray.count > 0
-        height: visible ? 30 : 0
-
-        Repeater {
-            model: Tray.items
-
-            Rectangle {
-                required property var modelData
-
-                width: 30
-                height: 30
-                radius: 8
-                color: trayHover.containsMouse
-                    ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
-
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                Image {
-                    anchors.centerIn: parent
-                    width: 18
-                    height: 18
-                    source: modelData.icon
-                    asynchronous: true
-                    fillMode: Image.PreserveAspectFit
-                }
-
-                MouseArea {
-                    id: trayHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-                    // Left activates, right opens the item's own menu.
-                    // Items that only offer a menu get it either way,
-                    // since activating them does nothing.
-                    onClicked: function(mouse) {
-                        if (mouse.button === Qt.RightButton || modelData.onlyMenu) {
-                            if (modelData.hasMenu)
-                                modelData.display(win, parent.x, parent.y + parent.height);
-                        } else {
-                            modelData.activate();
-                        }
-                    }
                 }
             }
         }
