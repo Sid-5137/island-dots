@@ -85,6 +85,15 @@ reaches it.
 Filterable, keyboard-driven, backed by cliphist. `Ctrl+D` deletes an
 entry without leaving the field.
 
+**System tray**
+A face on the collapsed pill — scroll to it. Left-click activates,
+right-click opens the application's own menu, and items asking for
+attention show a dot.
+
+**Calendar with events**
+Dates carry a dot when something is scheduled, and today's events list
+under the month. Reads khal; absent entirely without it.
+
 **Settings that reset**
 Six pages, every value adjustable. Anything you have changed grows a
 revert control beside it; sections and the whole config can be reset
@@ -141,6 +150,9 @@ shared, and there is one settings app rather than five config files.
 | `centre` | `Super+N` | notification history |
 | `notify` | on arrival | a notification, briefly |
 | `osd` | media keys | volume, brightness, mic |
+
+Scrolling the collapsed pill cycles its face: clock, media, system
+tray.
 | `auth` | on request | polkit authorization |
 
 The pill's collapsed width is derived from its content plus a padding
@@ -317,20 +329,16 @@ Things that cost real time to work out:
       switcher open, or `Qt.callLater` dispatching after the surface
       is down but before the compositor is ready to accept it.
 
-- [ ] **Media face bars do not animate.** `Player.playing` is true and
-      the delegate declares `required property int index`, so the
-      stagger has a real duration, yet the `SequentialAnimation on
-      height` never runs. Everything else on that face renders.
-
 - [ ] **Multi-monitor.** `Variants` creates one island per screen, but
       Settings and the notification popup are pinned to
       `Quickshell.screens[0]`.
 - [ ] **Inline reply** for chat notifications.
       `NotificationServer.inlineReplySupported` is off.
-- [ ] **System tray.** `Quickshell.Services.SystemTray` exists; nothing
-      reads it yet.
-- [ ] **Calendar events.** The control centre calendar shows dates
-      only.
+
+- [ ] **Calendar events need khal.** There is no desktop-wide calendar
+      to read on Linux, so `Services/Calendar.qml` shells out to khal
+      and shows nothing without it. Reading `.ics` files directly, or
+      through a portal, would drop the dependency.
 - [ ] **Fingerprint at the lock screen.** Needs a dedicated
       `/etc/pam.d` file; `Config.island.pamConfig` selects it.
 - [ ] **Per-monitor wallpapers.** One wallpaper is applied to every
