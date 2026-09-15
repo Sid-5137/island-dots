@@ -1,0 +1,52 @@
+# Template. install.sh substitutes the @...@ placeholders and writes
+# the result to ~/.config/island/matugen.toml, which is what the shell
+# actually passes to matugen.
+#
+# It is generated rather than committed because matugen's TOML has no
+# variable expansion: every path has to be absolute, and the repo is
+# not always at ~/island-dots. Editing a template here and re-running
+# install.sh is the supported way to change these.
+
+[config]
+reload_apps = false
+
+# The shell reads this and retints itself.
+[templates.quickshell]
+input_path = "@DOTS@/matugen/templates/quickshell.json"
+output_path = "@STATE@/island/colors.json"
+
+# GTK3 and GTK4 need SEPARATE templates: GTK3 reads the classic
+# theme_* names, GTK4/libadwaita reads only the adw names. One shared
+# file leaves half of each generation untouched.
+#
+# Both write matugen.css, NOT gtk.css. gtk.css is contested — adw-gtk3's
+# own GTK4 install step symlinks it to a root-owned file under
+# /usr/share/themes — and matugen aborts the entire run on the first
+# output it cannot write, taking the palette and the GTK3 colours down
+# with it. bin/island-gtk-apply owns gtk.css and imports these.
+#
+# Requires:  sudo dnf install adw-gtk3-theme
+# Flatpak apps need it inside their sandbox too:
+#   flatpak install org.gtk.Gtk3theme.adw-gtk3-dark
+[templates.gtk3]
+input_path = "@DOTS@/matugen/templates/gtk3.css"
+output_path = "@CONFIG@/gtk-3.0/matugen.css"
+
+[templates.gtk4]
+input_path = "@DOTS@/matugen/templates/gtk4.css"
+output_path = "@CONFIG@/gtk-4.0/matugen.css"
+# GTK caches parsed CSS, so new colours do not appear until the theme
+# name changes. Toggling it and putting it back forces a re-read.
+#
+# The old value is read back rather than hardcoded: this used to set
+# 'adw-gtk3' unconditionally, which fought with the theme the shell had
+# just applied — whichever ran last won, so the configured theme held
+# only some of the time.
+post_hook = """
+t=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d "'")
+if [ -n "$t" ] && [ "$t" != "Adwaita" ]; then
+    gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita'
+    sleep 0.2
+    gsettings set org.gnome.desktop.interface gtk-theme "$t"
+fi
+"""

@@ -20,7 +20,10 @@ hl.on("hyprland.start", function()
 
     -- Continuous four-finger gestures. Needs membership of the input
     -- group; it exits quietly if it cannot read the devices.
-    hl.exec_cmd("~/island-dots/bin/island-gestures")
+    -- install.sh links this into ~/.local/bin, so the clone can live
+    -- anywhere. A hardcoded ~/island-dots path meant gestures simply
+    -- never started on a machine that cloned it somewhere else.
+    hl.exec_cmd("island-gestures")
 
     -- The shell itself.
     hl.exec_cmd("quickshell -c island")

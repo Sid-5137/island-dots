@@ -431,15 +431,33 @@ Variants {
             target: Notifications
             function onArrived(entry) {
                 root.notice = entry;
-                noticeTimer.interval = entry.critical
+
+                // Coerced and floored. An undefined duration makes the
+                // interval NaN, the timer never fires, and the popup
+                // stays up forever — which pins the island in `notify`
+                // and makes every other mode, smart hiding included,
+                // look broken.
+                const want = entry && entry.critical
                     ? Config.island.notifyCriticalDuration
                     : Config.island.notifyDuration;
+
+                noticeTimer.interval = Math.max(1000, Number(want) || 5000);
                 noticeTimer.restart();
             }
         }
 
         Timer {
             id: noticeTimer
+            interval: 5000
+            onTriggered: root.notice = null
+        }
+
+        // A popup that outlives its timer holds the island hostage, so
+        // this clears one that has been up far longer than any
+        // configured duration regardless of why the timer missed.
+        Timer {
+            running: root.notice !== null
+            interval: 30000
             onTriggered: root.notice = null
         }
 
@@ -679,7 +697,15 @@ Variants {
                     island.mode === "expanded" ? 0 : 1)
 
                 Behavior on border.color {
-                    ColorAnimation { duration: win.fadeOut }
+                    // `win` is what the Modes/ components call this
+                    // window, because Island.qml passes it to them as
+                    // `win: root`. Inside Island.qml itself the id is
+                    // `root`, so this threw a ReferenceError on every
+                    // evaluation and the animation silently fell back
+                    // to the 250ms default — the border snapped
+                    // instead of fading, which is the flicker the
+                    // comment above is about.
+                    ColorAnimation { duration: root.fadeOut }
                 }
 
                 // Declared first, so it sits beneath the content. The

@@ -11,60 +11,48 @@ Singleton {
     property var cursors: []
     property var gtkThemes: []
 
+    // bin/island-gtk-apply does the actual work. It is a script and
+    // not a string of shell built here because it has to touch
+    // gsettings, two settings.ini files, two gtk.css files and
+    // qt6ct.conf, and quoting all of that through QML was where the
+    // GTK half of theming kept breaking.
     function applyAll() {
         const a = Config.appearance;
-        const cmds = [];
 
-        if (a.iconTheme) {
-            cmds.push("gsettings set org.gnome.desktop.interface icon-theme '" + a.iconTheme + "'");
-            cmds.push(qtctSet("icon_theme", a.iconTheme));
+        // A Process that is still running silently drops whatever is
+        // assigned to it next, so a burst of changes coalesces into
+        // one run rather than losing the last one.
+        if (proc.running) {
+            debounce.restart();
+            return;
         }
 
-        if (a.gtkTheme) {
-            cmds.push("gsettings set org.gnome.desktop.interface gtk-theme '" + a.gtkTheme + "'");
-            // GTK4 apps read this file rather than dconf for the theme.
-            cmds.push("mkdir -p \"$HOME/.config/gtk-4.0\" \"$HOME/.config/gtk-3.0\"");
-            for (const v of ["3.0", "4.0"]) {
-                const f = "\"$HOME/.config/gtk-" + v + "/settings.ini\"";
-                cmds.push("touch " + f);
-                cmds.push("grep -q '^\\[Settings\\]' " + f + " || printf '[Settings]\\n' >> " + f);
-                cmds.push("grep -q '^gtk-theme-name=' " + f
-                    + " && sed -i \"s|^gtk-theme-name=.*|gtk-theme-name=" + a.gtkTheme + "|\" " + f
-                    + " || printf 'gtk-theme-name=" + a.gtkTheme + "\\n' >> " + f);
-                cmds.push("grep -q '^gtk-icon-theme-name=' " + f
-                    + " && sed -i \"s|^gtk-icon-theme-name=.*|gtk-icon-theme-name=" + a.iconTheme + "|\" " + f
-                    + " || printf 'gtk-icon-theme-name=" + a.iconTheme + "\\n' >> " + f);
-                cmds.push("grep -q '^gtk-cursor-theme-name=' " + f
-                    + " && sed -i \"s|^gtk-cursor-theme-name=.*|gtk-cursor-theme-name=" + a.cursorTheme + "|\" " + f
-                    + " || printf 'gtk-cursor-theme-name=" + a.cursorTheme + "\\n' >> " + f);
-            }
-        }
-
-        if (a.cursorTheme) {
-            cmds.push("gsettings set org.gnome.desktop.interface cursor-theme '" + a.cursorTheme + "'");
-            cmds.push("gsettings set org.gnome.desktop.interface cursor-size " + a.cursorSize);
-            cmds.push("hyprctl setcursor '" + a.cursorTheme + "' " + a.cursorSize + " || true");
-            // Keeps XWayland clients in step with the Wayland ones.
-            cmds.push("dbus-update-activation-environment --systemd XCURSOR_THEME=" + a.cursorTheme
-                + " XCURSOR_SIZE=" + a.cursorSize + " || true");
-            cmds.push(qtctSet("cursor_theme", a.cursorTheme));
-        }
-
-        if (cmds.length === 0) return;
-        proc.command = ["sh", "-c", cmds.join("; ")];
+        proc.command = [
+            // Hyprland does not always start the shell with
+            // ~/.local/bin on PATH, and that is where install.sh puts
+            // the script.
+            "sh", "-c", 'PATH="$HOME/.local/bin:$PATH"; exec island-gtk-apply "$@"',
+            "sh",
+            "--gtk", a.gtkTheme || "",
+            "--icon", a.iconTheme || "",
+            "--cursor", a.cursorTheme || "",
+            "--cursor-size", String(a.cursorSize || 24)
+        ];
         proc.running = true;
-    }
-
-    // qt6ct keeps its settings in an ini; rewrite one key in place so
-    // anything else the user set there survives.
-    function qtctSet(key, value) {
-        const f = "\"$HOME/.config/qt6ct/qt6ct.conf\"";
-        return "[ -f " + f + " ] && sed -i \"s|^" + key + "=.*|" + key + "=" + value + "|\" " + f + " || true";
     }
 
     Process {
         id: proc
         running: false
+
+        onExited: function(code) {
+            if (code === 127)
+                console.warn("[Theming] island-gtk-apply not found on PATH —"
+                    + " run install.sh to link it into ~/.local/bin");
+            else if (code !== 0)
+                console.warn("[Theming] island-gtk-apply exited with", code);
+        }
+
         stderr: StdioCollector {
             onStreamFinished: {
                 if (this.text.trim() !== "")
@@ -169,7 +157,9 @@ Singleton {
         function apply(): void { root.applyAll() }
         function preview(): string {
             root.applyAll();
-            return proc.command.length > 2 ? proc.command[2] : "(nothing to apply)";
+            // From index 4: the sh -c wrapper and its $0 are noise.
+            return proc.command.length > 4
+                ? proc.command.slice(4).join(" ") : "(nothing to apply)";
         }
         function icons(): string { return root.available.join(", ") }
         function cursors(): string { return root.cursors.join(", ") }

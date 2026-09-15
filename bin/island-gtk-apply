@@ -1,0 +1,219 @@
+#!/usr/bin/env sh
+# island-dots — apply the GTK/Qt appearance settings.
+# Copyright (C) 2026 Siddhartha Mallavolu
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version. See LICENSE.
+#
+# Usage: island-gtk-apply [--gtk NAME] [--icon NAME] [--cursor NAME]
+#                         [--cursor-size N] [--no-nudge]
+#
+# This used to be a string of shell assembled inside Theming.qml. It
+# is a file now because it grew past the point where quoting it into
+# QML was readable, and because a script can be run by hand when a
+# theme refuses to apply.
+#
+# There are three places a GTK theme can be read from and they do not
+# agree with each other:
+#
+#   gsettings        GTK3 under a portal, and GTK4's cursor/icon names
+#   settings.ini     GTK3 with no portal running — the usual case here
+#   gtk.css          libadwaita, which ignores the theme name entirely
+#
+# All three get written, or the theme applies to some apps and not
+# others depending on what happens to be running.
+
+set -eu
+
+CFG="${XDG_CONFIG_HOME:-$HOME/.config}"
+MARKER="island-dots: managed file"
+
+gtk=""; icon=""; cursor=""; cursor_size=""; nudge=1
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --gtk)         gtk="$2";         shift 2 ;;
+        --icon)        icon="$2";        shift 2 ;;
+        --cursor)      cursor="$2";      shift 2 ;;
+        --cursor-size) cursor_size="$2"; shift 2 ;;
+        --no-nudge)    nudge=0;          shift ;;
+        *) echo "island-gtk-apply: unknown argument: $1" >&2; exit 2 ;;
+    esac
+done
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# Anything not passed falls back to what is already configured, so the
+# script is safe to run bare — install.sh does exactly that to repair
+# gtk.css without needing to know which theme the user picked.
+gget() {
+    have gsettings || return 0
+    gsettings get org.gnome.desktop.interface "$1" 2>/dev/null | tr -d "'" || true
+}
+
+[ -n "$gtk" ]         || gtk=$(gget gtk-theme)
+[ -n "$icon" ]        || icon=$(gget icon-theme)
+[ -n "$cursor" ]      || cursor=$(gget cursor-theme)
+[ -n "$cursor_size" ] || cursor_size=$(gget cursor-size)
+
+# ── gsettings ────────────────────────────────────────────────────────
+#
+# Best-effort: a machine with no glib schemas installed still gets the
+# settings.ini and gtk.css halves rather than dying here.
+
+gset() {
+    have gsettings || return 0
+    gsettings set org.gnome.desktop.interface "$1" "$2" 2>/dev/null || true
+}
+
+if [ -n "$gtk" ];         then gset gtk-theme "$gtk";           fi
+if [ -n "$icon" ];        then gset icon-theme "$icon";          fi
+if [ -n "$cursor" ];      then gset cursor-theme "$cursor";      fi
+if [ -n "$cursor_size" ]; then gset cursor-size "$cursor_size";  fi
+
+# adw-gtk3 ships light and dark as separate themes, but libadwaita
+# picks its variant from here, so it has to say dark either way.
+gset color-scheme 'prefer-dark'
+
+# ── settings.ini ─────────────────────────────────────────────────────
+#
+# Rewritten key by key so anything else the user put in these files —
+# font name, hinting, toolbar style — survives.
+
+ini_set() {
+    file="$1" key="$2" value="$3"
+    [ -n "$value" ] || return 0
+    mkdir -p "$(dirname "$file")"
+    [ -f "$file" ] || printf '[Settings]\n' > "$file"
+    grep -q '^\[Settings\]' "$file" || sed -i '1i [Settings]' "$file"
+    if grep -q "^$key=" "$file"; then
+        # `key` and `value` are theme names, not patterns, but a `|`
+        # in either would still end the sed expression early.
+        awk -v k="$key" -v v="$value" -F= \
+            '$1 == k { print k "=" v; next } { print }' \
+            "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+    else
+        printf '%s=%s\n' "$key" "$value" >> "$file"
+    fi
+}
+
+for v in 3.0 4.0; do
+    f="$CFG/gtk-$v/settings.ini"
+    ini_set "$f" gtk-theme-name        "$gtk"
+    ini_set "$f" gtk-icon-theme-name   "$icon"
+    ini_set "$f" gtk-cursor-theme-name "$cursor"
+    ini_set "$f" gtk-cursor-theme-size "$cursor_size"
+    ini_set "$f" gtk-application-prefer-dark-theme 1
+done
+
+# ── gtk.css ──────────────────────────────────────────────────────────
+#
+# matugen generates colours into gtk-N.0/matugen.css, and gtk.css is
+# a small file we own that pulls it in. They are kept apart because
+# gtk.css is contested: adw-gtk3's own GTK4 install step symlinks it
+# to a root-owned file in /usr/share/themes, and matugen writing
+# straight to gtk.css then fails with EACCES — which aborts the whole
+# matugen run, so the shell palette and the GTK3 colours never get
+# written either. Splitting the two means neither can break the other.
+
+theme_dir() {
+    for d in "$HOME/.themes" "$HOME/.local/share/themes" \
+             "${XDG_DATA_HOME:-$HOME/.local/share}/themes" /usr/share/themes; do
+        if [ -d "$d/$1" ]; then printf '%s\n' "$d/$1"; return 0; fi
+    done
+    return 1
+}
+
+for v in 3.0 4.0; do
+    dir="$CFG/gtk-$v"
+    css="$dir/gtk.css"
+    colours="$dir/matugen.css"
+    mkdir -p "$dir"
+
+    # An @import of a file that isn't there is a parse error that
+    # discards the rest of the stylesheet, so it always exists.
+    [ -e "$colours" ] || : > "$colours"
+
+    if [ -L "$css" ]; then
+        # adw-gtk3's GTK4 symlink. The theme it points at is imported
+        # below by absolute path, so nothing is lost by removing it.
+        rm -f "$css"
+    elif [ -f "$css" ] && ! grep -q "$MARKER" "$css" 2>/dev/null; then
+        if head -n 3 "$css" | grep -q 'Generated by matugen'; then
+            # A gtk.css from before the split: it *is* the colours.
+            mv "$css" "$colours"
+        else
+            cp "$css" "$css.bak"
+        fi
+    fi
+
+    {
+        printf '/* %s — edits here are overwritten.\n' "$MARKER"
+        printf ' * Put your own CSS in gtk-%s/user.css instead.\n */\n\n' "$v"
+
+        # GTK3 loads the theme itself from gtk-theme-name. libadwaita
+        # does not read that name at all, so for GTK4 the theme has to
+        # be imported by hand or adw-gtk3 simply never applies.
+        if [ "$v" = "4.0" ] && [ -n "$gtk" ]; then
+            if d=$(theme_dir "$gtk") && [ -f "$d/gtk-4.0/gtk.css" ]; then
+                printf '@import url("file://%s/gtk-4.0/gtk.css");\n' "$d"
+            fi
+        fi
+
+        # After the theme, so the generated palette wins: libadwaita
+        # resolves its named colours against the last definition.
+        printf '@import url("matugen.css");\n'
+
+        if [ -f "$dir/user.css" ]; then
+            printf '@import url("user.css");\n'
+        fi
+    } > "$css"
+done
+
+# ── cursor, beyond GTK ───────────────────────────────────────────────
+
+if [ -n "$cursor" ]; then
+    size="${cursor_size:-24}"
+    if have hyprctl; then
+        hyprctl setcursor "$cursor" "$size" >/dev/null 2>&1 || true
+    fi
+    # Keeps XWayland clients and anything D-Bus-activated in step.
+    if have dbus-update-activation-environment; then
+        dbus-update-activation-environment --systemd \
+            "XCURSOR_THEME=$cursor" "XCURSOR_SIZE=$size" >/dev/null 2>&1 || true
+    fi
+fi
+
+# ── qt6ct ────────────────────────────────────────────────────────────
+#
+# Only ever edited in place: qt6ct.conf holds a lot more than this and
+# rewriting it would throw away the rest.
+
+qtct="$CFG/qt6ct/qt6ct.conf"
+if [ -f "$qtct" ]; then
+    if [ -n "$icon" ]; then
+        sed -i "s|^icon_theme=.*|icon_theme=$icon|" "$qtct" || true
+    fi
+    if [ -n "$cursor" ]; then
+        sed -i "s|^cursor_theme=.*|cursor_theme=$cursor|" "$qtct" || true
+    fi
+fi
+
+# ── make running apps re-read ────────────────────────────────────────
+#
+# GTK caches the theme. Toggling the name and putting it back is the
+# only reliable way to force a reload without restarting every app.
+# The old value is read back rather than assumed, so this stays
+# correct whatever theme is configured.
+
+if [ "$nudge" -eq 1 ] && have gsettings; then
+    current=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null \
+                | tr -d "'" || true)
+    if [ -n "$current" ] && [ "$current" != "Adwaita" ]; then
+        gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita' 2>/dev/null || true
+        sleep 0.2
+        gsettings set org.gnome.desktop.interface gtk-theme "$current" 2>/dev/null || true
+    fi
+fi

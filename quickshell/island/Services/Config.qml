@@ -38,12 +38,14 @@ Singleton {
     // live ones once settings.json has been read over them.
     //
     // Rather than duplicating every default — which would drift from
-    // the declarations below — they are snapshotted here at startup.
-    // Component.onCompleted runs before the FileView's async load
-    // completes, so what is captured is what the code declares.
+    // the declarations below — they are snapshotted at startup, in
+    // Component.onCompleted before settings.json is read over them.
     property var defaults: ({})
 
     Component.onCompleted: {
+        // Order matters. The snapshot has to happen before the forced
+        // read below, or it captures the stored values and "Reset"
+        // resets to whatever the user already had.
         for (const name of sections) {
             const src = adapter[name];
             if (!src) continue;
@@ -53,6 +55,29 @@ Singleton {
             }
             defaults[name] = copy;
         }
+
+        // Force settings.json in synchronously, before the first
+        // binding reads a setting.
+        //
+        // `preload` alone starts an ASYNC read, and `blockLoading` on
+        // its own does not change that — FileView only applies it on
+        // an explicit text()/data() call. So the return value is
+        // discarded here and the call is made purely for its timing.
+        //
+        // Without this, every binding evaluates against the DECLARED
+        // defaults for the first frames, and some of those first
+        // values escape where a later change cannot follow them.
+        //
+        // The visible one was smart hiding. Island.qml derives the
+        // layer-shell exclusive zone from island.visibility, so the
+        // panel committed the "always" zone — reserving the top strip
+        // — before settings.json arrived. Hyprland then tiled every
+        // window below the island, so nothing ever reached it, so it
+        // never hid. The stored "smart" never got to the compositor,
+        // and re-picking it in Settings was the only way to push it
+        // through: exactly the "have to set it again every time"
+        // symptom.
+        file.text();
     }
 
     readonly property var sections:
@@ -112,11 +137,15 @@ Singleton {
 
     FileView {
         id: file
-        path: Quickshell.env("HOME") + "/.config/island/settings.json"
+        path: Paths.settings
 
         // Create it with the defaults below if it doesn't exist.
         preload: true
         printErrors: false
+
+        // Makes the text() call in Component.onCompleted a blocking
+        // read rather than a no-op. See the comment there.
+        blockLoading: true
 
         watchChanges: true
         onFileChanged: reload()
@@ -125,25 +154,27 @@ Singleton {
         onAdapterUpdated: writeAdapter()
 
         onLoaded: {
-            // Write the adapter straight back out once, at startup.
-            // Properties the file didn't contain are still at their
-            // declared defaults, so this merges new keys in — which is
-            // what stops an added setting from requiring the file to be
-            // deleted. Keys the adapter no longer declares are dropped
-            // by the same write.
+            // Deliberately does NOT write the adapter back out.
             //
-            // Guarded: the write trips the file watcher, which reloads,
-            // which would write again.
+            // It used to, to fold newly declared keys into the file.
+            // But a write here runs on whatever the adapter holds at
+            // that moment, and if anything has gone wrong with the
+            // parse — or a second instance is running — that is the
+            // defaults, written straight over the user's settings.
+            //
+            // The merge still works without it: JsonAdapter keeps a
+            // declared default for any key the file omits, and the
+            // first change to any setting writes the complete set.
             if (!root.merged) {
                 root.merged = true;
                 if (adapter.version < root.currentVersion)
                     root.migrate(adapter.version);
-                else
-                    file.writeAdapter();
             }
         }
 
         onLoadFailed: function(error) {
+            // Genuinely absent, so there is nothing to overwrite —
+            // this is the one place writing defaults is correct.
             root.merged = true;
             file.writeAdapter();
         }

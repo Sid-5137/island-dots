@@ -164,12 +164,18 @@ it.
 ## Install
 
 ```bash
-git clone https://github.com/Sid-5137/island-dots ~/island-dots
-cd ~/island-dots && ./install.sh
+git clone https://github.com/Sid-5137/island-dots
+cd island-dots && ./install.sh
 ```
 
-The script symlinks `hypr/` and `quickshell/island/` into `~/.config`,
-creates the state directories, and reports missing dependencies.
+Clone it wherever you like — nothing assumes `~/island-dots`.
+
+The script symlinks `hypr/` and `quickshell/island/` into `~/.config`
+and `bin/` into `~/.local/bin`, creates the state directories,
+generates `~/.config/island/matugen.toml` with this machine's absolute
+paths, puts `~/.config/gtk-{3,4}.0/gtk.css` under the shell's control,
+and reports missing dependencies. Re-run it any time; it is
+idempotent.
 
 **Requires**
 
@@ -187,20 +193,17 @@ Four-finger gestures need input device access:
 sudo usermod -aG input "$USER"
 ```
 
-**Two things that will bite you**
+**One thing that will bite you**
 
 The shell is the notification daemon and the polkit agent. mako, dunst
 and any external polkit agent must not be running alongside it.
 
-The GTK theme must be `adw-gtk3`, **not** `adw-gtk3-dark`, with
-`color-scheme: prefer-dark`. The colour scheme selects the dark
-variant; naming the dark theme directly loads one that ignores the
-matugen overrides.
-
-```bash
-gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3'
-gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
-```
+GTK used to be the other one: the theme had to be `adw-gtk3` and not
+`adw-gtk3-dark`, because the dark variant loaded a stylesheet that
+ignored the matugen overrides. That is no longer true — the shell
+imports whichever theme you pick and applies the palette on top of it,
+so either works. Pick one in the settings app and nothing else needs
+setting by hand.
 
 ---
 
@@ -208,7 +211,7 @@ gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
 
 Everything is in the settings app — `Super+S`.
 
-`~/island-dots` is code and belongs in git.
+The checkout is code and belongs in git.
 `~/.config/island/settings.json` is this machine's state and doesn't.
 It's written on first run from the defaults in `Services/Config.qml`,
 and merged against them on every start — so an update that adds a
@@ -223,7 +226,9 @@ already have. If a release changes a *default*, your existing file
 keeps the old value. Delete `settings.json` to take the new defaults.
 
 ```
-bin/                  island-gestures, the libinput gesture daemon
+bin/                  linked into ~/.local/bin by install.sh
+                      island-gestures   libinput gesture daemon
+                      island-gtk-apply  GTK/Qt appearance
 hypr/                 Hyprland config, one module per concern
 matugen/              Wallpaper → palette templates
 quickshell/island/
@@ -244,13 +249,28 @@ Wallpaper → matugen → four outputs:
 
 | Output | Read by |
 |:--|:--|
-| `colors.json` | the shell, via `Services/Theme.qml` |
-| `gtk-3.0/gtk.css` | GTK3, through adw-gtk3 |
-| `gtk-4.0/gtk.css` | GTK4 / libadwaita, directly |
+| `~/.local/state/island/colors.json` | the shell, via `Services/Theme.qml` |
+| `gtk-3.0/matugen.css` | GTK3, through adw-gtk3 |
+| `gtk-4.0/matugen.css` | GTK4 / libadwaita, directly |
 | `hyprctl eval` | window borders, via `Services/Compositor.qml` |
 
 GTK3 and GTK4 need separate templates — GTK3 reads the `theme_*`
 family, GTK4 reads only the `adw` names.
+
+matugen writes `matugen.css`, never `gtk.css`. `gtk.css` is contested:
+adw-gtk3's own GTK4 install step symlinks it to a root-owned file
+under `/usr/share/themes`, and matugen aborts its *entire* run on the
+first output it cannot write — so one stray symlink silently took down
+the palette and the GTK3 colours with it. `bin/island-gtk-apply` owns
+`gtk.css` and imports the theme and `matugen.css` into it:
+
+```css
+@import url("file:///usr/share/themes/<your theme>/gtk-4.0/gtk.css");
+@import url("matugen.css");
+@import url("user.css");   /* only if you create it */
+```
+
+Put your own CSS in `user.css` next to it. `gtk.css` is regenerated.
 
 Firefox, Chrome and Electron apps do their own theming and won't
 follow. That isn't a bug in the setup.

@@ -63,7 +63,7 @@ Singleton {
 
     FileView {
         id: colorFile
-        path: Quickshell.env("HOME") + "/island-dots/quickshell/island/colors.json"
+        path: Paths.colors
 
         watchChanges: true
         onFileChanged: reload()
