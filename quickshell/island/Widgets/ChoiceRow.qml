@@ -23,8 +23,12 @@ Item {
         id: text
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        anchors.right: segments.left
-        anchors.rightMargin: 16
+        // To the revert control, not to the segments: both used to be
+        // anchored to the same edge, so the revert icon was drawn on
+        // top of the description the moment a value differed from its
+        // default.
+        anchors.right: revert.left
+        anchors.rightMargin: 12
         spacing: 2
 
         Text {
@@ -51,6 +55,7 @@ Item {
     }
 
     ResetDot {
+        id: revert
         anchors.right: segments.left
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter

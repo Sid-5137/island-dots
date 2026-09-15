@@ -23,8 +23,10 @@ Item {
         id: text
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        anchors.right: knob.left
-        anchors.rightMargin: 16
+        // See ChoiceRow: anchoring to the control rather than to the
+        // revert dot put the two on top of each other.
+        anchors.right: revert.left
+        anchors.rightMargin: 12
         spacing: 2
 
         Text {
@@ -51,6 +53,7 @@ Item {
     }
 
     ResetDot {
+        id: revert
         anchors.right: knob.left
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter

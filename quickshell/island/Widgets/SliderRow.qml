@@ -23,7 +23,13 @@ Item {
     property string configKey: ""
 
     implicitWidth: parent ? parent.width : 400
-    implicitHeight: 62
+
+    // Grows for the description rather than assuming one line. The
+    // description used to be declared and then never drawn at all, so
+    // every explanation written for a slider — here and on every page
+    // — was invisible.
+    implicitHeight: 40 + (descText.visible ? descText.implicitHeight + 4 : 0)
+                       + track.height + 10
 
     readonly property real ratio: to > from ? (value - from) / (to - from) : 0
 
@@ -32,11 +38,30 @@ Item {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.topMargin: 4
+        anchors.right: revert.left
+        anchors.rightMargin: 10
         text: root.label
         color: Theme.text
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSizeNormal
         font.weight: Font.DemiBold
+        elide: Text.ElideRight
+        renderType: Text.NativeRendering
+    }
+
+    Text {
+        id: descText
+        anchors.left: parent.left
+        anchors.top: labelText.bottom
+        anchors.topMargin: 2
+        // Clear of the readout, which sits on the first line only.
+        anchors.right: parent.right
+        text: root.description
+        visible: root.description !== ""
+        color: Theme.textDim
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.fontSizeSmall
+        wrapMode: Text.WordWrap
         renderType: Text.NativeRendering
     }
 
@@ -89,7 +114,8 @@ Item {
             height: 14
             radius: 7
             anchors.verticalCenter: parent.verticalCenter
-            x: Math.max(0, Math.min(track.width - width, root.ratio * track.width - width / 2))
+            x: Math.max(0, Math.min(track.width - width,
+                                    root.ratio * track.width - width / 2))
             color: Theme.primary
             border.width: 2
             border.color: Theme.surfaceLowest
@@ -116,6 +142,16 @@ Item {
 
             onPressed: function(m) { apply(m.x) }
             onPositionChanged: function(m) { if (pressed) apply(m.x) }
+
+            // Click-drag is coarse on a long track. The wheel steps
+            // exactly one stepSize, which is the only way to land on a
+            // precise value without editing settings.json by hand.
+            onWheel: function(w) {
+                const dir = w.angleDelta.y > 0 ? 1 : -1;
+                const step = root.stepSize > 0 ? root.stepSize : 1;
+                root.moved(Math.max(root.from,
+                                    Math.min(root.to, root.value + dir * step)));
+            }
         }
     }
 }

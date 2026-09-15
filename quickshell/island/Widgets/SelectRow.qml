@@ -29,8 +29,8 @@ Item {
     Column {
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        anchors.right: field.left
-        anchors.rightMargin: 16
+        anchors.right: revert.left
+        anchors.rightMargin: 12
         spacing: 2
 
         Text {
@@ -57,6 +57,7 @@ Item {
     }
 
     ResetDot {
+        id: revert
         anchors.right: field.left
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter

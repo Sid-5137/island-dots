@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Regenerate settings.example.json from Services/Config.qml.
+
+The README says this file "is generated from Services/Config.qml", and
+until now that was an aspiration: it was maintained by hand and drifted
+the moment a key was added. This makes the claim true.
+
+    ./bin/island-gen-example            # rewrite settings.example.json
+    ./bin/island-gen-example --check    # exit 1 if it is out of date
+
+The shell never reads the output. It exists so that every key and its
+shipped default can be read in one place without opening QML.
+"""
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+CONFIG = REPO / "quickshell/island/Services/Config.qml"
+TARGET = REPO / "settings.example.json"
+
+
+def parse_value(raw):
+    raw = raw.strip()
+
+    # Trailing comments: `property int fontScale: 100      // percent`.
+    # Stripped only outside a quoted string, so a default containing //
+    # survives.
+    in_quote = False
+    for i, ch in enumerate(raw):
+        if ch == '"':
+            in_quote = not in_quote
+        elif ch == "/" and not in_quote and raw[i:i + 2] == "//":
+            raw = raw[:i].strip()
+            break
+
+    if raw in ("true", "false"):
+        return raw == "true"
+
+    if raw.startswith('"') and raw.endswith('"'):
+        return raw[1:-1]
+
+    # Quickshell.env("HOME") + "/Pictures/Wallpapers" and friends. The
+    # value is machine specific, so the example shows the shape rather
+    # than this machine's answer.
+    if "Quickshell.env" in raw:
+        m = re.search(r'\+\s*"([^"]*)"', raw)
+        return "$HOME" + m.group(1) if m else "$HOME"
+
+    try:
+        return int(raw)
+    except ValueError:
+        pass
+    try:
+        return float(raw)
+    except ValueError:
+        pass
+    return raw
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--check", action="store_true",
+                    help="verify the file is current instead of writing it")
+    args = ap.parse_args()
+
+    if not CONFIG.is_file():
+        print("cannot find %s" % CONFIG, file=sys.stderr)
+        return 2
+
+    out = {}
+    section = None
+    version = None
+
+    for line in CONFIG.read_text().splitlines():
+        stripped = line.strip()
+
+        # `property int version: 1` sits on the adapter itself rather
+        # than inside a section, but it is a key in the written file.
+        if section is None:
+            m = re.match(r'property\s+int\s+version\s*:\s*(\d+)', stripped)
+            if m:
+                version = int(m.group(1))
+                continue
+
+        # property JsonObject island: JsonObject {
+        m = re.match(r'property\s+JsonObject\s+(\w+)\s*:', stripped)
+        if m:
+            section = m.group(1)
+            out[section] = {}
+            continue
+
+        if section is None:
+            continue
+
+        # A closing brace at the section's indentation ends it. The
+        # sections are declared at a known depth, so matching on the
+        # brace alone is enough without tracking nesting.
+        if stripped == "}" and line.startswith(" " * 12) \
+                and not line.startswith(" " * 16):
+            section = None
+            continue
+
+        # property int hoverGrace: 600
+        m = re.match(r'property\s+\w+\s+(\w+)\s*:\s*(.+?)\s*$', stripped)
+        if m:
+            out[section][m.group(1)] = parse_value(m.group(2))
+
+    if not out:
+        print("parsed nothing out of Config.qml", file=sys.stderr)
+        return 2
+
+    document = {k: dict(sorted(v.items())) for k, v in sorted(out.items())}
+    if version is not None:
+        document["version"] = version
+
+    text = json.dumps(dict(sorted(document.items())), indent=4) + "\n"
+
+    if args.check:
+        current = TARGET.read_text() if TARGET.is_file() else ""
+        if current == text:
+            print("settings.example.json is up to date")
+            return 0
+        print("settings.example.json is out of date — run %s"
+              % Path(__file__).name, file=sys.stderr)
+        return 1
+
+    TARGET.write_text(text)
+    keys = sum(len(v) for v in out.values())
+    print("wrote %s — %d sections, %d keys"
+          % (TARGET.relative_to(REPO), len(out), keys))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

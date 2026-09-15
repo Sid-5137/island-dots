@@ -112,22 +112,19 @@ PanelWindow {
                 }
 
                 Repeater {
-                    model: [
-                        { id: "island",     label: "Island" },
-                        { id: "network",    label: "Network" },
-                        { id: "input",      label: "Input" },
-                        { id: "session",    label: "Session" },
-                        { id: "appearance", label: "Appearance" },
-                        { id: "motion",     label: "Motion" },
-                        { id: "wallpaper",  label: "Wallpaper" }
-                    ]
+                    // Five, not seven. Wallpaper and the theming half
+                    // of Appearance are one subject and are now one
+                    // page; Motion was five sliders about the island
+                    // and lives under it; Session and the compositor
+                    // half of Appearance are both "the system".
+                    model: root.pages
 
                     Rectangle {
                         required property var modelData
                         readonly property bool active: modelData.id === root.page
 
                         width: sidebar.width - 28
-                        height: 36
+                        height: 38
                         radius: 8
                         color: active
                             ? Theme.surfaceHigh
@@ -135,8 +132,39 @@ PanelWindow {
 
                         Behavior on color { ColorAnimation { duration: 120 } }
 
-                        Text {
+                        // A rail that marks the current page without
+                        // relying on the fill alone, which is a very
+                        // small difference on a dark palette.
+                        Rectangle {
                             anchors.left: parent.left
+                            anchors.leftMargin: 1
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 3
+                            height: parent.active ? 20 : 0
+                            radius: 1.5
+                            color: Theme.primary
+
+                            Behavior on height {
+                                NumberAnimation {
+                                    duration: 160
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
+
+                        Text {
+                            id: navIcon
+                            anchors.left: parent.left
+                            anchors.leftMargin: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.glyph
+                            color: parent.active ? Theme.primary : Theme.textDim
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 14
+                        }
+
+                        Text {
+                            anchors.left: navIcon.right
                             anchors.leftMargin: 12
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData.label
@@ -188,13 +216,11 @@ PanelWindow {
                 width: scroll.width
                 sourceComponent: {
                     switch (root.page) {
-                        case "network":    return networkPage;
-                        case "input":      return inputPage;
-                        case "session":    return sessionPage;
-                        case "appearance": return appearancePage;
-                        case "motion":     return motionPage;
-                        case "wallpaper":  return wallpaperPage;
-                        default:           return islandPage;
+                        case "theme":   return themePage;
+                        case "input":   return inputPage;
+                        case "system":  return systemPage;
+                        case "network": return networkPage;
+                        default:        return islandPage;
                     }
                 }
 
@@ -207,7 +233,24 @@ PanelWindow {
         }
     }
 
+    readonly property var pages: [
+        { id: "island",  label: "Island",  glyph: "\udb80\udcb5" },
+        { id: "theme",   label: "Theme",   glyph: "\udb81\udda0" },
+        { id: "input",   label: "Input",   glyph: "\udb80\udf30" },
+        { id: "system",  label: "System",  glyph: "\udb80\uddfd" },
+        { id: "network", label: "Network", glyph: "\udb82\udda8" }
+    ]
+
     property string page: "island"
+
+    // Old names still work: they are in muscle memory, in binds, and
+    // in anything that scripted `settings page`.
+    readonly property var aliases: ({
+        appearance: "theme",
+        wallpaper:  "theme",
+        motion:     "island",
+        session:    "system"
+    })
 
     onPageChanged: {
         loader.opacity = 0;
@@ -220,13 +263,11 @@ PanelWindow {
         onTriggered: loader.opacity = 1
     }
 
-    Component { id: islandPage;    IslandPage { width: scroll.width } }
-    Component { id: motionPage;    MotionPage { width: scroll.width } }
-    Component { id: wallpaperPage;  WallpaperPage { width: scroll.width } }
-    Component { id: appearancePage; AppearancePage { width: scroll.width } }
-    Component { id: networkPage;    NetworkPage { width: scroll.width } }
-    Component { id: inputPage;      InputPage { width: scroll.width } }
-    Component { id: sessionPage;    SessionPage { width: scroll.width } }
+    Component { id: islandPage;  IslandPage  { width: scroll.width } }
+    Component { id: themePage;   ThemePage   { width: scroll.width } }
+    Component { id: inputPage;   InputPage   { width: scroll.width } }
+    Component { id: systemPage;  SystemPage  { width: scroll.width } }
+    Component { id: networkPage; NetworkPage { width: scroll.width } }
 
     IpcHandler {
         target: "settings"
@@ -234,6 +275,9 @@ PanelWindow {
         function toggle(): void { root.open = !root.open }
         function show(): void { root.open = true }
         function hide(): void { root.open = false }
-        function page(name: string): void { root.page = name; root.open = true }
+        function page(name: string): void {
+            root.page = root.aliases[name] || name;
+            root.open = true;
+        }
     }
 }
