@@ -18,6 +18,10 @@ Item {
     property int maxRows: 3
     property bool expanded: false
 
+    // Which monitor a click assigns to. "" means all of them, which is
+    // the only meaning when per-monitor wallpapers are off.
+    property string targetScreen: ""
+
     readonly property var all: Wallpaper.list
 
     readonly property int totalRows:
@@ -68,7 +72,8 @@ Item {
                 id: cell
                 required property var modelData
 
-                readonly property bool active: modelData === Wallpaper.current
+                readonly property bool active:
+                    modelData === Wallpaper.pathFor(root.targetScreen)
 
                 // Derived from root, not from the Grid: a Grid sizes
                 // itself from its children, so asking it how wide it is
@@ -130,7 +135,8 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Wallpaper.set(cell.modelData)
+                    onClicked: Wallpaper.set(cell.modelData, false,
+                                             root.targetScreen)
                 }
             }
         }

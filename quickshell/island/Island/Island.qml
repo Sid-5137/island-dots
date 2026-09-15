@@ -1029,6 +1029,13 @@ Variants {
                 if (root.centreOpen) root.closeCentre();
                 else root.openCentre();
             }
+            // `show` cannot be reached from the command line: qs's
+            // own `ipc show` subcommand swallows the word before it
+            // gets as far as the function name, and even `--` does not
+            // help. `open` is the same thing under a name the CLI can
+            // actually pass. Both are kept — `show` still works for
+            // anything talking to the socket directly.
+            function open(): void { root.openCentre() }
             function show(): void { root.openCentre() }
             function hide(): void { root.closeCentre() }
         }
@@ -1051,6 +1058,7 @@ Variants {
                 if (root.overviewOpen) root.closeOverview();
                 else root.openOverview();
             }
+            function open(): void { root.openOverview() }
             function show(): void { root.openOverview() }
             function hide(): void { root.closeOverview() }
         }
@@ -1063,6 +1071,7 @@ Variants {
                 if (root.clipOpen) root.closeClipboard();
                 else root.openClipboard();
             }
+            function open(): void { root.openClipboard() }
             function show(): void { root.openClipboard() }
             function hide(): void { root.closeClipboard() }
         }
@@ -1090,6 +1099,7 @@ Variants {
                 if (root.expanded) root.closeControl();
                 else root.openControl();
             }
+            function open(): void { root.openControl() }
             function show(): void { root.openControl() }
             function hide(): void { root.closeControl() }
         }
@@ -1102,6 +1112,7 @@ Variants {
                 if (root.sessionOpen) root.closeSession();
                 else root.openSession();
             }
+            function open(): void { root.openSession() }
             function show(): void { root.openSession() }
             function hide(): void { root.closeSession() }
             function run(action: string): void { Session.run(action) }
@@ -1116,6 +1127,7 @@ Variants {
                 if (root.searching) root.closeSearch();
                 else root.openSearch();
             }
+            function open(): void { root.openSearch() }
             function show(): void { root.openSearch() }
             function hide(): void { root.closeSearch() }
         }

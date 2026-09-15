@@ -127,18 +127,18 @@ Variants {
             }
         }
 
-        Connections {
-            target: Wallpaper
+        // This screen's wallpaper, which is the shared one unless
+        // per-monitor wallpapers are on and this screen has its own.
+        readonly property string mine:
+            Wallpaper.pathFor(win.screen ? win.screen.name : "")
 
-            function onCurrentChanged() {
-                if (Wallpaper.current !== "")
-                    stage.show("file://" + Wallpaper.current, true);
-            }
+        onMineChanged: {
+            if (mine !== "") stage.show("file://" + mine, true);
         }
 
         Component.onCompleted: {
-            if (Wallpaper.current !== "") {
-                imgA.source = "file://" + Wallpaper.current;
+            if (mine !== "") {
+                imgA.source = "file://" + mine;
                 stage.showA = true;
             }
         }

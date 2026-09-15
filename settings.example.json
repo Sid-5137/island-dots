@@ -119,6 +119,7 @@
     "wallpaper": {
         "crossfadeDuration": 450,
         "directory": "$HOME/Pictures/Wallpapers",
+        "perMonitor": false,
         "rotateMinutes": 0,
         "scheme": "scheme-tonal-spot"
     }

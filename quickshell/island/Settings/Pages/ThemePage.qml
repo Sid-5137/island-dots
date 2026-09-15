@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "root:/Services"
 import "root:/Widgets"
 
@@ -16,12 +17,38 @@ Column {
     id: page
     spacing: 4
 
+    // Which screen the wallpaper grid assigns to. Reset whenever
+    // per-monitor is turned off, so a stale target cannot make a click
+    // appear to do nothing.
+    property string target: ""
+
+    Connections {
+        target: Config.wallpaper
+        function onPerMonitorChanged() {
+            if (!Config.wallpaper.perMonitor) page.target = "";
+        }
+    }
+
     SectionHeader { text: "Wallpaper"; section: "wallpaper" }
+
+    // Only worth showing with somewhere to send it. On one monitor
+    // there is nothing to choose between.
+    ChoiceRow {
+        label: "Applies to"
+        description: "Which screen the wallpaper below is set on."
+        visible: Screens.multi && Config.wallpaper.perMonitor
+        height: visible ? implicitHeight : 0
+        current: page.target
+        options: [{ value: "", label: "All" }].concat(
+            Quickshell.screens.map(s => ({ value: s.name, label: s.name })))
+        onSelected: function(v) { page.target = v }
+    }
 
     WallpaperGrid {
         width: parent.width
         columns: 4
         maxRows: 2
+        targetScreen: page.target
     }
 
     // Only shown when there is something to say. A note about image
@@ -198,7 +225,20 @@ Column {
     Disclosure {
         width: parent.width
         text: "Wallpaper behaviour"
-        hint: "3 settings"
+        hint: Screens.multi ? "4 settings" : "3 settings"
+
+        ToggleRow {
+            configKey: "wallpaper.perMonitor"
+            label: "One per monitor"
+            description: "Give each screen its own wallpaper. The"
+                + " palette still comes from the focused screen's —"
+                + " there is one GTK theme and one set of window"
+                + " borders to drive."
+            visible: Screens.multi
+            height: visible ? implicitHeight : 0
+            checked: Config.wallpaper.perMonitor
+            onToggled: function(v) { Config.wallpaper.perMonitor = v }
+        }
 
         SliderRow {
             configKey: "wallpaper.crossfadeDuration"

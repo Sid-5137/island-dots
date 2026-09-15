@@ -10,7 +10,28 @@ Singleton {
     readonly property string dir: Config.wallpaper.directory
     readonly property string statePath: Paths.wallpaper
 
-    property string current: ""
+    // ── One wallpaper, or one per monitor ────────────────────────
+    //
+    // `chosen` maps a monitor name to its wallpaper, with "_all" as
+    // the one used by any screen that has not been given its own. With
+    // perMonitor off only "_all" is ever written, which is exactly the
+    // single-wallpaper behaviour this had before.
+    //
+    // The palette cannot be per monitor — there is one GTK theme, one
+    // set of window borders and one shell — so it is always derived
+    // from the wallpaper on the focused screen. Moving between
+    // monitors does not re-derive it; changing a wallpaper does.
+    property var chosen: ({ _all: "" })
+
+    function pathFor(name) {
+        if (Config.wallpaper.perMonitor && name && chosen[name])
+            return chosen[name];
+        return chosen._all || "";
+    }
+
+    // The wallpaper the palette comes from.
+    readonly property string current: pathFor(Screens.activeName)
+
     property var list: []
     property bool busy: false
 
@@ -71,43 +92,75 @@ Singleton {
         }
     }
 
-    function set(path, force) {
+    // Set the wallpaper for one screen, or for all of them.
+    //
+    // `screen` is a monitor name, or "" for every screen. With
+    // perMonitor off it is ignored: there is only one wallpaper.
+    function set(path, force, screen) {
         if (!path)
             return;
 
-        if (path === current && force !== true) {
+        const perMonitor = Config.wallpaper.perMonitor;
+        const target = (perMonitor && screen) ? screen : "_all";
+
+        if (chosen[target] === path && force !== true) {
             // Same image: nothing to fade, but the palette may still
             // need regenerating after a scheme change.
             return;
         }
 
-        current = path;
-        stateFile.setText(path);
-        generate(path);
+        // Reassigned rather than mutated: QML does not see a change
+        // signal for a property var that is edited in place, so the
+        // layers would keep the old wallpaper.
+        const next = Object.assign({}, chosen);
+        next[target] = path;
+
+        // Per-screen entries are deliberately kept when the shared
+        // wallpaper changes. pathFor() already ignores them unless
+        // perMonitor is on, so they cannot leak into the single
+        // wallpaper case — and keeping them means turning the setting
+        // off and on again does not throw away the assignments.
+        chosen = next;
+        save();
+
+        // Only the focused screen's wallpaper decides the palette.
+        const source = pathFor(Screens.activeName);
+        if (source !== "") generate(source);
+    }
+
+    function setForScreen(screen, path) { set(path, false, screen) }
+
+    function save() {
+        stateFile.setText(JSON.stringify(root.chosen));
     }
 
     function reapply() {
         if (current !== "") generate(current);
     }
 
+    // Stepping and rotation act on the focused screen when wallpapers
+    // are per monitor, and on everything when they are not.
+    readonly property string stepScreen:
+        Config.wallpaper.perMonitor ? Screens.activeName : ""
+
     function next() {
         if (list.length === 0)
             return;
         const i = list.indexOf(current);
-        set(list[(i + 1) % list.length]);
+        set(list[(i + 1) % list.length], false, stepScreen);
     }
 
     function previous() {
         if (list.length === 0)
             return;
         const i = list.indexOf(current);
-        set(list[(i - 1 + list.length) % list.length]);
+        set(list[(i - 1 + list.length) % list.length], false, stepScreen);
     }
 
     function random() {
         if (list.length === 0)
             return;
-        set(list[Math.floor(Math.random() * list.length)]);
+        set(list[Math.floor(Math.random() * list.length)], false, stepScreen);
     }
 
     function refresh() {
@@ -148,8 +201,23 @@ Singleton {
 
         onLoaded: {
             const saved = stateFile.text().trim();
-            if (saved !== "")
-                root.current = saved;
+            if (saved === "") return;
+
+            // Older installs wrote a bare path. Read it as the shared
+            // wallpaper rather than starting from nothing.
+            if (saved[0] !== "{") {
+                root.chosen = { _all: saved };
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed && typeof parsed === "object")
+                    root.chosen = Object.assign({ _all: "" }, parsed);
+            } catch (e) {
+                console.warn("[Wallpaper] state file is not readable —", e);
+                root.chosen = { _all: saved };
+            }
         }
     }
 
@@ -185,7 +253,7 @@ Singleton {
 
                 // First run with nothing saved: take the first one.
                 if (root.current === "" && root.list.length > 0)
-                    root.set(root.list[0]);
+                    root.set(root.list[0], false, "");
             }
         }
     }
@@ -255,5 +323,21 @@ Singleton {
         function set(path: string): void { root.set(path) }
         function reapply(): void { root.reapply() }
         function current(): string { return root.current }
+
+        // Which wallpaper each screen is showing, and where it came
+        // from — the screen's own choice or the shared one.
+        function screens(): string {
+            return Quickshell.screens.map(s => {
+                const own = root.chosen[s.name];
+                return s.name + "  " + root.pathFor(s.name)
+                    + (Config.wallpaper.perMonitor
+                       ? (own ? "  (its own)" : "  (shared)")
+                       : "  (shared)");
+            }).join("\n");
+        }
+
+        function setOn(screen: string, path: string): void {
+            root.setForScreen(screen, path);
+        }
     }
 }

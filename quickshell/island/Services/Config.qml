@@ -420,6 +420,12 @@ Singleton {
 
                 // Cycle wallpapers on a timer. 0 disables.
                 property int rotateMinutes: 0
+
+                // Give each monitor its own wallpaper. The palette
+                // still comes from one of them — the focused one —
+                // because there is one GTK theme and one set of
+                // window borders to drive.
+                property bool perMonitor: false
             }
         }
     }

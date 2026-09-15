@@ -273,6 +273,13 @@ PanelWindow {
         target: "settings"
 
         function toggle(): void { root.open = !root.open }
+        // `show` cannot be reached from the command line: qs's
+        // own `ipc show` subcommand swallows the word before it
+        // gets as far as the function name, and even `--` does not
+        // help. `open` is the same thing under a name the CLI can
+        // actually pass. Both are kept — `show` still works for
+        // anything talking to the socket directly.
+        function open(): void { root.open = true }
         function show(): void { root.open = true }
         function hide(): void { root.open = false }
         function page(name: string): void {
