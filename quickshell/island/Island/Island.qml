@@ -18,6 +18,14 @@ Variants {
 
         screen: modelData
 
+        // One island per screen is right for the pill. It is wrong for
+        // everything below that can only exist once — the IPC handlers,
+        // the notification popup and the exclusive keyboard grab. Those
+        // are gated on this, so they belong to the monitor you are
+        // actually looking at and move with it. See Services/Screens.qml.
+        readonly property bool primary:
+            modelData && modelData.name === Screens.activeName
+
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.namespace: "island-bar"
         // Only the collapsed height, and only in "always" mode. A zone
@@ -34,10 +42,11 @@ Variants {
         // Only grab the keyboard while searching. Holding exclusive
         // focus the rest of the time would swallow every keystroke
         // meant for the focused app.
-        WlrLayershell.keyboardFocus: (searching || sessionOpen || centreOpen
-                                      || picker !== "" || Polkit.active || clipOpen
-                                      || switcherOpen || overviewOpen
-                                      || root.expanded)
+        WlrLayershell.keyboardFocus: (root.primary
+                                      && (searching || sessionOpen || centreOpen
+                                          || picker !== "" || Polkit.active || clipOpen
+                                          || switcherOpen || overviewOpen
+                                          || root.expanded))
             ? WlrKeyboardFocus.Exclusive
             : WlrKeyboardFocus.None
 
@@ -191,6 +200,22 @@ Variants {
                 root.deferred = null;
                 if (fn) fn();
             }
+        }
+
+        // Moving to the other monitor leaves whatever was open here
+        // with no keyboard grab and no IPC handlers, so it would sit
+        // there until clicked. Hand the shape back instead.
+        onPrimaryChanged: {
+            if (root.primary) return;
+            searching = false;
+            sessionOpen = false;
+            centreOpen = false;
+            clipOpen = false;
+            overviewOpen = false;
+            picker = "";
+            expanded = false;
+            notice = null;
+            cancelSwitch();
         }
 
         function openOverview() {
@@ -507,6 +532,9 @@ Variants {
         Connections {
             target: Notifications
             function onArrived(entry) {
+                // One popup, on the screen you are looking at. Without
+                // this every monitor grows the same notification.
+                if (!root.primary) return;
                 root.notice = entry;
 
                 // Coerced and floored. An undefined duration makes the
@@ -892,6 +920,7 @@ Variants {
         Process { id: settingsProc; running: false }
 
         IpcHandler {
+            enabled: root.primary
             target: "island"
 
             function toggle(): void { root.expanded = !root.expanded }
@@ -962,6 +991,7 @@ Variants {
         }
 
         IpcHandler {
+            enabled: root.primary
             target: "notifications-ui"
 
             function toggle(): void {
@@ -973,6 +1003,7 @@ Variants {
         }
 
         IpcHandler {
+            enabled: root.primary
             target: "switcher"
 
             function next(): void { root.openSwitcher(1) }
@@ -982,6 +1013,7 @@ Variants {
         }
 
         IpcHandler {
+            enabled: root.primary
             target: "overview"
 
             function toggle(): void {
@@ -993,6 +1025,7 @@ Variants {
         }
 
         IpcHandler {
+            enabled: root.primary
             target: "clipboard-ui"
 
             function toggle(): void {
@@ -1004,6 +1037,7 @@ Variants {
         }
 
         IpcHandler {
+            enabled: root.primary
             target: "picker"
 
             function toggle(kind: string): void {
@@ -1018,6 +1052,7 @@ Variants {
         }
 
         IpcHandler {
+            enabled: root.primary
             target: "control"
 
             function toggle(): void {
@@ -1029,6 +1064,7 @@ Variants {
         }
 
         IpcHandler {
+            enabled: root.primary
             target: "session"
 
             function toggle(): void {
@@ -1042,6 +1078,7 @@ Variants {
 
         // SUPER+R and ALT+Space are bound to launcher toggle.
         IpcHandler {
+            enabled: root.primary
             target: "launcher"
 
             function toggle(): void {

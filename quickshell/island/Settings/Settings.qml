@@ -20,8 +20,9 @@ PanelWindow {
         return Qt.rgba(col.r, col.g, col.b, a);
     }
 
-    // Only one settings window, on the focused screen.
-    screen: Quickshell.screens[0]
+    // One settings window, on the monitor Hyprland considers focused
+    // rather than whichever screen happens to be first in the list.
+    screen: Screens.active
 
     visible: open
 
