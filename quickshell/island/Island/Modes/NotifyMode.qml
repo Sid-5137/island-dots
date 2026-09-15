@@ -115,6 +115,111 @@ Item {
         }
     }
 
+    // Inline reply, for clients that advertise one. The field takes
+    // the keyboard while it's up, which is why the popup's dismiss
+    // timer is held off in Island.qml for as long as it has focus —
+    // a reply box that vanishes mid-sentence is worse than no reply
+    // box at all.
+    Rectangle {
+        id: replyBox
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: 30
+        radius: 8
+        visible: root.canReply
+
+        color: replyField.activeFocus
+            ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.06)
+        border.width: 1
+        border.color: replyField.activeFocus
+            ? Theme.primary : Theme.outlineVariant
+
+        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on border.color { ColorAnimation { duration: 120 } }
+
+        TextInput {
+            id: replyField
+            anchors.fill: parent
+            anchors.leftMargin: 11
+            anchors.rightMargin: sendBtn.width + 16
+            verticalAlignment: Text.AlignVCenter
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+            clip: true
+
+            Keys.onEscapePressed: win.dismissNotice()
+            onAccepted: root.send()
+
+            Text {
+                anchors.fill: parent
+                verticalAlignment: Text.AlignVCenter
+                visible: replyField.text === ""
+                text: root.n ? (root.n.replyHint || "Reply") : "Reply"
+                color: Theme.outline
+                font: replyField.font
+                renderType: Text.NativeRendering
+            }
+        }
+
+        Text {
+            id: sendBtn
+            anchors.right: parent.right
+            anchors.rightMargin: 11
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Send"
+            color: replyField.text === ""
+                ? Theme.outline
+                : (sendHover.containsMouse ? Theme.primary : Theme.text)
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+            font.weight: Font.DemiBold
+            renderType: Text.NativeRendering
+
+            Behavior on color { ColorAnimation { duration: 120 } }
+
+            MouseArea {
+                id: sendHover
+                anchors.fill: parent
+                anchors.margins: -6
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.send()
+            }
+        }
+
+        // Focus the field as soon as the popup carrying it appears,
+        // so a reply is one keystroke away rather than a click first.
+        Connections {
+            target: root
+            function onCanReplyChanged() {
+                if (root.canReply) {
+                    replyField.text = "";
+                    replyField.forceActiveFocus();
+                }
+            }
+        }
+    }
+
+    readonly property bool canReply:
+        !!n && n.hasReply === true && island.isNotify
+
+    // Island.qml holds the dismiss timer while this is true.
+    Binding {
+        target: win
+        property: "replyFocused"
+        value: root.canReply && replyField.activeFocus
+        restoreMode: Binding.RestoreBindingOrValue
+    }
+
+    function send() {
+        if (replyField.text.trim() === "") return;
+        Notifications.reply(root.n, replyField.text);
+        replyField.text = "";
+        win.dismissNotice();
+    }
+
     // Click runs the first action if there is one, and
     // dismisses either way — a notification you've
     // acted on shouldn't linger.
@@ -122,6 +227,7 @@ Item {
         id: actions
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+        anchors.bottomMargin: root.canReply ? replyBox.height + 6 : 0
         spacing: 6
         visible: root.n && root.n.actions.length > 0
 
@@ -172,7 +278,10 @@ Item {
     // run whatever the sender put first.
     MouseArea {
         anchors.fill: parent
-        anchors.bottomMargin: actions.visible ? 32 : 0
+        // Declared last, so this sits above everything. Keep it clear
+        // of the controls underneath or it swallows their clicks.
+        anchors.bottomMargin: (root.canReply ? replyBox.height + 6 : 0)
+                            + (actions.visible ? 32 : 0)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: win.dismissNotice()
     }

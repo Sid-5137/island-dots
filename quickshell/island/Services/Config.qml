@@ -294,6 +294,9 @@ Singleton {
                 property int notifyWidth: 460
                 property int notifyHeight: 104
                 property int notifyActionHeight: 36
+                // Extra room for the inline reply field, on the
+                // notifications that carry one.
+                property int notifyReplyHeight: 38
                 property int notifyDuration: 5000
                 property int notifyCriticalDuration: 12000
                 property int centreWidth: 480

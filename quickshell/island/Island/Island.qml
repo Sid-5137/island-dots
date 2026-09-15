@@ -42,13 +42,25 @@ Variants {
         // Only grab the keyboard while searching. Holding exclusive
         // focus the rest of the time would swallow every keystroke
         // meant for the focused app.
-        WlrLayershell.keyboardFocus: (root.primary
-                                      && (searching || sessionOpen || centreOpen
-                                          || picker !== "" || Polkit.active || clipOpen
-                                          || switcherOpen || overviewOpen
-                                          || root.expanded))
-            ? WlrKeyboardFocus.Exclusive
-            : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: {
+            if (!root.primary) return WlrKeyboardFocus.None;
+
+            if (searching || sessionOpen || centreOpen || picker !== ""
+                || Polkit.active || clipOpen || switcherOpen
+                || overviewOpen || root.expanded)
+                return WlrKeyboardFocus.Exclusive;
+
+            // A notification offering a reply has to be typeable. It
+            // must not be an exclusive grab, though: popups arrive
+            // unbidden, and taking the keyboard off whatever you were
+            // typing in because a chat message landed is how a shell
+            // earns a reputation for eating keystrokes. OnDemand hands
+            // the keyboard over only once you click the popup.
+            if (notice !== null && notice.hasReply)
+                return WlrKeyboardFocus.OnDemand;
+
+            return WlrKeyboardFocus.None;
+        }
 
         property bool searching: false
         property bool sessionOpen: false
@@ -311,6 +323,11 @@ Variants {
         property var notice: null
         property bool centreOpen: false
 
+        // Set by NotifyMode while its inline reply field holds the
+        // keyboard. A popup that disappears mid-sentence loses what
+        // you typed, so every timer that would clear it defers.
+        property bool replyFocused: false
+
         function openCentre() {
             centreOpen = true;
             picker = "";
@@ -554,7 +571,15 @@ Variants {
         Timer {
             id: noticeTimer
             interval: 5000
-            onTriggered: root.notice = null
+            onTriggered: {
+                if (root.replyFocused) {
+                    // Come back once they've stopped typing rather
+                    // than taking the half-written reply away.
+                    noticeTimer.restart();
+                    return;
+                }
+                root.notice = null;
+            }
         }
 
         // A popup that outlives its timer holds the island hostage, so
@@ -563,7 +588,9 @@ Variants {
         Timer {
             running: root.notice !== null
             interval: 30000
-            onTriggered: root.notice = null
+            onTriggered: {
+                if (!root.replyFocused) root.notice = null;
+            }
         }
 
         Timer {
@@ -624,6 +651,8 @@ Variants {
                     return "osd";
                 // A popup outranks everything except an interaction
                 // already in progress — it's brief and it's news.
+                // One with a reply field open outranks more than that:
+                // it is holding text the user is in the middle of.
                 if (root.notice !== null && !root.searching && !root.sessionOpen
                     && !root.centreOpen && root.picker === "")
                     return "notify";
@@ -742,7 +771,9 @@ Variants {
                     notify:   { w: Config.island.notifyWidth,
                                 h: Config.island.notifyHeight
                                    + ((root.notice && root.notice.actions.length > 0)
-                                      ? Config.island.notifyActionHeight : 0) },
+                                      ? Config.island.notifyActionHeight : 0)
+                                   + ((root.notice && root.notice.hasReply)
+                                      ? Config.island.notifyReplyHeight : 0) },
                     centre:   { w: Config.island.centreWidth,  h: Config.island.centreHeight },
                     osd:      { w: Config.island.osdWidth,     h: Config.island.osdHeight },
                     auth:     { w: Config.island.authWidth,    h: Config.island.authHeight },
