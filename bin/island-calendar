@@ -1,0 +1,383 @@
+#!/usr/bin/env python3
+"""Read calendar events from iCalendar files on disk.
+
+island used to shell out to khal for this. khal is a good program, but
+it is also a hard dependency on a terminal calendar most people do not
+have, and it only ever read .ics files that something else had already
+synced to disk. This reads those files directly, so a GNOME Calendar
+or vdirsyncer setup works with nothing extra installed.
+
+Output is one event per line, tab separated, which is the format
+Services/Calendar.qml already parses:
+
+    YYYY-MM-DD<TAB>HH:MM<TAB>Title
+
+All-day events leave the time field empty. Lines are sorted by start.
+
+Exit status:
+    0   ran; zero or more events on stdout
+    3   no calendar store found at all
+
+Only the standard library is used, deliberately: this runs on every
+shell start, and a dependency on python-icalendar would be the same
+kind of dependency khal was.
+"""
+
+import argparse
+import datetime as dt
+import os
+import re
+import sys
+from pathlib import Path
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # pragma: no cover - python < 3.9
+    ZoneInfo = None
+
+
+# Where .ics files live. Evolution backs GNOME Calendar and GNOME
+# Online Accounts, so it covers most desktop setups without the user
+# arranging anything; the rest are the usual vdirsyncer and khal
+# layouts. ISLAND_CALENDAR_DIRS overrides the lot.
+def candidate_dirs():
+    env = os.environ.get("ISLAND_CALENDAR_DIRS", "").strip()
+    if env:
+        return [Path(p).expanduser() for p in env.split(":") if p.strip()]
+
+    home = Path.home()
+    data = Path(os.environ.get("XDG_DATA_HOME", home / ".local/share"))
+    return [
+        data / "evolution/calendar",
+        data / "calendars",
+        data / "khal/calendars",
+        data / "vdirsyncer",
+        home / ".calendars",
+        home / ".local/share/calendar",
+        home / "Calendars",
+    ]
+
+
+def ics_files():
+    found = []
+    roots = []
+    for d in candidate_dirs():
+        if not d.is_dir():
+            continue
+        roots.append(d)
+        for p in d.rglob("*.ics"):
+            # Evolution keeps deleted events in trash/; they are still
+            # valid .ics and would otherwise come back as live events.
+            if "trash" in p.parts:
+                continue
+            if p.is_file():
+                found.append(p)
+    return roots, found
+
+
+# ── iCalendar parsing ────────────────────────────────────────────────
+
+def unfold(text):
+    """RFC 5545 line folding: a leading space or tab continues the
+    previous line. Splitting on newlines without this cuts long
+    SUMMARY values in half."""
+    out = []
+    for raw in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if raw[:1] in (" ", "\t") and out:
+            out[-1] += raw[1:]
+        else:
+            out.append(raw)
+    return out
+
+
+def unescape(value):
+    # Order matters: the backslash rule has to come last or it would
+    # eat the backslashes the other rules just produced.
+    return (value.replace("\\n", " ").replace("\\N", " ")
+                 .replace("\\,", ",").replace("\\;", ";")
+                 .replace("\\\\", "\\"))
+
+
+def split_line(line):
+    """`NAME;PARAM=V:value` -> ("NAME", {"PARAM": "V"}, "value")"""
+    # The colon may appear inside a quoted parameter, so find the first
+    # one that is not inside quotes.
+    in_quote = False
+    for i, ch in enumerate(line):
+        if ch == '"':
+            in_quote = not in_quote
+        elif ch == ":" and not in_quote:
+            head, value = line[:i], line[i + 1:]
+            break
+    else:
+        return None, {}, ""
+
+    parts = head.split(";")
+    name = parts[0].upper()
+    params = {}
+    for p in parts[1:]:
+        if "=" in p:
+            k, v = p.split("=", 1)
+            params[k.upper()] = v.strip('"')
+    return name, params, value
+
+
+def parse_dt(value, params, local_tz):
+    """Returns (datetime, all_day). Naive datetimes are treated as
+    local, which is what a floating time means."""
+    value = value.strip()
+    all_day = params.get("VALUE", "").upper() == "DATE" or len(value) == 8
+
+    if all_day:
+        try:
+            return dt.datetime.strptime(value[:8], "%Y%m%d"), True
+        except ValueError:
+            return None, True
+
+    utc = value.endswith("Z")
+    if utc:
+        value = value[:-1]
+    try:
+        stamp = dt.datetime.strptime(value[:15], "%Y%m%dT%H%M%S")
+    except ValueError:
+        return None, False
+
+    if utc:
+        stamp = stamp.replace(tzinfo=dt.timezone.utc).astimezone(local_tz)
+        return stamp.replace(tzinfo=None), False
+
+    tzid = params.get("TZID")
+    if tzid and ZoneInfo is not None:
+        try:
+            stamp = (stamp.replace(tzinfo=ZoneInfo(tzid))
+                          .astimezone(local_tz).replace(tzinfo=None))
+        except Exception:
+            pass  # unknown zone: treat as floating
+    return stamp, False
+
+
+def parse_events(text, local_tz):
+    events = []
+    current = None
+
+    for line in unfold(text):
+        upper = line.upper()
+        if upper.startswith("BEGIN:VEVENT"):
+            current = {"exdate": []}
+            continue
+        if upper.startswith("END:VEVENT"):
+            if current is not None and current.get("start"):
+                events.append(current)
+            current = None
+            continue
+        if current is None:
+            continue
+
+        name, params, value = split_line(line)
+        if name == "DTSTART":
+            stamp, all_day = parse_dt(value, params, local_tz)
+            current["start"] = stamp
+            current["all_day"] = all_day
+        elif name == "SUMMARY":
+            current["title"] = unescape(value).strip()
+        elif name == "RRULE":
+            current["rrule"] = value
+        elif name == "EXDATE":
+            for chunk in value.split(","):
+                stamp, _ = parse_dt(chunk, params, local_tz)
+                if stamp:
+                    current["exdate"].append(stamp)
+        elif name == "RECURRENCE-ID":
+            # A single modified instance of a recurring event. Kept as
+            # its own one-off so it shows at its moved time; the parent
+            # series still generates the original, which is wrong but
+            # far less wrong than dropping the event.
+            current["rrule"] = None
+        elif name == "STATUS" and value.strip().upper() == "CANCELLED":
+            current["cancelled"] = True
+
+    return [e for e in events if not e.get("cancelled")]
+
+
+# ── Recurrence ───────────────────────────────────────────────────────
+
+WEEKDAYS = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
+
+
+def add_months(stamp, months):
+    month = stamp.month - 1 + months
+    year = stamp.year + month // 12
+    month = month % 12 + 1
+    # Clamp, so the 31st in a 30-day month lands on the 30th rather
+    # than raising.
+    day = min(stamp.day, [31, 29 if year % 4 == 0 and (year % 100 != 0
+              or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30,
+              31, 30, 31][month - 1])
+    return stamp.replace(year=year, month=month, day=day)
+
+
+def expand(event, window_start, window_end):
+    """Yield the event's occurrences inside the window.
+
+    Covers FREQ, INTERVAL, COUNT, UNTIL and weekly BYDAY, which is what
+    the overwhelming majority of real calendar entries use. Anything
+    more exotic falls back to the first occurrence rather than being
+    dropped."""
+    start = event["start"]
+    rule = event.get("rrule")
+
+    if not rule:
+        if window_start <= start.date() <= window_end:
+            yield start
+        return
+
+    params = {}
+    for chunk in rule.split(";"):
+        if "=" in chunk:
+            k, v = chunk.split("=", 1)
+            params[k.upper()] = v.upper()
+
+    freq = params.get("FREQ", "")
+    if freq not in ("DAILY", "WEEKLY", "MONTHLY", "YEARLY"):
+        if window_start <= start.date() <= window_end:
+            yield start
+        return
+
+    try:
+        interval = max(1, int(params.get("INTERVAL", "1")))
+    except ValueError:
+        interval = 1
+
+    count = None
+    if "COUNT" in params:
+        try:
+            count = int(params["COUNT"])
+        except ValueError:
+            count = None
+
+    until = None
+    if "UNTIL" in params:
+        raw = params["UNTIL"].rstrip("Z")
+        for fmt in ("%Y%m%dT%H%M%S", "%Y%m%d"):
+            try:
+                until = dt.datetime.strptime(raw, fmt)
+                break
+            except ValueError:
+                continue
+        # An UNTIL given as a bare date bounds the whole of that day,
+        # not midnight on it, or a daily 09:00 series ending "on the
+        # 10th" would lose its last occurrence.
+        if until is not None and len(raw) == 8:
+            until = until.replace(hour=23, minute=59, second=59)
+
+    bydays = [WEEKDAYS[d[-2:]] for d in params.get("BYDAY", "").split(",")
+              if d[-2:] in WEEKDAYS]
+
+    exdates = {d.date() for d in event.get("exdate", [])}
+
+    emitted = 0
+    cursor = start
+    # Bounded so a malformed or unbounded rule cannot spin forever.
+    for _ in range(2000):
+        if cursor.date() > window_end:
+            break
+        if until and cursor > until:
+            break
+        if count is not None and emitted >= count:
+            break
+
+        if freq == "WEEKLY" and bydays:
+            # Walk the requested days within this week.
+            monday = cursor - dt.timedelta(days=cursor.weekday())
+            for wd in sorted(bydays):
+                day = monday + dt.timedelta(days=wd)
+                if day < start:
+                    continue
+                if until and day > until:
+                    break
+                if count is not None and emitted >= count:
+                    break
+                emitted += 1
+                if (window_start <= day.date() <= window_end
+                        and day.date() not in exdates):
+                    yield day
+        else:
+            emitted += 1
+            if (window_start <= cursor.date() <= window_end
+                    and cursor.date() not in exdates):
+                yield cursor
+
+        if freq == "DAILY":
+            cursor += dt.timedelta(days=interval)
+        elif freq == "WEEKLY":
+            cursor += dt.timedelta(weeks=interval)
+        elif freq == "MONTHLY":
+            cursor = add_months(cursor, interval)
+        else:
+            cursor = cursor.replace(year=cursor.year + interval)
+
+
+# ── Entry point ──────────────────────────────────────────────────────
+
+def main():
+    ap = argparse.ArgumentParser(add_help=True, description=__doc__)
+    ap.add_argument("--days", type=int, default=14,
+                    help="window length in days (default 14)")
+    ap.add_argument("--from", dest="start", default="",
+                    help="window start, YYYY-MM-DD (default today)")
+    ap.add_argument("--sources", action="store_true",
+                    help="list the calendar files found and exit")
+    args = ap.parse_args()
+
+    roots, files = ics_files()
+    if not roots:
+        # Nothing on this machine keeps calendars where we look. The
+        # shell reads this as "no calendar" and hides the section.
+        return 3
+
+    if args.sources:
+        for f in files:
+            print(f)
+        return 0
+
+    if args.start:
+        try:
+            today = dt.datetime.strptime(args.start, "%Y-%m-%d").date()
+        except ValueError:
+            today = dt.date.today()
+    else:
+        today = dt.date.today()
+    window_end = today + dt.timedelta(days=max(1, args.days))
+
+    local_tz = dt.datetime.now().astimezone().tzinfo
+
+    rows = []
+    for path in files:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for event in parse_events(text, local_tz):
+            title = event.get("title") or "(no title)"
+            for when in expand(event, today, window_end):
+                time = "" if event.get("all_day") else when.strftime("%H:%M")
+                rows.append((when, time, title))
+
+    # De-duplicate: the same event often exists in more than one file
+    # once a calendar has been exported or synced twice.
+    seen = set()
+    for when, time, title in sorted(rows, key=lambda r: (r[0], r[2])):
+        key = (when.date(), time, title)
+        if key in seen:
+            continue
+        seen.add(key)
+        print("%s\t%s\t%s" % (when.strftime("%Y-%m-%d"), time, title))
+
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        sys.exit(0)

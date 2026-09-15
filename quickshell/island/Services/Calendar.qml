@@ -6,12 +6,19 @@ import QtQuick
 
 // Calendar events.
 //
-// There is no desktop-wide calendar to read on Linux, so this reads
-// khal, which keeps a local store synced by vdirsyncer. Without khal
-// installed it reports nothing and the control centre simply omits
-// the list — no error, no empty box.
+// There is no desktop-wide calendar service to ask on Linux, but there
+// is a de facto storage format: everything that keeps a calendar keeps
+// it as .ics files on disk. bin/island-calendar reads those directly —
+// Evolution's store, which is what GNOME Calendar and GNOME Online
+// Accounts write to, plus the usual vdirsyncer and khal layouts.
 //
-//     sudo dnf install khal vdirsyncer
+// This used to shell out to khal, which meant the whole feature was
+// dark unless you had installed a terminal calendar. khal is still
+// used as a fallback, for a setup whose store isn't in any of the
+// standard places.
+//
+// With neither available it reports nothing and the control centre
+// omits the list entirely — no error, no empty box.
 
 Singleton {
     id: root
@@ -34,22 +41,41 @@ Singleton {
 
     function refresh() { query.running = true }
 
+    // Where the events came from, for the settings page and `calendar
+    // status`. "" until the first query finishes.
+    property string source: ""
+
     Process {
         id: query
         running: true
-        // A fixed format so the output does not depend on the user's
-        // khal config. Two weeks is enough for the month view's dots
-        // without pulling a year of history.
+
+        // Both backends emit the same three tab-separated fields, so
+        // only the source differs. island-calendar exits 3 when it
+        // finds no calendar store at all, which is the signal to try
+        // khal before giving up.
+        //
+        // Two weeks is enough for the month view's dots without
+        // pulling a year of history.
         command: ["sh", "-c",
-            "command -v khal >/dev/null 2>&1 || exit 3; " +
+            'PATH="$HOME/.local/bin:$PATH"; ' +
+            'if out=$(island-calendar --days 14 2>/dev/null); then ' +
+            '  printf "#ics\\n%s" "$out"; exit 0; ' +
+            'fi; ' +
+            'command -v khal >/dev/null 2>&1 || exit 3; ' +
+            'printf "#khal\\n"; ' +
             "khal list --format '{start-date}\\t{start-time}\\t{title}' " +
-            "--day-format '' today 14d 2>/dev/null"]
+            '--day-format "" today 14d 2>/dev/null']
 
         stdout: StdioCollector {
             onStreamFinished: {
                 const out = [];
                 for (const line of this.text.split("\n")) {
                     if (line.trim() === "") continue;
+                    // First line names the backend that answered.
+                    if (line[0] === "#") {
+                        root.source = line.slice(1).trim();
+                        continue;
+                    }
                     const f = line.split("\t");
                     if (f.length < 3) continue;
 
@@ -75,7 +101,10 @@ Singleton {
 
         onExited: function(code) {
             root.available = code !== 3;
-            if (code === 3) root.events = [];
+            if (code === 3) {
+                root.events = [];
+                root.source = "";
+            }
         }
     }
 
@@ -86,13 +115,36 @@ Singleton {
         onTriggered: root.refresh()
     }
 
+    Process {
+        id: probe
+        running: false
+        command: ["sh", "-c",
+            'PATH="$HOME/.local/bin:$PATH"; island-calendar --sources']
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const out = this.text.trim();
+                console.log("[Calendar] sources:\n" + (out || "(none)"));
+            }
+        }
+    }
+
     IpcHandler {
         target: "calendar"
 
         function status(): string {
-            if (!root.available) return "khal not installed";
-            return root.count + " events, " + root.today.length + " today";
+            if (!root.available)
+                return "no calendar store found (looked for .ics files; "
+                     + "khal is not installed either)";
+            return root.count + " events, " + root.today.length + " today"
+                 + "  ·  via " + (root.source || "?");
         }
         function refresh(): void { root.refresh() }
+
+        // The files island-calendar is actually reading, which is the
+        // first thing to check when an event does not show up.
+        function sources(): string {
+            probe.running = true;
+            return "listing to the shell log";
+        }
     }
 }
