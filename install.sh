@@ -95,6 +95,56 @@ if [ -x "$DOTS/bin/island-gtk-apply" ]; then
     echo "  ~/.config/gtk-{3,4}.0/gtk.css"
 fi
 
+# The lock screen authenticates against a PAM file named by
+# Config.island.pamConfig. The shipped default is "login", which exists
+# everywhere and works. A dedicated /etc/pam.d/island additionally lets
+# a fingerprint reader work at the lock screen without enabling it for
+# tty logins, where a failed read looks like a hung terminal.
+#
+# This needs root, so it asks rather than doing it. Declining leaves a
+# perfectly good password-only lock.
+if [ -f "$DOTS/pam/island.in" ] && [ ! -e /etc/pam.d/island ]; then
+    stack=""
+    for candidate in password-auth system-auth common-auth; do
+        if [ -f "/etc/pam.d/$candidate" ]; then
+            stack="$candidate"
+            break
+        fi
+    done
+
+    if [ -z "$stack" ]; then
+        echo
+        echo "  Skipping /etc/pam.d/island: no system auth stack found"
+        echo "  (looked for password-auth, system-auth, common-auth)."
+    else
+        echo
+        echo "Fingerprint unlock (optional)"
+        echo "  Installing /etc/pam.d/island lets the lock screen use a"
+        echo "  fingerprint reader, falling back to your password. It"
+        echo "  needs root, and the lock screen works without it."
+        printf '  Install it now? [y/N] '
+        read -r answer </dev/tty || answer=""
+
+        case "$answer" in
+            [yY]*)
+                tmp="$(mktemp)"
+                sed "s|@STACK@|$stack|g" "$DOTS/pam/island.in" > "$tmp"
+                if sudo install -m 0644 "$tmp" /etc/pam.d/island; then
+                    echo "  /etc/pam.d/island written (stack: $stack)"
+                    echo "  Set Lock > PAM configuration to 'island' in settings,"
+                    echo "  then enrol a finger with: fprintd-enroll"
+                else
+                    echo "  Could not write /etc/pam.d/island; leaving it alone."
+                fi
+                rm -f "$tmp"
+                ;;
+            *)
+                echo "  Skipped. Run install.sh again to be asked once more."
+                ;;
+        esac
+    fi
+fi
+
 echo
 echo "Checking dependencies:"
 missing=()

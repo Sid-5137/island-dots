@@ -50,5 +50,6 @@ ShellRoot {
         // host; without it no tray application can connect.
         Tray.count;
         Calendar.refresh();
+        Biometric.refresh();
     }
 }

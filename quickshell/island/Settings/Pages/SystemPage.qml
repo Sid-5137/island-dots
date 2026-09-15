@@ -295,6 +295,66 @@ Column {
         }
     }
 
+    // Fingerprint unlock needs four separate things to line up and
+    // each fails silently on its own, so the page says which one is
+    // missing rather than leaving a reader that does nothing.
+    ChoiceRow {
+        configKey: "island.pamConfig"
+        label: "PAM file"
+        description: Biometric.pamFile
+            ? "island adds the fingerprint reader on top of your"
+              + " password. login is password only."
+            : "Only login is installed. Re-run install.sh to add an"
+              + " island file with fingerprint support."
+        current: Config.island.pamConfig
+        options: [
+            { value: "login",  label: "login" },
+            { value: "island", label: "island" }
+        ]
+        onSelected: function(v) { Config.island.pamConfig = v }
+    }
+
+    Item {
+        width: parent.width
+        height: 44
+
+        Text {
+            id: fpState
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 90
+            text: Biometric.ready
+                ? "Fingerprint unlock is ready."
+                : "Fingerprint: " + Biometric.advice
+            color: Biometric.ready ? Theme.primary : Theme.textDim
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+            wrapMode: Text.WordWrap
+            renderType: Text.NativeRendering
+        }
+
+        Text {
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Recheck"
+            color: fpHover.containsMouse ? Theme.primary : Theme.outline
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+            renderType: Text.NativeRendering
+
+            Behavior on color { ColorAnimation { duration: 120 } }
+
+            MouseArea {
+                id: fpHover
+                anchors.fill: parent
+                anchors.margins: -8
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Biometric.refresh()
+            }
+        }
+    }
+
     SectionHeader { text: "Everything" }
 
     Item {
