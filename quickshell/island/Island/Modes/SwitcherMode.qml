@@ -26,7 +26,7 @@ Item {
 
     Text {
         anchors.centerIn: parent
-        visible: Wm.allWindows.length === 0
+        visible: win.switchList.length === 0
         text: "No windows"
         color: Theme.outline
         font.family: Theme.fontFamily
@@ -42,7 +42,7 @@ Item {
         spacing: 8
 
         Repeater {
-            model: Wm.allWindows
+            model: win.switchList
 
             Rectangle {
                 id: tile

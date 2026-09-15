@@ -70,22 +70,66 @@ Variants {
         property int switchIndex: 0
         property bool overviewOpen: false
 
+        // The switcher renders and indexes this snapshot rather than
+        // Wm.allWindows directly.
+        //
+        // Wm re-sorts allWindows by focus history on every compositor
+        // event, and the refresh that openSwitcher kicks off is async —
+        // so the list could be re-ordered underneath a gesture already
+        // in progress, and the second Tab landed somewhere unrelated to
+        // what the first one had selected.
+        property var switchList: []
+
         readonly property var switchTarget:
-            Wm.allWindows.length > switchIndex ? Wm.allWindows[switchIndex] : null
+            switchList.length > switchIndex ? switchList[switchIndex] : null
+
+        // Windows opening and closing mid-gesture still have to show
+        // up, but re-sorting is what breaks the selection. So the
+        // opening order is kept, closed windows drop out, new ones
+        // append — and the selected window is tracked by address, so
+        // it only moves if it actually went away.
+        function syncSwitchList() {
+            if (!switcherOpen) return;
+
+            const live = Wm.allWindows;
+            const byAddr = {};
+            for (const w of live) byAddr[w.address] = w;
+
+            const selected = switchTarget ? switchTarget.address : "";
+
+            const kept = switchList
+                .filter(w => byAddr[w.address])
+                .map(w => byAddr[w.address]);
+
+            const known = {};
+            for (const w of kept) known[w.address] = true;
+            for (const w of live) if (!known[w.address]) kept.push(w);
+
+            switchList = kept;
+
+            const i = kept.findIndex(w => w.address === selected);
+            switchIndex = i >= 0
+                ? i
+                : Math.min(switchIndex, Math.max(0, kept.length - 1));
+        }
+
+        Connections {
+            target: Wm
+            function onAllWindowsChanged() { root.syncSwitchList() }
+        }
 
         function openSwitcher(step) {
-            // Only refresh when opening. Refreshing on each Tab
-            // re-sorts allWindows by focus history while you are
-            // stepping through it, which moves the selection out from
-            // under you mid-gesture.
-            if (!switcherOpen) Wm.refresh();
             if (!switcherOpen) {
                 switcherOpen = true;
+                switchList = Wm.allWindows.slice();
                 // Start on the previously focused window, which is what
                 // a single Alt+Tab is asking for.
-                switchIndex = Wm.allWindows.length > 1 ? 1 : 0;
+                switchIndex = switchList.length > 1 ? 1 : 0;
+                // Anything that arrived since the last event is folded
+                // in by syncSwitchList, which preserves the selection.
+                Wm.refresh();
             } else {
-                const n = Wm.allWindows.length;
+                const n = switchList.length;
                 if (n > 0) switchIndex = (switchIndex + step + n) % n;
             }
             // Commits itself once tabbing stops. Detecting the Alt
@@ -105,15 +149,48 @@ Variants {
             switchCommit.stop();
             const target = switchTarget;
             switcherOpen = false;
-            // Dispatch after the surface is down. Focusing while the
-            // island is still up lets the compositor restore focus
-            // over the top of it a moment later.
-            if (target) Qt.callLater(() => Wm.focusWindow(target.address));
+            if (target) {
+                const addr = target.address;
+                afterSurfaceDown(() => Wm.focusWindow(addr));
+            }
         }
 
         function cancelSwitch() {
             switchCommit.stop();
             switcherOpen = false;
+        }
+
+        // Run something once this surface has actually released its
+        // exclusive keyboard grab.
+        //
+        // This used to be Qt.callLater, and that is what made Alt+Tab
+        // look broken. callLater runs before the event loop returns to
+        // Wayland, so the focus dispatch reached Hyprland while the
+        // island still held WlrKeyboardFocus.Exclusive — and when the
+        // grab was released a moment later, the compositor restored
+        // focus to whatever had it before, silently undoing ours.
+        //
+        // It appeared to work across workspaces only by accident:
+        // focusing a window elsewhere also switches workspace, which
+        // leaves the restore nothing on screen to put focus back onto.
+        //
+        // Measured against the real compositor: issued once the surface
+        // is down, the identical dispatch lands every time.
+        property var deferred: null
+
+        function afterSurfaceDown(fn) {
+            deferred = fn;
+            surfaceDown.restart();
+        }
+
+        Timer {
+            id: surfaceDown
+            interval: 90
+            onTriggered: {
+                const fn = root.deferred;
+                root.deferred = null;
+                if (fn) fn();
+            }
         }
 
         function openOverview() {
@@ -643,7 +720,7 @@ Variants {
                     auth:     { w: Config.island.authWidth,    h: Config.island.authHeight },
                     switcher: { w: Math.min(Config.island.switcherWidth,
                                             Math.max(260,
-                                                     Wm.allWindows.length
+                                                     root.switchList.length
                                                      * (Config.island.switcherTile + 8) + 32)),
                                 h: Config.island.switcherHeight },
                     overview: { w: Math.max(260,

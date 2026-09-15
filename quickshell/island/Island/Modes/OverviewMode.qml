@@ -103,7 +103,11 @@ Item {
                     onClicked: {
                         const id = card.modelData.id;
                         win.closeOverview();
-                        Qt.callLater(() => Wm.switchTo(id));
+                        // Not Qt.callLater — see afterSurfaceDown in
+                        // Island.qml. Dispatching before this surface
+                        // has dropped its keyboard grab lets the
+                        // compositor undo the switch.
+                        win.afterSurfaceDown(() => Wm.switchTo(id));
                     }
                 }
 
@@ -167,7 +171,8 @@ Item {
                                 onClicked: {
                                     const addr = thumb.modelData.address;
                                     win.closeOverview();
-                                    Qt.callLater(() => Wm.focusWindow(addr));
+                                    win.afterSurfaceDown(
+                                        () => Wm.focusWindow(addr));
                                 }
                             }
                         }
