@@ -37,7 +37,7 @@ authorization prompts — all the same shape, morphing between them.
 **Wallpaper-driven theming**
 matugen derives a palette from your wallpaper and feeds the shell,
 GTK3, GTK4 *and* Hyprland's own window borders. Change the wallpaper,
-the desktop follows.
+the desktop follows. One wallpaper per monitor, if you want.
 
 **A launcher in the pill**
 Fuzzy application search with subsequence matching — `fx` finds
@@ -46,9 +46,10 @@ filtered.
 
 **Notification daemon**
 Not a client of one. The shell claims
-`org.freedesktop.Notifications`: popups with action buttons, full
-history, Focus mode that records without interrupting, and critical
-notifications that ignore it.
+`org.freedesktop.Notifications`: popups with working action buttons,
+inline reply for chat clients that offer it, full history, Focus mode
+that records without interrupting, and critical notifications that
+ignore it.
 
 **Session lock**
 A real `ext-session-lock` surface with PAM authentication — not a
@@ -92,12 +93,13 @@ attention show a dot.
 
 **Calendar with events**
 Dates carry a dot when something is scheduled, and today's events list
-under the month. Reads khal; absent entirely without it.
+under the month. Reads `.ics` files directly — GNOME Calendar's store,
+vdirsyncer, khal — so nothing extra needs installing.
 
-**Settings that reset**
-Six pages, every value adjustable. Anything you have changed grows a
-revert control beside it; sections and the whole config can be reset
-too.
+**Settings that show their work**
+Five pages. The palette is shown as colour, the pill as a live
+preview. Anything you have changed grows a revert control beside it;
+sections and the whole config can be reset too.
 
 </td>
 </tr>
@@ -112,7 +114,7 @@ calendar, battery ring, quick toggles, sliders, media, system tray
 
 ![settings](docs/settings.png)
 
-**Settings** — six pages, live preview, per-control revert
+**Settings** — the palette as colour, the pill as a live preview
 
 </div>
 
@@ -150,10 +152,10 @@ shared, and there is one settings app rather than five config files.
 | `centre` | `Super+N` | notification history |
 | `notify` | on arrival | a notification, briefly |
 | `osd` | media keys | volume, brightness, mic |
+| `auth` | on request | polkit authorization |
 
 Scrolling the collapsed pill cycles its face: clock, media, system
 tray.
-| `auth` | on request | polkit authorization |
 
 The pill's collapsed width is derived from its content plus a padding
 constant, so nothing ever runs into the edges regardless of what's in
@@ -174,18 +176,24 @@ The script symlinks `hypr/` and `quickshell/island/` into `~/.config`
 and `bin/` into `~/.local/bin`, creates the state directories,
 generates `~/.config/island/matugen.toml` with this machine's absolute
 paths, puts `~/.config/gtk-{3,4}.0/gtk.css` under the shell's control,
-and reports missing dependencies. Re-run it any time; it is
-idempotent.
+and reports missing dependencies. It also offers to install
+`/etc/pam.d/island`, which is the only thing it does that needs root —
+say no and the lock screen still works, just without a fingerprint
+reader. Re-run it any time; it is idempotent.
 
 **Requires**
 
 ```
 hyprland quickshell matugen adw-gtk3-theme qt6ct
 wl-clipboard cliphist brightnessctl playerctl hyprshot slurp
-hypridle NetworkManager bluez
+hypridle NetworkManager bluez python3
 ```
 
 Fonts: JetBrainsMono Nerd Font.
+
+Optional: `qt6-qtimageformats` for WebP, AVIF and JPEG XL wallpapers.
+Without it those files are left out of the picker rather than offered
+as tiles that cannot be drawn. `fprintd` for fingerprint unlock.
 
 Four-finger gestures need input device access:
 
@@ -218,8 +226,9 @@ and merged against them on every start — so an update that adds a
 setting picks it up without the file being deleted.
 
 `settings.example.json` shows every key and its shipped default. It is
-generated from `Services/Config.qml` and is documentation only; the
-shell never reads it.
+generated from `Services/Config.qml` by `bin/island-gen-example` and is
+documentation only; the shell never reads it. `--check` says whether it
+is current, which is worth running after adding a setting.
 
 One consequence of the merge worth knowing: it preserves values you
 already have. If a release changes a *default*, your existing file
@@ -227,9 +236,12 @@ keeps the old value. Delete `settings.json` to take the new defaults.
 
 ```
 bin/                  linked into ~/.local/bin by install.sh
-                      island-gestures   libinput gesture daemon
-                      island-gtk-apply  GTK/Qt appearance
+                      island-gestures     libinput gesture daemon
+                      island-gtk-apply    GTK/Qt appearance
+                      island-calendar     .ics reader
+                      island-gen-example  regenerates the example config
 hypr/                 Hyprland config, one module per concern
+pam/                  PAM template for the lock screen
 matugen/              Wallpaper → palette templates
 quickshell/island/
   Services/           Singletons. No UI.
@@ -332,43 +344,81 @@ Things that cost real time to work out:
   fonts reserve descent space they never use.
 - A `Grid` takes its width from its children — deriving a child size
   from the Grid's width is circular and collapses silently.
-- Notifications are `Retainable`: they're destroyed on dismiss, so
-  history stores copies rather than references.
+- **Notifications are destroyed the moment the handler returns**
+  unless you set `tracked = true` on them. Nothing did, so
+  `trackedNotifications` was always empty and the object each history
+  entry held was already dead. The JavaScript wrapper stays *truthy*
+  after that and every property read comes back `undefined`, so it
+  fails as a `TypeError` at the call site rather than anywhere near
+  the cause — which is why action buttons silently did nothing for
+  the entire life of the project. History stores copies and looks the
+  live object up by id.
+
+- **`Qt.callLater` is not "after the surface is down".** It runs
+  before the event loop returns to Wayland. Dispatching a focus change
+  from it while a layer still holds `WlrKeyboardFocus.Exclusive` means
+  the compositor restores focus over the top of you a moment later.
+  This is the whole of the Alt+Tab bug. Use a short timer.
+
+  It hid behind a coincidence: focusing a window on *another*
+  workspace also switches workspace, which leaves the restore nothing
+  on screen to put focus back onto. So it worked across workspaces
+  and failed within one, which reads like anything except a focus
+  race.
+
+- **A `Repeater` needs a visual parent.** In a singleton it has none,
+  so its delegates are never created and whatever they were supposed
+  to do silently does not happen. `Instantiator` is the non-visual
+  one.
+
+- **Everything inside `Variants` exists once per screen**, including
+  `IpcHandler`. Two handlers claiming one target collide and the loser
+  is not registered, so on a second monitor it is load order that
+  decides which of your keybinds work. `Services/Screens.qml` names
+  one island the owner.
+
+- **`qs ipc call <target> show` cannot work.** `show` is eaten by
+  `qs ipc show` before it reaches the function name, and `--` does not
+  help. Every `show()` here also answers to `open()`.
+
+- **A declared property is not a drawn one.** `SliderRow` had a
+  `description` for years and never rendered it, so every explanation
+  written for a slider was invisible and nobody could tell from the
+  source that it should not have been.
 
 ---
 
 ## Roadmap
 
-- [ ] **Alt+Tab does not reliably change focus.** The pieces all work
-      in isolation: `wm windows` lists every window with its address,
-      and `wm focus <address>` moves focus correctly both within a
-      workspace and across workspaces. The switcher opens, selects,
-      and calls the same function — but focus often does not move.
-      Suspects not yet ruled out: the commit timer firing between two
-      Tab presses, `repeating: true` on the bind not keeping the
-      switcher open, or `Qt.callLater` dispatching after the surface
-      is down but before the compositor is ready to accept it.
+- [ ] **Inline reply is send-only.** The field delivers the reply and
+      the notification closes. Chat clients that send a follow-up in
+      the same conversation start a new notification rather than
+      threading, because the spec has nowhere to put a thread.
 
-- [ ] **Multi-monitor.** `Variants` creates one island per screen, but
-      Settings and the notification popup are pinned to
-      `Quickshell.screens[0]`.
-- [ ] **Inline reply** for chat notifications.
-      `NotificationServer.inlineReplySupported` is off.
+- [ ] **Per-monitor scaling.** Wallpapers are per monitor now, but the
+      pill's geometry is in pixels and does not follow a screen's
+      scale factor, so it is smaller on a HiDPI second display.
 
-- [ ] **Calendar events need khal.** There is no desktop-wide calendar
-      to read on Linux, so `Services/Calendar.qml` shells out to khal
-      and shows nothing without it. Reading `.ics` files directly, or
-      through a portal, would drop the dependency.
-- [ ] **Fingerprint at the lock screen.** Needs a dedicated
-      `/etc/pam.d` file; `Config.island.pamConfig` selects it.
-- [ ] **Per-monitor wallpapers.** One wallpaper is applied to every
-      screen.
-- [ ] **Continuous gestures upstream.** `bin/island-gestures` reads
-      libinput directly because Hyprland's `gesture` action fires once
-      on release. A progress callback for custom gestures would make
-      the daemon unnecessary.
+- [ ] **Calendar is read-only.** `bin/island-calendar` parses .ics
+      files directly, so events appear without khal. Writing one back
+      would mean speaking CalDAV, which is a different program.
 
----
+- [ ] **Recurrence rules are partial.** `FREQ`, `INTERVAL`, `COUNT`,
+      `UNTIL`, `EXDATE` and weekly `BYDAY` cover the overwhelming
+      majority of real calendar entries. `BYSETPOS`, `BYMONTHDAY` and
+      the rest of RFC 5545 fall back to the first occurrence rather
+      than being dropped.
+
+- [ ] **Fingerprint is untested.** The PAM file ships and the shell
+      reports which piece is missing, but it has never run against an
+      actual reader — there isn't one on the machine this was built
+      on. If you have one, an issue either way would be useful.
+
+- [ ] **Continuous gestures need a daemon.** `bin/island-gestures`
+      reads libinput directly because Hyprland's `gesture` action
+      fires once on release. This is a note rather than a task: it
+      needs a progress callback for custom gestures upstream, and
+      until that exists there is nothing to do here.
 
 ## Contributing
 

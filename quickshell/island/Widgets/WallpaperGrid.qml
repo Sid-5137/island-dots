@@ -29,8 +29,19 @@ Item {
     readonly property bool truncated:
         maxRows > 0 && !expanded && totalRows > maxRows
 
-    readonly property var list:
-        truncated ? all.slice(0, maxRows * columns) : all
+    // The wallpaper in use is always on screen, even when the folder
+    // is long enough to be folded. Truncating a sorted list otherwise
+    // hides it whenever its name sorts past the fold, and then the
+    // grid cannot answer the one question you came to it with.
+    readonly property var list: {
+        if (!truncated) return all;
+
+        const shown = all.slice(0, maxRows * columns);
+        const active = Wallpaper.pathFor(targetScreen);
+        if (active === "" || shown.indexOf(active) !== -1) return shown;
+
+        return [active].concat(shown.slice(0, shown.length - 1));
+    }
 
     readonly property int rows: Math.max(1, Math.ceil(list.length / columns))
     readonly property real cellWidth:

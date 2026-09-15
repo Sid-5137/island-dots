@@ -258,6 +258,21 @@ Singleton {
         }
     }
 
+    // Turning per-monitor wallpapers on or off changes which wallpaper
+    // the palette should come from, without any wallpaper being set.
+    // Without this the palette keeps whatever it was derived from
+    // last — so switching the option off left the desktop on the
+    // colours of a wallpaper no screen was showing any more.
+    //
+    // Deliberately not bound to `current` itself: that also changes
+    // when focus moves between monitors showing different wallpapers,
+    // and re-running matugen every time you cross screens would make
+    // Alt+Tab repaint the entire desktop.
+    Connections {
+        target: Config.wallpaper
+        function onPerMonitorChanged() { root.reapply() }
+    }
+
     // Optional rotation. 0 in the config disables it.
     Timer {
         running: Config.wallpaper.rotateMinutes > 0
