@@ -14,6 +14,63 @@ Singleton {
     property var list: []
     property bool busy: false
 
+    // ── What the renderer can actually decode ────────────────────
+    //
+    // The scan used to offer every .webp it found whether or not Qt
+    // could read one. Qt ships no WebP plugin of its own — it comes
+    // from qt6-qtimageformats — so on a machine without that package
+    // the picker listed wallpapers that rendered as an empty tile, and
+    // setting one gave a blank desktop and a line in the log.
+    //
+    // Rather than hardcoding an answer, a one-pixel image of each
+    // questionable format is decoded at startup and the format is
+    // offered only if that worked. Install the package and the files
+    // appear on the next scan, with nothing to configure.
+    readonly property var probes: ({
+        webp: "data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
+    })
+
+    // jpg and png are built into Qt and never need checking.
+    property var formats: ["jpg", "jpeg", "png"]
+
+    // Number of files skipped because nothing here can display them,
+    // so the settings page can say so instead of quietly omitting.
+    property int unsupported: 0
+
+    // Instantiator, not Repeater: a Repeater needs a visual parent to
+    // instantiate into and this singleton has none, so its delegates
+    // were never created and the probe never ran.
+    Instantiator {
+        model: Object.keys(root.probes)
+
+        delegate: Image {
+            required property var modelData
+
+            source: root.probes[modelData]
+            asynchronous: false
+            cache: false
+
+            onStatusChanged: {
+                if (status === Image.Ready) {
+                    if (root.formats.indexOf(modelData) === -1) {
+                        
+                        root.formats = root.formats.concat([modelData]);
+                        root.refresh();
+                    }
+                } else if (status === Image.Error) {
+                    // console.warn, not console.log: the log only
+                    // carries warnings, and Qt has just emitted its
+                    // own unexplained "Unsupported image format" for
+                    // this probe. This is the line that says why.
+                    console.warn("[Wallpaper] no decoder for ." + modelData
+                        + " — install qt6-qtimageformats to use those"
+                        + " wallpapers. They are left out of the picker"
+                        + " rather than offered as blank tiles.");
+                }
+            }
+        }
+    }
+
     function set(path, force) {
         if (!path)
             return;
@@ -99,17 +156,32 @@ Singleton {
     Process {
         id: lister
         running: true
+
+        // Everything is listed, then split by whether this build can
+        // decode it — so the count of skipped files is knowable rather
+        // than the files merely being absent.
         command: [
             "sh", "-c",
             "find '" + root.dir + "' -type f "
             + "\\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' "
-            + "-o -iname '*.webp' \\) 2>/dev/null | sort"
+            + "-o -iname '*.webp' -o -iname '*.avif' -o -iname '*.jxl' "
+            + "\\) 2>/dev/null | sort"
         ]
 
         stdout: StdioCollector {
             onStreamFinished: {
                 const out = this.text.trim();
-                root.list = out === "" ? [] : out.split("\n");
+                const all = out === "" ? [] : out.split("\n");
+
+                const usable = all.filter(p => {
+                    const dot = p.lastIndexOf(".");
+                    if (dot < 0) return false;
+                    return root.formats.indexOf(
+                        p.slice(dot + 1).toLowerCase()) !== -1;
+                });
+
+                root.unsupported = all.length - usable.length;
+                root.list = usable;
 
                 // First run with nothing saved: take the first one.
                 if (root.current === "" && root.list.length > 0)

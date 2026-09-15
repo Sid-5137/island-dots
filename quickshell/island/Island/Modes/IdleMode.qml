@@ -316,7 +316,7 @@ Row {
                 required property var modelData
 
                 readonly property bool attention:
-                    modelData.status === SystemTrayStatus.NeedsAttention
+                    modelData.status === Status.NeedsAttention
 
                 width: 18
                 height: 18

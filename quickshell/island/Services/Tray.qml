@@ -21,7 +21,7 @@ Singleton {
     readonly property bool anyAttention: {
         if (!items) return false;
         for (const i of items.values) {
-            if (i.status === SystemTrayStatus.NeedsAttention) return true;
+            if (i.status === Status.NeedsAttention) return true;
         }
         return false;
     }
@@ -38,7 +38,7 @@ Singleton {
                 + (i.title !== "" ? "  " + i.title : "")
                 + (i.hasMenu ? "  [menu]" : "")
                 + (i.onlyMenu ? " only" : "")
-                + (i.status === SystemTrayStatus.NeedsAttention
+                + (i.status === Status.NeedsAttention
                    ? "  [attention]" : "")
             ).join("\n");
         }
