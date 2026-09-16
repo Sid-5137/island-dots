@@ -24,8 +24,9 @@ Rectangle {
     property bool hovered: false
 
     // Slightly rounder than the panel, which reads as right when the
-    // card is a fraction of the panel's size.
-    radius: Math.round(Config.appearance.panelRadius * 1.2)
+    // card is a fraction of the panel's size. Theme derives all three
+    // radii from the one the user sets, so this follows that slider.
+    radius: Theme.radiusLarge
 
     color: lit
         ? Theme.primary

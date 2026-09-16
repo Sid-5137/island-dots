@@ -33,9 +33,9 @@ Item {
     Text {
         id: title
         anchors.left: parent.left
-        anchors.leftMargin: 12
+        anchors.leftMargin: Theme.padCard
         anchors.top: parent.top
-        anchors.topMargin: 8
+        anchors.topMargin: 10
         text: "Notifications"
         color: Theme.text
         font.family: Theme.fontFamily
@@ -47,7 +47,7 @@ Item {
 
     Text {
         anchors.right: parent.right
-        anchors.rightMargin: 12
+        anchors.rightMargin: Theme.padCard
         anchors.verticalCenter: title.verticalCenter
         visible: Notifications.count > 0
         text: Notifications.count
@@ -60,7 +60,7 @@ Item {
 
     Text {
         anchors.left: parent.left
-        anchors.leftMargin: 12
+        anchors.leftMargin: Theme.padCard
         anchors.top: title.bottom
         anchors.topMargin: 6
         visible: Notifications.count === 0
@@ -76,8 +76,8 @@ Item {
         id: list
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
+        anchors.leftMargin: Theme.padCard
+        anchors.rightMargin: Theme.padCard
         anchors.top: title.bottom
         anchors.topMargin: 5
         spacing: 4

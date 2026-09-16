@@ -43,8 +43,8 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.leftMargin: 12
-        anchors.rightMargin: 8
+        anchors.leftMargin: Theme.padCard
+        anchors.rightMargin: Theme.padRow
         height: 28
 
         Text {
@@ -69,7 +69,7 @@ Item {
 
                 Rectangle {
                     required property var modelData
-                    width: 22; height: 22; radius: 6
+                    width: 22; height: 22; radius: Theme.radiusSmall
                     color: nav.containsMouse
                         ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
 
@@ -102,8 +102,8 @@ Item {
 
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: 8
-        anchors.rightMargin: 8
+        anchors.leftMargin: Theme.padCard
+        anchors.rightMargin: Theme.padCard
         anchors.top: header.bottom
         anchors.bottom: events.visible ? events.top : parent.bottom
         anchors.bottomMargin: 6
@@ -185,9 +185,9 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
-        anchors.bottomMargin: 9
+        anchors.leftMargin: Theme.padCard
+        anchors.rightMargin: Theme.padCard
+        anchors.bottomMargin: 10
         spacing: 3
 
         visible: root.events.length > 0

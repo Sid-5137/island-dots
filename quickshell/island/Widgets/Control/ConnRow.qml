@@ -51,6 +51,21 @@ Item {
         hovered: rowHover.containsMouse && root.roomy
     }
 
+    // A card that only changes colour under the pointer tells you it
+    // is hoverable. Giving way under the press is what tells you it
+    // was hit — and it is the one animation here that has to be
+    // immediate, because it is answering an action rather than
+    // reporting a state.
+    scale: rowHover.pressed || badgeTap.pressed ? 0.97 : 1
+
+    Behavior on scale {
+        NumberAnimation {
+            duration: Motion.hover
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Motion.arrive
+        }
+    }
+
     MouseArea {
         id: rowHover
         anchors.fill: parent
@@ -77,13 +92,15 @@ Item {
         width: size
         height: size
 
-        x: root.roomy ? 9 : Math.round((root.width - size) / 2)
+        x: root.roomy ? Theme.padCard
+                      : Math.round((root.width - size) / 2)
         y: Math.round((root.height - size) / 2)
 
         glyph: root.glyph
         lit: root.on
 
         MouseArea {
+            id: badgeTap
             anchors.fill: parent
             // A 30px circle is a small target, and the row behind it
             // does something different — so it is widened past its
@@ -97,9 +114,9 @@ Item {
 
     Column {
         anchors.left: badge.right
-        anchors.leftMargin: 10
+        anchors.leftMargin: Theme.gapBadge
         anchors.right: chevron.left
-        anchors.rightMargin: 6
+        anchors.rightMargin: Theme.spacingSmall
         anchors.verticalCenter: parent.verticalCenter
         spacing: 1
         visible: root.roomy
@@ -133,7 +150,7 @@ Item {
     Text {
         id: chevron
         anchors.right: parent.right
-        anchors.rightMargin: 10
+        anchors.rightMargin: Theme.padCard
         anchors.verticalCenter: parent.verticalCenter
         visible: root.roomy
         text: "›"

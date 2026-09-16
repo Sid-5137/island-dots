@@ -28,7 +28,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: Math.round(Config.appearance.panelRadius * 0.9)
+        radius: Theme.radiusSmall
         color: hover.containsMouse || root.lit
             ? Qt.rgba(1, 1, 1, root.lit ? 0.07 : 0.05)
             : "transparent"
@@ -46,7 +46,7 @@ Item {
     Badge {
         id: badge
         anchors.left: parent.left
-        anchors.leftMargin: 8
+        anchors.leftMargin: Theme.padRow
         anchors.verticalCenter: parent.verticalCenter
         width: 24
         height: 24
@@ -56,9 +56,9 @@ Item {
 
     Column {
         anchors.left: badge.right
-        anchors.leftMargin: 9
+        anchors.leftMargin: Theme.gapBadge
         anchors.right: act.left
-        anchors.rightMargin: 8
+        anchors.rightMargin: Theme.padRow
         anchors.verticalCenter: parent.verticalCenter
         spacing: 0
 
@@ -89,13 +89,13 @@ Item {
     Rectangle {
         id: act
         anchors.right: parent.right
-        anchors.rightMargin: 8
+        anchors.rightMargin: Theme.padRow
         anchors.verticalCenter: parent.verticalCenter
         visible: root.action !== ""
 
         width: label.implicitWidth + 18
         height: 24
-        radius: 12
+        radius: height / 2
 
         color: tap.containsMouse && !root.waiting
             ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.09)
@@ -112,6 +112,17 @@ Item {
             font.pixelSize: Theme.fontSizeSmall - 1
             font.weight: Font.Bold
             renderType: Text.NativeRendering
+        }
+
+        // Presses give way, the way the cards do.
+        scale: tap.pressed ? 0.94 : 1
+
+        Behavior on scale {
+            NumberAnimation {
+                duration: Motion.hover
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.arrive
+            }
         }
 
         MouseArea {

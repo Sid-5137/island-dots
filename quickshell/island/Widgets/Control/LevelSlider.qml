@@ -58,9 +58,9 @@ Item {
     Text {
         id: name
         anchors.left: parent.left
-        anchors.leftMargin: 12
+        anchors.leftMargin: Theme.padCard
         anchors.top: parent.top
-        anchors.topMargin: 7
+        anchors.topMargin: 8
         visible: root.showLabel
         text: root.label
         color: Theme.text
@@ -76,7 +76,7 @@ Item {
         anchors.right: parent.right
         // Beside the bar rather than over it when there is no label
         // line for it to sit on.
-        anchors.rightMargin: root.showLabel ? 10 : 11
+        anchors.rightMargin: Theme.padCard
         anchors.verticalCenter: root.showLabel ? name.verticalCenter
                                                : parent.verticalCenter
         visible: root.showText && root.hasPage && !root.vertical
@@ -110,12 +110,15 @@ Item {
         // to both the bottom and the centre at once — which Qt
         // resolves by ignoring one of them, silently, in whichever
         // order the bindings happened to evaluate.
-        readonly property int pad: 8
+        // The bar lines up with the label above it, and with every
+        // other card's left edge, rather than being inset by whatever
+        // looked right on its own.
+        readonly property int pad: Theme.padCard
 
         readonly property int bar:
             Math.min(26, root.height - 14)
 
-        x: root.showLabel ? 10 : pad
+        x: pad
         // The chevron sits inside the card when there is no label
         // line, so the bar stops short of it rather than running
         // underneath. A way into the Sound page that disappears
@@ -124,11 +127,14 @@ Item {
         width: root.width - x * 2
              - (chevron.visible && !root.showLabel ? 20 : 0)
 
+        // Symmetric: eight above the label, eight below the bar.
+        readonly property int foot: 8
+
         y: root.vertical ? pad
             : (root.showLabel ? name.y + name.height + 4
                               : Math.round((root.height - bar) / 2))
         height: root.vertical ? root.height - pad * 2
-            : (root.showLabel ? root.height - y - 9 : bar)
+            : (root.showLabel ? root.height - y - foot : bar)
 
         readonly property real ratio: Math.max(0, Math.min(1, root.value / 100))
 

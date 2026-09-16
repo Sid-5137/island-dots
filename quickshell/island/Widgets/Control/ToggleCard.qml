@@ -45,6 +45,18 @@ Item {
         onClicked: root.triggered()
     }
 
+    // See ConnRow: the press is the half of the feedback that says it
+    // was hit rather than merely pointed at.
+    scale: hover.pressed ? 0.97 : 1
+
+    Behavior on scale {
+        NumberAnimation {
+            duration: Motion.hover
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Motion.arrive
+        }
+    }
+
     // Positioned, not anchored. The badge sits against the left edge
     // when there is a label beside it and in the middle when there is
     // not, and the obvious way to write that — an anchor bound to
@@ -62,7 +74,8 @@ Item {
         width: size
         height: size
 
-        x: root.roomy ? 9 : Math.round((root.width - size) / 2)
+        x: root.roomy ? Theme.padCard
+                      : Math.round((root.width - size) / 2)
         y: Math.round((root.height - size) / 2)
 
         glyph: root.glyph
@@ -71,9 +84,9 @@ Item {
 
     Column {
         anchors.left: badge.right
-        anchors.leftMargin: 10
+        anchors.leftMargin: Theme.gapBadge
         anchors.right: parent.right
-        anchors.rightMargin: 10
+        anchors.rightMargin: Theme.padCard
         anchors.verticalCenter: parent.verticalCenter
         spacing: 1
         visible: root.roomy

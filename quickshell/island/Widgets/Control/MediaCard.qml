@@ -42,7 +42,7 @@ Item {
     ClippingRectangle {
         id: frame
         anchors.fill: parent
-        radius: Math.round(Config.appearance.panelRadius * 1.2)
+        radius: Theme.radiusLarge
         color: Theme.surfaceHigh
 
         Image {
@@ -96,10 +96,10 @@ Item {
         id: lines
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
+        anchors.leftMargin: Theme.padCard
+        anchors.rightMargin: Theme.padCard
         anchors.top: parent.top
-        anchors.topMargin: 9
+        anchors.topMargin: 10
         spacing: 0
         visible: root.showText
 
@@ -133,7 +133,7 @@ Item {
         id: transport
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: root.showText ? parent.bottom : undefined
-        anchors.bottomMargin: root.tall ? 12 : 8
+        anchors.bottomMargin: root.tall ? Theme.padCard : 8
         anchors.verticalCenter: root.showText ? undefined
                                               : parent.verticalCenter
         spacing: root.roomy ? 14 : 8

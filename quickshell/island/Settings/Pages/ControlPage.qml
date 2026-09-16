@@ -32,6 +32,12 @@ Column {
     id: page
     spacing: 4
 
+    // nmcli and bluetoothctl poll by spawning processes, and they do
+    // it only while something is reading them. This page is one of
+    // the two places that does.
+    Component.onCompleted: { Network.hold(); Bluetooth.hold() }
+    Component.onDestruction: { Network.release(); Bluetooth.release() }
+
     // The item being dragged, and where it would land. While this is
     // set nothing is written, which is also what keeps the Repeater
     // below from rebuilding mid-drag and dropping the mouse grab.
@@ -87,7 +93,7 @@ Column {
 
                     width: 28
                     height: 28
-                    radius: 14
+                    radius: height / 2
                     color: current ? Theme.primary
                         : (colHover.containsMouse ? Theme.surfaceHigh
                                                   : "transparent")
@@ -135,7 +141,7 @@ Column {
 
                     width: caption.implicitWidth + 22
                     height: 28
-                    radius: 8
+                    radius: Theme.radiusSmall
                     color: actHover.containsMouse && usable
                         ? Theme.surfaceHigh : "transparent"
                     border.width: 1
@@ -216,7 +222,7 @@ Column {
 
                     visible: !ControlLayout.occupied(cx, cy)
 
-                    radius: 8
+                    radius: Theme.radiusSmall
                     color: "transparent"
                     border.width: 1
                     border.color: Qt.rgba(1, 1, 1, 0.06)
@@ -283,7 +289,7 @@ Column {
                     Rectangle {
                         anchors.fill: parent
                         visible: card.dragging
-                        radius: Math.round(Config.appearance.panelRadius * 1.2)
+                        radius: Theme.radiusLarge
                         color: "transparent"
                         border.width: 2
                         border.color: page.ghostOk ? Theme.primary : Theme.error
@@ -353,7 +359,7 @@ Column {
                         anchors.margins: -4
                         width: 15
                         height: 15
-                        radius: 8
+                        radius: height / 2
                         visible: cardHover.containsMouse || killHover.containsMouse
                         color: killHover.containsMouse
                             ? Theme.error : Qt.darker(Theme.error, 1.3)
@@ -393,7 +399,7 @@ Column {
                         anchors.topMargin: -4
                         width: 22
                         height: 15
-                        radius: 7
+                        radius: height / 2
                         visible: labelled
                                  && (cardHover.containsMouse
                                      || textHover.containsMouse)
@@ -550,7 +556,7 @@ Column {
 
                 width: chip.implicitWidth + 44
                 height: 34
-                radius: 10
+                radius: Theme.radiusSmall
                 color: addHover.containsMouse ? Theme.surfaceHigh : "transparent"
                 border.width: 1
                 border.color: Theme.outlineVariant
