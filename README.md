@@ -370,10 +370,11 @@ The script symlinks `hypr/` and `quickshell/island/` into `~/.config`
 and `bin/` into `~/.local/bin`, creates the state directories,
 generates `~/.config/island/matugen.toml` with this machine's absolute
 paths, puts `~/.config/gtk-{3,4}.0/gtk.css` under the shell's control,
-and reports missing dependencies. It also offers to install
-`/etc/pam.d/island`, which is the only thing it does that needs root —
-say no and the lock screen still works, just without a fingerprint
-reader. Re-run it any time; it is idempotent.
+and reports missing dependencies. It also offers to install the icon
+font if it is absent or too old, and `/etc/pam.d/island`, which is the
+only thing it does that needs root — say no and the lock screen still
+works, just without a fingerprint reader. Re-run it any time; it is
+idempotent.
 
 **Requires**
 
@@ -383,7 +384,24 @@ wl-clipboard cliphist brightnessctl playerctl hyprshot slurp
 hypridle NetworkManager bluez python3
 ```
 
-Fonts: JetBrainsMono Nerd Font.
+Fonts: **JetBrainsMono Nerd Font, v3 or newer**. Every glyph the shell
+draws comes from it — `Services/Icons.qml` is the list — and v3 matters:
+it moved the whole Material Design range from `U+F500..U+FD46` up to
+`U+F0000` and beyond, and the shell uses the new codepoints. A v2 patch
+has the same family name and satisfies any check for it, then draws
+nothing where the Wi-Fi bars, the settings tab icons and the padlock on
+a secured network go. `install.sh` checks for a glyph rather than for a
+name, and offers to fetch v3 into `~/.local/share/fonts` if it does not
+find one. To check by hand:
+
+```bash
+fc-list ':charset=f0928' family   # md-wifi_strength_4; v3 only
+```
+
+Icons: an XDG icon theme for application icons in the launcher, the
+tray and notifications — `adwaita-icon-theme` and `hicolor-icon-theme`.
+Cursors ship configured as `Bibata-Modern-Ice`; any installed theme
+works, and Settings > Theme lists what you have.
 
 Optional: `qt6-qtimageformats` for WebP, AVIF and JPEG XL wallpapers.
 Without it those files are left out of the picker rather than offered

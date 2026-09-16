@@ -22,6 +22,11 @@ CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}"
 BIN="$HOME/.local/bin"
 
+# Set if the icon font is still unusable when we finish. Read by the
+# summary at the bottom, which is the only place that should decide
+# whether an install "worked".
+missing_font=0
+
 link() {
     local src="$1" dst="$2"
     if [ -L "$dst" ]; then
@@ -123,7 +128,13 @@ if [ -f "$DOTS/pam/island.in" ] && [ ! -e /etc/pam.d/island ]; then
         echo "  fingerprint reader, falling back to your password. It"
         echo "  needs root, and the lock screen works without it."
         printf '  Install it now? [y/N] '
-        read -r answer </dev/tty || answer=""
+        # Braces so a missing controlling terminal is silent — see the
+        # icon-font prompt below, which does the same. Unanswered stays
+        # "no" here, which it already was.
+        if ! { read -r answer </dev/tty; } 2>/dev/null; then
+            answer=""
+            echo
+        fi
 
         case "$answer" in
             [yY]*)
@@ -143,6 +154,133 @@ if [ -f "$DOTS/pam/island.in" ] && [ ! -e /etc/pam.d/island ]; then
                 ;;
         esac
     fi
+fi
+
+# ── The icon font ────────────────────────────────────────────────
+#
+# Every glyph the shell draws comes out of one patched font, named in
+# Services/Theme.qml and enumerated in Services/Icons.qml. Without it
+# the shell still runs and every icon in it is a box.
+#
+# The version matters, which is the part worth automating. Nerd Fonts
+# v3 moved the whole Material Design range from U+F500..U+FD46 up to
+# U+F0000 and beyond, and the shell's glyphs are the new ones — the
+# four Wi-Fi bars, the settings tabs, the padlock on a secured network.
+# A v2 patch has the family name, satisfies a `fc-list` check for it,
+# and draws nothing where those go. That failure is silent and it looks
+# like a shell bug rather than a font one, so the check below is for a
+# glyph rather than for a name.
+
+NERD_FAMILY="JetBrainsMono Nerd Font"
+
+# md-wifi_strength_4. Any U+F0000-range glyph would do; this one is
+# picked because it is in the shell's own register and so cannot
+# quietly stop being used.
+NERD_PROBE="f0928"
+
+font_has_glyph() {
+    fc-list ":charset=$1" family 2>/dev/null | grep -qi "jetbrainsmono nerd"
+}
+
+install_nerd_font() {
+    local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
+    local dest="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/JetBrainsMonoNerdFont"
+    local tmp fetch
+
+    if command -v curl >/dev/null 2>&1; then
+        fetch=(curl -fsSL -o)
+    elif command -v wget >/dev/null 2>&1; then
+        fetch=(wget -qO)
+    else
+        echo "  Need curl or wget to fetch it. Install one, or grab"
+        echo "  JetBrainsMono from https://nerdfonts.com and unzip it"
+        echo "  into $dest"
+        return 1
+    fi
+
+    if ! command -v unzip >/dev/null 2>&1; then
+        echo "  Need unzip to unpack it."
+        return 1
+    fi
+
+    tmp="$(mktemp -d)"
+    echo "  Downloading JetBrainsMono Nerd Font..."
+    if ! "${fetch[@]}" "$tmp/JetBrainsMono.zip" "$url"; then
+        echo "  Download failed. Leaving fonts alone."
+        rm -rf "$tmp"
+        return 1
+    fi
+
+    # Into a directory of its own, so uninstalling is one rm and so a
+    # second run replaces rather than accumulates.
+    mkdir -p "$dest"
+    if ! unzip -qo "$tmp/JetBrainsMono.zip" -d "$dest"; then
+        echo "  Could not unpack the archive. Leaving fonts alone."
+        rm -rf "$tmp"
+        return 1
+    fi
+    rm -rf "$tmp"
+
+    fc-cache -f "$dest" >/dev/null 2>&1 || fc-cache -f >/dev/null 2>&1 || true
+    echo "  $dest"
+    return 0
+}
+
+echo
+echo "Icon font:"
+
+if font_has_glyph "$NERD_PROBE"; then
+    echo "  ok   $NERD_FAMILY (v3)"
+else
+    # `fc-list : family`, not `fc-list family` — the first argument is
+    # a pattern, so the bare form asks for fonts whose family is
+    # literally "family" and prints nothing. The colon is the
+    # match-everything pattern, and without it this branch can never be
+    # taken: a v2 patch would be reported as no font at all.
+    if fc-list : family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
+        echo "  $NERD_FAMILY is installed, but it is a Nerd Fonts v2"
+        echo "  patch: it has no U+F0928, so the Wi-Fi bars, the settings"
+        echo "  tab icons and the secured-network padlock will be blank."
+        prompt="  Install the v3 build alongside it? [Y/n] "
+    else
+        echo "  $NERD_FAMILY is not installed. Without it every icon in"
+        echo "  the shell — and all of its text — falls back to whatever"
+        echo "  fontconfig picks."
+        prompt="  Install it now (~30MB, no root needed)? [Y/n] "
+    fi
+
+    # Default yes on a bare Enter, because at a real prompt that is
+    # what the person meant. But a read that FAILS is not a yes — it
+    # is nobody there to ask, and treating it as consent means a run
+    # with no controlling terminal fetches 30MB on its own. Asked for
+    # and answered are different things.
+    printf '%s' "$prompt"
+    # Braces so the redirection failure is swallowed too: when there is
+    # no controlling terminal it is the shell, not `read`, that
+    # complains, and 2>/dev/null on the read alone does not catch it.
+    if { read -r answer </dev/tty; } 2>/dev/null; then
+        answer="${answer:-y}"
+    else
+        answer="n"
+        echo
+        echo "  (no terminal to ask on)"
+    fi
+
+    case "$answer" in
+        [nN]*)
+            echo "  Skipped."
+            missing_font=1
+            ;;
+        *)
+            if install_nerd_font && font_has_glyph "$NERD_PROBE"; then
+                echo "  ok   $NERD_FAMILY (v3)"
+            else
+                echo "  Still not resolving. Check with:"
+                echo "    fc-list ':charset=$NERD_PROBE' family"
+                missing_font=1
+            fi
+            ;;
+    esac
 fi
 
 echo
@@ -166,6 +304,49 @@ if [ ! -d /usr/share/themes/adw-gtk3 ]; then
     printf '  MISS %s\n' "adw-gtk3 theme"
     missing+=("adw-gtk3-theme")
 fi
+
+# App icons — the launcher's rows, the tray, the icon on a
+# notification. Quickshell resolves these through the XDG icon theme
+# named in Config.appearance.iconTheme, which ships as Adwaita; with no
+# theme installed every one of them resolves to nothing and the
+# launcher becomes a list of names with holes down the left.
+#
+# hicolor is the fallback every spec-compliant theme inherits from, so
+# it is worth naming separately: without it even an installed theme
+# resolves badly.
+icon_dirs=("/usr/share/icons" "${XDG_DATA_HOME:-$HOME/.local/share}/icons")
+has_icon_theme() {
+    local name="$1" dir
+    for dir in "${icon_dirs[@]}"; do
+        [ -d "$dir/$name" ] && return 0
+    done
+    return 1
+}
+
+if has_icon_theme Adwaita; then
+    printf '  ok   %s\n' "Adwaita icon theme"
+else
+    printf '  MISS %s\n' "Adwaita icon theme"
+    missing+=("adwaita-icon-theme")
+fi
+
+if has_icon_theme hicolor; then
+    printf '  ok   %s\n' "hicolor icon theme"
+else
+    printf '  MISS %s\n' "hicolor icon theme"
+    missing+=("hicolor-icon-theme")
+fi
+
+# Cursors. Config.appearance.cursorTheme ships as Bibata-Modern-Ice and
+# the shell pushes it to GTK, Qt and Hyprland together, so a missing one
+# is three inconsistent cursors rather than one missing cursor. Not
+# fatal, and not added to `missing` for that reason — the pointer still
+# works, it is just the wrong pointer.
+if has_icon_theme Bibata-Modern-Ice; then
+    printf '  ok   %s\n' "Bibata-Modern-Ice cursors"
+else
+    printf '  note %s\n' "Bibata-Modern-Ice cursors absent — pick another in Settings > Theme"
+fi
 if ! ls /usr/libexec/xdg-desktop-portal* >/dev/null 2>&1; then
     printf '  MISS %s\n' "xdg-desktop-portal"
     missing+=("xdg-desktop-portal-gtk")
@@ -178,9 +359,19 @@ if [ ${#missing[@]} -gt 0 ]; then
     echo "  sudo dnf install hyprland quickshell matugen kitty nautilus \\"
     echo "      wireplumber brightnessctl playerctl NetworkManager bluez \\"
     echo "      cliphist wl-clipboard hyprshot slurp adw-gtk3-theme qt6ct hypridle \\"
-    echo "      mate-polkit xdg-desktop-portal-gtk xdg-desktop-portal-hyprland"
-else
+    echo "      mate-polkit xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \\"
+    echo "      adwaita-icon-theme hicolor-icon-theme"
+elif [ "$missing_font" -eq 0 ]; then
     echo "All dependencies present."
+fi
+
+if [ "$missing_font" -ne 0 ]; then
+    echo
+    echo "The icon font is still missing or too old. The shell will run,"
+    echo "but its icons will not. Fedora ships a v3 patch as:"
+    echo "  sudo dnf install jetbrains-mono-nerd-fonts"
+    echo "or unzip JetBrainsMono.zip from https://nerdfonts.com into"
+    echo "  ~/.local/share/fonts/  &&  fc-cache -f"
 fi
 
 case ":$PATH:" in
