@@ -8,6 +8,7 @@ A Hyprland desktop shell built around a single morphing pill and
 two small pods beside it. No bar. No panels. The island *is* the
 interface.
 
+[![Status](https://img.shields.io/badge/status-beta-d08770?style=for-the-badge)](#contributing)
 [![License](https://img.shields.io/badge/license-GPL--3.0-4c566a?style=for-the-badge)](LICENSE)
 [![Quickshell](https://img.shields.io/badge/built%20with-Quickshell-5e81ac?style=for-the-badge)](https://quickshell.org)
 [![Hyprland](https://img.shields.io/badge/compositor-Hyprland-81a1c1?style=for-the-badge)](https://hypr.land)
@@ -15,11 +16,14 @@ interface.
 
 <br>
 
-https://github.com/Sid-5137/island-dots/assets/PLACEHOLDER/demo.mp4
+![the island morphing between its modes](docs/demo.webp)
 
 *One surface. Clock, launcher, control centre, notifications, power —
 it becomes each of them and hands the shape back. Workspaces and the
 tray flank it, so a glance answers where you are and what is running.*
+
+<sub>Captured at 88fps so the springs survive; `docs/demo.mp4` is the
+same take at full quality.</sub>
 
 </div>
 
@@ -119,15 +123,30 @@ sections and the whole config can be reset too.
 
 <div align="center">
 
+![idle](docs/idle.png)
+
+**At rest** — the clock, the date, and a pod of workspace dashes. The
+corner is a capsule at this height and opens up as the shape grows.
+
 ![control centre](docs/control-centre.png)
 
 **The control centre** — one blurred panel on a grid you arrange
-yourself: calendar, Wi-Fi and Bluetooth with their lists one chevron
-away, media, sliders
+yourself: calendar, Wi-Fi and Bluetooth, quick toggles, media, sliders
+
+![bluetooth](docs/bluetooth.png)
+
+**A list, in the same panel** — the chevron pushes a page over the
+grid rather than opening a window somewhere else
+
+![launcher](docs/launcher.png)
+
+**The launcher** — the same shape, stretched
 
 ![settings](docs/settings.png)
 
-**Settings** — the palette as colour, the pill as a live preview
+**Settings → Control** — the canvas is the panel at its real size,
+drawing the real cards. Drag to move, corner to resize, `Aa` for
+words, `×` to remove.
 
 </div>
 
@@ -578,6 +597,20 @@ Things that cost real time to work out:
       actual reader — there isn't one on the machine this was built
       on. If you have one, an issue either way would be useful.
 
+- [ ] **The layout editor has not been driven by a real pointer.**
+      Settings -> Control was built and checked against the model —
+      collisions, packing, undo, the column count — but the drag and
+      the corner resize were never exercised with an actual mouse, so
+      the arithmetic that turns a pointer into a cell is the part most
+      likely to be a pixel out.
+
+- [ ] **`xray` on the island layer is unverified.** Hyprland's Lua
+      layer-rule parser ignores keys it does not recognise without
+      logging anything — a deliberately bogus field produced no output
+      at all — so the rule in `hypr/rules.lua` is taken on the
+      documentation's word. If the island's blur still changes with
+      whatever window is behind it, that line is doing nothing.
+
 - [ ] **Continuous gestures need a daemon.** `bin/island-gestures`
       reads libinput directly because Hyprland's `gesture` action
       fires once on release. This is a note rather than a task: it
@@ -586,12 +619,12 @@ Things that cost real time to work out:
 
 ## Contributing
 
-Early, and tested on one machine. If you try it and something breaks,
+Beta, and tested on one machine. If you try it and something breaks,
 [open an issue](https://github.com/Sid-5137/island-dots/issues/new) —
 that's more useful than a star.
 
-`docs/RECORDING.md` covers how the demo was captured, if you want to
-show a variation.
+`docs/RECORDING.md` covers how the demo was captured — no recorder
+package needed — if you want to show a variation.
 
 ---
 
