@@ -143,10 +143,26 @@ Item {
             onPressed: function(m) { apply(m.x) }
             onPositionChanged: function(m) { if (pressed) apply(m.x) }
 
-            // Click-drag is coarse on a long track. The wheel steps
-            // exactly one stepSize, which is the only way to land on a
-            // precise value without editing settings.json by hand.
+            // Ctrl, because a settings page is a scrolling page first
+            // and a row of sliders second.
+            //
+            // The wheel used to adjust the value whenever the pointer
+            // happened to be over a track, which on a page that is
+            // mostly tracks means scrolling past one changes it. You
+            // do not find out until later, and by then you do not know
+            // which one moved or what it was. Every toolkit that has
+            // had this argument — GTK, Cocoa — resolves it the same
+            // way: the wheel belongs to whatever is scrolling.
+            //
+            // Not accepting the event is what hands it back up to the
+            // Flickable. Click-drag is still coarse on a long track,
+            // so the precise stepping stays, one modifier away.
             onWheel: function(w) {
+                if (!(w.modifiers & Qt.ControlModifier)) {
+                    w.accepted = false;
+                    return;
+                }
+
                 const dir = w.angleDelta.y > 0 ? 1 : -1;
                 const step = root.stepSize > 0 ? root.stepSize : 1;
                 root.moved(Math.max(root.from,
