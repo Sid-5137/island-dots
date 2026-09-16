@@ -54,7 +54,7 @@ Item {
                 width: (root.width - root.spacing * (root.columns - 1))
                        / root.columns
                 height: root.cellHeight
-                radius: 8
+                radius: Theme.radiusLarge
 
                 readonly property string hex:
                     Theme.palette[modelData.key] || "#000000"

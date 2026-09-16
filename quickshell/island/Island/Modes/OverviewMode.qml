@@ -57,15 +57,15 @@ Item {
 
                 width: Config.island.overviewCard
                 height: Config.island.overviewCard * 0.68
-                radius: 12
+                radius: Theme.radiusLarge
                 color: active ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.04)
                 border.width: 1
                 border.color: active ? Theme.primary
                     : (cardHover.containsMouse ? Theme.outlineVariant : "transparent")
                 clip: true
 
-                Behavior on color { ColorAnimation { duration: 140 } }
-                Behavior on border.color { ColorAnimation { duration: 140 } }
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
                 Text {
                     anchors.top: parent.top
@@ -134,16 +134,20 @@ Item {
                             required property var modelData
                             readonly property var toplevel: root.toplevelFor(modelData.address)
 
+                            // A thumbnail is inside a card already,
+                            // so it takes the chip's corner rather than
+                            // the card's — the same corner twice, once
+                            // nested in the other, reads as a mistake.
                             width: thumbs.cellW
                             height: thumbs.cellH
-                            radius: 6
+                            radius: Theme.radiusSmall
                             color: Qt.rgba(1, 1, 1, 0.06)
                             border.width: 1
                             border.color: thumbHover.containsMouse
                                 ? Theme.primary : "transparent"
                             clip: true
 
-                            Behavior on border.color { ColorAnimation { duration: 120 } }
+                            Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
                             ScreencopyView {
                                 anchors.fill: parent

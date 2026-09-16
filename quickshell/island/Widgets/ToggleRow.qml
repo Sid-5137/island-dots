@@ -66,27 +66,36 @@ Item {
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
 
+        // A switch is a capsule and its knob is a circle, whatever
+        // the radius dial says. Those are facts about the shape rather
+        // than preferences, so they are written against the shape.
         width: 44
         height: 24
-        radius: 12
+        radius: height / 2
         color: root.checked ? Theme.primary : Theme.surfaceHigh
         border.width: 1
         border.color: root.checked ? Theme.primary : Theme.outlineVariant
 
-        Behavior on color { ColorAnimation { duration: 140 } }
+        Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
         Rectangle {
             width: 18
             height: 18
-            radius: 9
+            radius: width / 2
             y: 3
             x: root.checked ? parent.width - width - 3 : 3
             color: root.checked ? Theme.textOnPrimary : Theme.textDim
 
+            // The knob travels on the arrival spring, so a switch
+            // moves the way the rest of the shell does.
             Behavior on x {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                NumberAnimation {
+                    duration: Motion.hover
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Motion.arrive
+                }
             }
-            Behavior on color { ColorAnimation { duration: 140 } }
+            Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
         }
 
         MouseArea {

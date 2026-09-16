@@ -199,7 +199,12 @@ Column {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
 
-            radius: Config.island.radius
+            // The panel's own line, against the panel's own height —
+            // see Theme.corner. This canvas claims to be the control
+            // centre at its real size, and it was drawing the slider's
+            // number flat: 14 where the real panel, ten times taller
+            // than the pill, opens its corner out to 36.
+            radius: Theme.corner(height)
             color: page.tint(Theme.surfaceLowest, Config.island.opacity)
             border.width: 1
             border.color: Theme.outlineVariant
@@ -449,7 +454,7 @@ Column {
                                 y: 3 + index * 4
                                 width: 2 + index * 4
                                 height: 2
-                                radius: 1
+                                radius: height / 2
                                 color: Theme.text
                                 opacity: 0.7
                                 rotation: -45

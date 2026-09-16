@@ -103,7 +103,7 @@ Item {
                     id: pip
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 3; height: 11; radius: 1.5
+                    width: 3; height: 11; radius: width / 2
                     color: modelData.critical ? Theme.error : Theme.primary
                 }
 

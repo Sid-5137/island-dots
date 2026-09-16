@@ -55,13 +55,13 @@ Item {
 
                 width: Config.island.switcherTile
                 height: Config.island.switcherTile
-                radius: 14
+                radius: Theme.radiusLarge
                 color: active ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
                 border.width: 1
                 border.color: active ? Theme.primary : "transparent"
 
-                Behavior on color { ColorAnimation { duration: 120 } }
-                Behavior on border.color { ColorAnimation { duration: 120 } }
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
                 IconImage {
                     anchors.centerIn: parent
@@ -70,7 +70,7 @@ Item {
                                                 "application-x-executable")
                     opacity: tile.active ? 1 : 0.6
 
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
+                    Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
                 }
 
                 Rectangle {
@@ -79,7 +79,7 @@ Item {
                     anchors.margins: 7
                     width: 16
                     height: 16
-                    radius: 5
+                    radius: Theme.radiusSmall
                     color: tile.modelData.workspaceId === Wm.activeId
                         ? Theme.primary : Qt.rgba(1, 1, 1, 0.16)
 

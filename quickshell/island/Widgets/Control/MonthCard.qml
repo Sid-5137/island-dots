@@ -202,7 +202,7 @@ Item {
 
                 Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 3; height: 11; radius: 1.5
+                    width: 3; height: 11; radius: width / 2
                     color: Theme.primary
                 }
 

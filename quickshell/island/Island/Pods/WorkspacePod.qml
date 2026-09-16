@@ -64,7 +64,7 @@ Pod {
                 anchors.verticalCenter: parent.verticalCenter
                 width: active ? 16 : (modelData.windows > 0 ? 7 : 4)
                 height: 3
-                radius: 1.5
+                radius: height / 2
                 color: active
                     ? Theme.primary
                     : (modelData.windows > 0 ? Theme.textDim : Theme.outline)
@@ -72,7 +72,7 @@ Pod {
                 Behavior on width {
                     NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
                 }
-                Behavior on color { ColorAnimation { duration: 200 } }
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
                 // A 3px target is not a target. The margin makes the
                 // whole band clickable without changing the shape.
@@ -109,7 +109,7 @@ Pod {
                 anchors.verticalCenter: parent.verticalCenter
                 width: active ? 24 : 18
                 height: 18
-                radius: 5
+                radius: Theme.radiusSmall
                 color: active
                     ? Theme.primary
                     : (modelData.windows > 0
@@ -120,7 +120,7 @@ Pod {
                 Behavior on width {
                     NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
                 }
-                Behavior on color { ColorAnimation { duration: 200 } }
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
                 Text {
                     anchors.centerIn: parent

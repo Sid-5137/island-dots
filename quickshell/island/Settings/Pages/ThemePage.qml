@@ -122,35 +122,11 @@ Column {
             renderType: Text.NativeRendering
         }
 
-        Rectangle {
+        Button {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: 96
-            height: 30
-            radius: 8
-            color: regenHover.containsMouse ? Theme.surfaceHigh
-                                            : Theme.surfaceContainer
-            border.width: 1
-            border.color: Theme.outlineVariant
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "Regenerate"
-                color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall - 1
-                renderType: Text.NativeRendering
-            }
-
-            MouseArea {
-                id: regenHover
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Wallpaper.reapply()
-            }
+            text: "Regenerate"
+            onClicked: Wallpaper.reapply()
         }
     }
 
@@ -206,8 +182,8 @@ Column {
     SliderRow {
         configKey: "appearance.panelRadius"
         label: "Panel radius"
-        description: "Shapes this window and the control centre tiles"
-            + " together."
+        description: "Shapes this window, the control centre, the"
+            + " launcher and every card, row and button in them."
         from: 0; to: 32; stepSize: 1; suffix: " px"
         value: Config.appearance.panelRadius
         onMoved: function(v) { Config.appearance.panelRadius = v }

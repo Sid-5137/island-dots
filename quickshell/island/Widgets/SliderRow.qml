@@ -97,13 +97,13 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width
             height: 4
-            radius: 2
+            radius: height / 2
             color: Theme.surfaceHigh
 
             Rectangle {
                 width: parent.width * root.ratio
                 height: parent.height
-                radius: 2
+                radius: height / 2
                 color: Theme.primary
             }
         }
@@ -112,7 +112,7 @@ Item {
             id: handle
             width: 14
             height: 14
-            radius: 7
+            radius: width / 2
             anchors.verticalCenter: parent.verticalCenter
             x: Math.max(0, Math.min(track.width - width,
                                     root.ratio * track.width - width / 2))
@@ -122,7 +122,7 @@ Item {
             scale: drag.pressed ? 1.25 : 1.0
 
             Behavior on scale {
-                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Motion.fadeIn; easing.type: Easing.OutCubic }
             }
         }
 

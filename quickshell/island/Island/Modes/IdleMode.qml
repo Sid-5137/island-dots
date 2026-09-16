@@ -149,11 +149,11 @@ Row {
                         // The resting height is what a paused player
                         // shows, so it has to be legible on its own.
                         height: 9
-                        radius: 1
+                        radius: width / 2
                         anchors.verticalCenter: parent.verticalCenter
                         color: Player.playing ? Theme.primary : Theme.outline
 
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
                         SequentialAnimation on height {
                             running: Player.playing && mediaSlot.shown

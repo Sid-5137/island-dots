@@ -47,14 +47,16 @@ Item {
         anchors.rightMargin: 16
         anchors.verticalCenter: parent.verticalCenter
         height: 8
-        radius: 4
+        radius: height / 2
         color: Qt.rgba(1, 1, 1, 0.12)
         visible: Osd.kind !== "mic"
 
         Rectangle {
-            width: Math.max(8, parent.width * (Osd.value / 100))
+            // Never narrower than it is tall, so the fill stays a
+            // capsule rather than collapsing to a lens at zero.
+            width: Math.max(parent.height, parent.width * (Osd.value / 100))
             height: parent.height
-            radius: 4
+            radius: height / 2
             color: Osd.muted ? Theme.outline : Theme.primary
 
             Behavior on width {

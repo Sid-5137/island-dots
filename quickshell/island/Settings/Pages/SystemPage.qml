@@ -141,35 +141,11 @@ Column {
             renderType: Text.NativeRendering
         }
 
-        Rectangle {
+        Button {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: 84
-            height: 30
-            radius: 8
-            color: reapplyHover.containsMouse ? Theme.surfaceHigh
-                                              : Theme.surfaceContainer
-            border.width: 1
-            border.color: Theme.outlineVariant
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "Reapply"
-                color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                renderType: Text.NativeRendering
-            }
-
-            MouseArea {
-                id: reapplyHover
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Compositor.apply()
-            }
+            text: "Reapply"
+            onClicked: Compositor.apply()
         }
     }
 
@@ -272,36 +248,13 @@ Column {
             }
         }
 
-        Rectangle {
+        Button {
             id: lockBtn
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: 96
-            height: 32
-            radius: 8
-            color: lockHover.containsMouse ? Theme.surfaceHigh
-                                           : Theme.surfaceContainer
-            border.width: 1
-            border.color: Theme.outlineVariant
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "Lock now"
-                color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                renderType: Text.NativeRendering
-            }
-
-            MouseArea {
-                id: lockHover
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Lock.lock()
-            }
+            implicitHeight: 32
+            text: "Lock now"
+            onClicked: Lock.lock()
         }
     }
 
@@ -352,7 +305,7 @@ Column {
             font.pixelSize: Theme.fontSizeSmall
             renderType: Text.NativeRendering
 
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
             MouseArea {
                 id: fpHover
@@ -386,24 +339,21 @@ Column {
             renderType: Text.NativeRendering
         }
 
-        Rectangle {
+        // 118px wide, before, because that is what "Reset all"
+        // needed once it had turned into "Confirm" and back. A chip
+        // that measures its own label does not need anybody to have
+        // worked that out.
+        Button {
             id: resetAll
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: 118
-            height: 32
-            radius: 8
+            implicitHeight: 32
 
             // Two presses. A reset is not undoable.
             property bool confirming: false
 
-            color: confirming ? Theme.error
-                : (allHover.containsMouse ? Theme.surfaceHigh
-                                          : Theme.surfaceContainer)
-            border.width: 1
-            border.color: confirming ? Theme.error : Theme.outlineVariant
-
-            Behavior on color { ColorAnimation { duration: 120 } }
+            text: confirming ? "Confirm" : "Reset all"
+            kind: confirming ? "danger" : "plain"
 
             Timer {
                 id: allArmed
@@ -411,31 +361,15 @@ Column {
                 onTriggered: resetAll.confirming = false
             }
 
-            Text {
-                anchors.centerIn: parent
-                text: resetAll.confirming ? "Confirm" : "Reset all"
-                color: resetAll.confirming ? Theme.textOnError : Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                font.weight: Font.DemiBold
-                renderType: Text.NativeRendering
-            }
-
-            MouseArea {
-                id: allHover
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (!resetAll.confirming) {
-                        resetAll.confirming = true;
-                        allArmed.restart();
-                        return;
-                    }
-                    resetAll.confirming = false;
-                    allArmed.stop();
-                    Config.resetAll();
+            onClicked: {
+                if (!resetAll.confirming) {
+                    resetAll.confirming = true;
+                    allArmed.restart();
+                    return;
                 }
+                resetAll.confirming = false;
+                allArmed.stop();
+                Config.resetAll();
             }
         }
     }

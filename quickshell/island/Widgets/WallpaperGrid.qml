@@ -91,14 +91,14 @@ Item {
                 // from inside a child is circular.
                 width: root.cellWidth
                 height: root.cellHeight
-                radius: 8
+                radius: Theme.radiusLarge
                 color: Theme.surfaceHigh
                 clip: true
 
                 border.width: active ? 2 : (cellHover.containsMouse ? 1 : 0)
                 border.color: active ? Theme.primary : Theme.outlineVariant
 
-                Behavior on border.color { ColorAnimation { duration: 120 } }
+                Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
                 Image {
                     anchors.fill: parent
@@ -111,7 +111,7 @@ Item {
                     sourceSize.width: 420
                     opacity: cellHover.containsMouse || cell.active ? 1 : 0.72
 
-                    Behavior on opacity { NumberAnimation { duration: 140 } }
+                    Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
                 }
 
                 // The filename, on hover. Wallpapers are often named
@@ -124,7 +124,7 @@ Item {
                     color: Qt.rgba(0, 0, 0, 0.62)
                     opacity: cellHover.containsMouse ? 1 : 0
 
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
+                    Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
 
                     Text {
                         anchors.fill: parent
@@ -173,7 +173,7 @@ Item {
             font.weight: Font.DemiBold
             renderType: Text.NativeRendering
 
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
         }
 
         MouseArea {

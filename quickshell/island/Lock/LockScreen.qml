@@ -61,14 +61,14 @@ WlSessionLock {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 320
                 height: 46
-                radius: 12
+                radius: Theme.radiusNormal
                 color: Qt.rgba(1, 1, 1, 0.10)
                 border.width: 1
                 border.color: Lock.error
                     ? Theme.error
                     : (input.activeFocus ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.18))
 
-                Behavior on border.color { ColorAnimation { duration: 150 } }
+                Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
                 TextInput {
                     id: input

@@ -43,7 +43,7 @@ Item {
     Rectangle {
         id: backdrop
         anchors.fill: parent
-        radius: 10
+        radius: Theme.radiusNormal
         color: Theme.surfaceLowest
         clip: true
 
@@ -83,7 +83,13 @@ Item {
                                       : restDashes.implicitWidth + 16)
                          : 0
             height: root.shapeHeight
-            radius: Config.island.radius
+            // The real pod's own line, against the same height — see
+            // Theme.corner. Reading the slider directly drew a shape
+            // the island never takes: at the default 8 the pill is
+            // actually a 10, because the corner grows with the height,
+            // and a preview two pixels off is a preview of something
+            // else.
+            radius: Theme.corner(height)
             color: root.shapeColor
             border.width: shown ? 1 : 0
             border.color: Theme.outlineVariant
@@ -100,7 +106,9 @@ Item {
                 opacity: root.open ? 0 : 1
                 visible: opacity > 0.01
 
-                Behavior on opacity { NumberAnimation { duration: 120 } }
+                // The real pod's cross-fade, not a clock of its own —
+                // see Widgets/ContentFade and Island/Pods/WorkspacePod.
+                Behavior on opacity { ContentFade { revealing: !root.open } }
 
                 Repeater {
                     model: 4
@@ -110,7 +118,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         width: index === 0 ? 16 : (index === 3 ? 4 : 7)
                         height: 3
-                        radius: 1.5
+                        radius: height / 2
                         color: index === 0 ? Theme.primary
                             : (index === 3 ? Theme.outline : Theme.textDim)
                     }
@@ -124,7 +132,7 @@ Item {
                 opacity: root.open ? 1 : 0
                 visible: opacity > 0.01
 
-                Behavior on opacity { NumberAnimation { duration: 120 } }
+                Behavior on opacity { ContentFade { revealing: root.open } }
 
                 Repeater {
                     model: 4
@@ -136,7 +144,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         width: active ? 24 : 18
                         height: 18
-                        radius: 5
+                        radius: Theme.radiusSmall
                         color: active ? Theme.primary
                             : (index === 3 ? "transparent"
                                            : Qt.rgba(1, 1, 1, 0.12))
@@ -170,14 +178,17 @@ Item {
                             contents.implicitWidth + Config.island.padding * 2)
             height: root.shapeHeight
 
-            radius: Config.island.radius
+            radius: Theme.corner(height)
             color: root.shapeColor
             border.width: 1
             border.color: Theme.outlineVariant
 
             Behavior on width { Morph { shape: root } }
             Behavior on height { Morph { shape: root } }
-            Behavior on radius { NumberAnimation { duration: Motion.fadeIn } }
+            // No Behavior on radius, for the same reason the island
+            // has none: the corner is a function of a height that is
+            // already on a spring, so it arrives with the shape rather
+            // than chasing it on a second clock.
             Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
             Row {
@@ -224,7 +235,7 @@ Item {
 
             width: shown ? 3 * icon + 2 * gap + 16 : 0
             height: root.shapeHeight
-            radius: Config.island.radius
+            radius: Theme.corner(height)
             color: root.shapeColor
             border.width: shown ? 1 : 0
             border.color: Theme.outlineVariant
@@ -246,9 +257,12 @@ Item {
                     Rectangle {
                         required property int index
                         anchors.verticalCenter: parent.verticalCenter
+                        // Circles, because Widgets/TrayIcon draws
+                        // circles. The preview had them as rounded
+                        // squares.
                         width: rightPod.icon
                         height: rightPod.icon
-                        radius: 4
+                        radius: width / 2
                         opacity: root.open ? 1 : 0.78
                         color: index === 0 ? Theme.primary
                             : (index === 1 ? Theme.secondary : Theme.tertiary)
@@ -275,7 +289,7 @@ Item {
         anchors.margins: 7
         width: hintText.implicitWidth + 14
         height: 19
-        radius: 5
+        radius: Theme.radiusSmall
         color: Qt.rgba(0, 0, 0, 0.5)
 
         Text {

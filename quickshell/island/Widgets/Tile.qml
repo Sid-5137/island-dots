@@ -17,18 +17,18 @@ Rectangle {
 
     signal hoverChanged(bool inside)
 
-    // Shares the panel radius so one slider shapes the settings
-    // window and these together. Scaled down, because the same radius
-    // reads much rounder on a 200px tile than on a 960px panel.
-    radius: Math.round(Config.appearance.panelRadius * 0.9)
+    // A card's corner. This was `panelRadius * 0.9` — a fourth
+    // multiplier, alongside Theme's three, that existed only here and
+    // was never going to be kept in step with them.
+    radius: Theme.radiusLarge
 
     color: active ? Theme.primary : Qt.rgba(1, 1, 1, 0.06)
     border.width: 1
     border.color: active ? Theme.primary
         : (hover.containsMouse ? Theme.outlineVariant : "transparent")
 
-    Behavior on color { ColorAnimation { duration: 150 } }
-    Behavior on border.color { ColorAnimation { duration: 150 } }
+    Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+    Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
     // anchors.centerIn centres the text's LINE BOX, not the glyph.
     // The box runs from ascent above the baseline to descent below,

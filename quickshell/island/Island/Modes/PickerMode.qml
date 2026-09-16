@@ -75,36 +75,18 @@ Item {
                 { key: "icon",      label: "Icons" }
             ]
 
-            Rectangle {
+            // An unselected tab used to be transparent, which made it
+            // a word rather than a control — you found out the other
+            // two were clickable by hovering them. They carry the
+            // chip's resting wash now, and the selected one is filled.
+            Button {
                 required property var modelData
-                readonly property bool active: win.picker === modelData.key
 
-                width: tabLabel.implicitWidth + 24
-                height: 26
-                radius: 8
-                color: active ? Theme.primary
-                    : (tabHover.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent")
-
-                Behavior on color { ColorAnimation { duration: 140 } }
-
-                Text {
-                    id: tabLabel
-                    anchors.centerIn: parent
-                    text: modelData.label
-                    color: parent.active ? Theme.textOnPrimary : Theme.textDim
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    font.weight: Font.DemiBold
-                    renderType: Text.NativeRendering
-                }
-
-                MouseArea {
-                    id: tabHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: win.openPicker(modelData.key)
-                }
+                implicitHeight: 26
+                padding: Theme.padCard
+                text: modelData.label
+                kind: win.picker === modelData.key ? "primary" : "plain"
+                onClicked: win.openPicker(modelData.key)
             }
         }
     }
@@ -144,14 +126,14 @@ Item {
 
             width: isImage ? 132 : 116
             height: strip.height
-            radius: 10
+            radius: Theme.radiusLarge
             color: Theme.surfaceHigh
             border.width: active ? 2 : 1
             border.color: active ? Theme.primary
                 : (cardHover.containsMouse ? Theme.outlineVariant : "transparent")
             clip: true
 
-            Behavior on border.color { ColorAnimation { duration: 140 } }
+            Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
             Image {
                 anchors.fill: parent
@@ -175,7 +157,7 @@ Item {
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 34; height: 34; radius: 17
+                    width: 34; height: 34; radius: width / 2
                     color: Theme.primary
                     visible: win.picker === "theme"
                 }

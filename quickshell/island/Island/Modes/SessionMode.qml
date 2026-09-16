@@ -46,7 +46,7 @@ Item {
 
                 width: 78
                 height: 84
-                radius: 10
+                radius: Theme.radiusLarge
                 color: armed
                     ? Theme.error
                     : (selected ? Qt.rgba(1, 1, 1, 0.10) : "transparent")
@@ -55,8 +55,21 @@ Item {
                     ? Theme.error
                     : (selected ? Theme.outlineVariant : "transparent")
 
-                Behavior on color { ColorAnimation { duration: 140 } }
-                Behavior on border.color { ColorAnimation { duration: 140 } }
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
+
+                // Hover colours the tile; the press is what says it
+                // landed. A power menu is the last place to leave that
+                // ambiguous.
+                scale: btnHover.pressed ? 0.96 : 1
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Motion.hover
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Motion.arrive
+                    }
+                }
 
                 Column {
                     anchors.centerIn: parent
@@ -72,7 +85,7 @@ Item {
                         font.family: Theme.fontFamily
                         font.pixelSize: 22
                         font.weight: Config.island.fontWeight
-                        Behavior on color { ColorAnimation { duration: 140 } }
+                        Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
                     }
 
                     Text {

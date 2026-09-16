@@ -73,14 +73,14 @@ Item {
         anchors.bottom: buttons.top
         anchors.bottomMargin: 12
         height: 40
-        radius: 10
+        radius: Theme.radiusNormal
         color: Qt.rgba(1, 1, 1, 0.07)
         border.width: 1
         border.color: Polkit.failed
             ? Theme.error
             : (input.activeFocus ? Theme.outline : Theme.outlineVariant)
 
-        Behavior on border.color { ColorAnimation { duration: 150 } }
+        Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
         TextInput {
             id: input
@@ -132,71 +132,42 @@ Item {
         id: buttons
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        spacing: 8
+        spacing: Theme.spacingSmall
 
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            width: root.width - 200
-            text: Polkit.supplementary
-            color: Polkit.supplementaryIsError ? Theme.error : Theme.outline
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
+        Button {
+            implicitHeight: 32
+            text: "Cancel"
+            onClicked: Polkit.cancel()
         }
 
-        Rectangle {
-            width: 84
-            height: 32
-            radius: 8
-            color: cancelHover.containsMouse ? Theme.surfaceHigh : Qt.rgba(1, 1, 1, 0.06)
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "Cancel"
-                color: Theme.textDim
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                font.weight: Font.DemiBold
-                renderType: Text.NativeRendering
-            }
-
-            MouseArea {
-                id: cancelHover
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Polkit.cancel()
-            }
+        Button {
+            implicitHeight: 32
+            text: "Authenticate"
+            kind: "primary"
+            // Nothing to submit is not the same as a button that
+            // submits nothing. `enabled` dims it and stops the click
+            // in one move.
+            enabled: Polkit.entry !== ""
+            onClicked: Polkit.submit()
         }
+    }
 
-        Rectangle {
-            width: 108
-            height: 32
-            radius: 8
-            color: Theme.primary
-            opacity: Polkit.entry === "" ? 0.4 : 1
-
-            Behavior on opacity { NumberAnimation { duration: 120 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "Authenticate"
-                color: Theme.textOnPrimary
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                font.weight: Font.DemiBold
-                renderType: Text.NativeRendering
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Polkit.submit()
-            }
-        }
+    // Whatever polkit has to say, in the room the buttons leave it.
+    // Anchored rather than sitting in the Row, where its width was
+    // `root.width - 200` — the two buttons' hard-coded widths added up
+    // by hand, which stopped being true the moment either of them was
+    // allowed to size itself to its own label.
+    Text {
+        anchors.left: parent.left
+        anchors.right: buttons.left
+        anchors.rightMargin: Theme.spacingNormal
+        anchors.verticalCenter: buttons.verticalCenter
+        text: Polkit.supplementary
+        color: Polkit.supplementaryIsError ? Theme.error : Theme.outline
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.fontSizeSmall
+        font.weight: Font.DemiBold
+        elide: Text.ElideRight
+        renderType: Text.NativeRendering
     }
 }

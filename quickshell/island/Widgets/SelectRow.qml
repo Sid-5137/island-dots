@@ -71,18 +71,18 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 210
         height: 32
-        radius: 8
+        radius: Theme.radiusNormal
         color: root.open || fieldHover.containsMouse
             ? Theme.surfaceHigh
             : Theme.surfaceContainer
         border.width: 1
         border.color: root.open ? Theme.primary : Theme.outlineVariant
 
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
         Text {
             anchors.left: parent.left
-            anchors.leftMargin: 12
+            anchors.leftMargin: Theme.padCard
             anchors.right: chevron.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
@@ -97,7 +97,7 @@ Item {
         Text {
             id: chevron
             anchors.right: parent.right
-            anchors.rightMargin: 12
+            anchors.rightMargin: Theme.padCard
             anchors.verticalCenter: parent.verticalCenter
             text: "\u2304"
             color: Theme.outline
@@ -131,7 +131,7 @@ Item {
 
         width: field.width
         height: root.open ? root.popupHeight : 0
-        radius: 10
+        radius: Theme.radiusLarge
         color: Theme.surfaceLowest
         border.width: 1
         border.color: Theme.outlineVariant
@@ -152,8 +152,8 @@ Item {
             TextInput {
                 id: filter
                 anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
+                anchors.leftMargin: Theme.padCard
+                anchors.rightMargin: Theme.padCard
                 verticalAlignment: Text.AlignVCenter
                 color: Theme.text
                 font.family: Theme.fontFamily
@@ -197,39 +197,61 @@ Item {
                 return root.options.filter(o => o.toLowerCase().includes(q));
             }
 
-            delegate: Rectangle {
+            // Inset and rounded, for the same reason the launcher's
+            // rows are: a square highlight running the full width of a
+            // rounded popup meets the popup's corner and gets cut, and
+            // the eye reads the cut rather than the selection. The row
+            // keeps its text on the same line as the filter field
+            // above it — the card's inset plus the text's inset inside
+            // it come to the field's own margin.
+            delegate: Item {
+                id: opt
+
                 required property var modelData
 
                 readonly property bool active: modelData === root.current
 
                 width: popup.width
                 height: 30
-                color: active
-                    ? Qt.rgba(1, 1, 1, 0.10)
-                    : (rowHover.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent")
 
-                Text {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: modelData
-                    color: parent.active ? Theme.primary : Theme.textDim
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    elide: Text.ElideRight
-                    renderType: Text.NativeRendering
-                }
-
-                MouseArea {
-                    id: rowHover
+                Rectangle {
                     anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        root.selected(modelData);
-                        root.open = false;
+                    anchors.leftMargin: Theme.spacingSmall
+                    anchors.rightMargin: Theme.spacingSmall
+                    anchors.topMargin: 1
+                    anchors.bottomMargin: 1
+
+                    radius: Theme.radiusSmall
+
+                    color: opt.active
+                        ? Qt.rgba(1, 1, 1, 0.10)
+                        : (rowHover.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent")
+
+                    Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: Theme.spacingSmall
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.spacingSmall
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: opt.modelData
+                        color: opt.active ? Theme.primary : Theme.textDim
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        elide: Text.ElideRight
+                        renderType: Text.NativeRendering
+                    }
+
+                    MouseArea {
+                        id: rowHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.selected(opt.modelData);
+                            root.open = false;
+                        }
                     }
                 }
             }

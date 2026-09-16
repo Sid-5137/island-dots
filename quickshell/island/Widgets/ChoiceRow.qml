@@ -83,13 +83,17 @@ Item {
                 color: active ? Theme.primary : Theme.surfaceHigh
 
                 // Round only the outer edges, so the group reads as one
-                // control rather than separate buttons.
-                topLeftRadius: index === 0 ? 8 : 0
-                bottomLeftRadius: index === 0 ? 8 : 0
-                topRightRadius: index === root.options.length - 1 ? 8 : 0
-                bottomRightRadius: index === root.options.length - 1 ? 8 : 0
+                // control rather than separate buttons. The whole group
+                // is one field-shaped thing, which is why it takes the
+                // panel's corner and not the chip's.
+                readonly property int end: Theme.radiusNormal
 
-                Behavior on color { ColorAnimation { duration: 140 } }
+                topLeftRadius: index === 0 ? end : 0
+                bottomLeftRadius: index === 0 ? end : 0
+                topRightRadius: index === root.options.length - 1 ? end : 0
+                bottomRightRadius: index === root.options.length - 1 ? end : 0
+
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
                 Text {
                     id: seg
