@@ -49,7 +49,13 @@ hl.config({
             vibrancy           = 0.0,
             popups             = true,
             popups_ignorealpha = 0.2,
-            new_optimizations  = false,
+            -- Hyprland's blur cache, and on by default for good
+            -- reason: without it a three-pass blur is recomputed
+            -- every frame for every blurred surface, including the
+            -- island while it is morphing at 60fps. It was off here
+            -- with no note saying why. If blur ever smears behind an
+            -- animating layer, this is the line to suspect.
+            new_optimizations  = true,
         },
     },
 

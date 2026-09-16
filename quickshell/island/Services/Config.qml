@@ -491,6 +491,10 @@ Singleton {
                 // Hyprland — applied live with hyprctl keyword
                 property int blurSize: 8
                 property int blurPasses: 3
+                // Hyprland's blur cache. Off, a blurred surface is
+                // recomputed every frame whether or not anything
+                // behind it moved.
+                property bool blurOptimize: true
                 property real blurBrightness: 0.85
                 property real blurContrast: 0.9
                 property int gapsIn: 4

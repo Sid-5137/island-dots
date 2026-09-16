@@ -38,7 +38,9 @@ Singleton {
             + "      size = "       + a.blurSize + ","
             + "      passes = "     + a.blurPasses + ","
             + "      brightness = " + a.blurBrightness + ","
-            + "      contrast = "   + a.blurContrast
+            + "      contrast = "   + a.blurContrast + ","
+            + "      new_optimizations = "
+            + (a.blurOptimize ? "true" : "false")
             + "    }"
             + "  }"
             + "})";

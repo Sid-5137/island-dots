@@ -129,6 +129,12 @@ hl.layer_rule({
     -- anything under the threshold is skipped entirely rather than
     -- blurred faintly.
     ignore_alpha = 0.03,
+    -- Blur the wallpaper rather than whatever window happens to be
+    -- underneath. Cheaper — there is one surface to sample instead of
+    -- a stack — and it means the island looks the same over a terminal
+    -- as it does over a video, which for something that is on screen
+    -- all the time matters more than seeing through it accurately.
+    xray         = true,
 })
 
 -- ignore_alpha is low so nothing gets skipped for being too

@@ -2,6 +2,7 @@
     "appearance": {
         "blurBrightness": 0.85,
         "blurContrast": 0.9,
+        "blurOptimize": true,
         "blurPasses": 3,
         "blurSize": 8,
         "borderSize": 1,

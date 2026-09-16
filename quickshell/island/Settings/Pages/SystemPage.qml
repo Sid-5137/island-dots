@@ -83,6 +83,16 @@ Column {
         onMoved: function(v) { Config.appearance.blurPasses = v }
     }
 
+    ToggleRow {
+        configKey: "appearance.blurOptimize"
+        label: "Cache the blur"
+        description: "Recompute a blurred surface only when something"
+            + " behind it moved. Off, every pass runs every frame —"
+            + " including behind the island while it is morphing."
+        checked: Config.appearance.blurOptimize
+        onToggled: function(v) { Config.appearance.blurOptimize = v }
+    }
+
     Disclosure {
         width: parent.width
         text: "Blur tone"
