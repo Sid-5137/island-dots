@@ -22,8 +22,10 @@ interface.
 it becomes each of them and hands the shape back. Workspaces and the
 tray flank it, so a glance answers where you are and what is running.*
 
-<sub>Captured at 88fps so the springs survive; `docs/demo.mp4` is the
-same take at full quality.</sub>
+<sub>Captured frame by frame at 60–90fps so the springs survive, and
+timestamped rather than assumed so it plays at real speed;
+`docs/demo.mp4` is the same take at full quality. See
+`docs/RECORDING.md`.</sub>
 
 </div>
 
