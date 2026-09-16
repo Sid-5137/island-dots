@@ -94,6 +94,10 @@ Item {
             border.width: shown ? 1 : 0
             border.color: Theme.outlineVariant
             opacity: shown ? 1 : 0
+
+            // A pod's second line. Gated with the pod by inheriting
+            // its opacity rather than by repeating the condition.
+            Bezel { outer: parent.radius }
             clip: true
 
             Behavior on width { Morph { shape: root } }
@@ -183,6 +187,10 @@ Item {
             border.width: 1
             border.color: Theme.outlineVariant
 
+            // The pill's, so the preview and the pill agree about
+            // what an edge is as well as about what a corner is.
+            Bezel { outer: parent.radius }
+
             Behavior on width { Morph { shape: root } }
             Behavior on height { Morph { shape: root } }
             // No Behavior on radius, for the same reason the island
@@ -240,6 +248,8 @@ Item {
             border.width: shown ? 1 : 0
             border.color: Theme.outlineVariant
             opacity: shown ? 1 : 0
+
+            Bezel { outer: parent.radius }
             clip: true
 
             Behavior on width { Morph { shape: root } }

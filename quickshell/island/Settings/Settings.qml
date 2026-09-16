@@ -105,6 +105,14 @@ PanelWindow {
             border.color: root.tint(Theme.outline, 0.30)
             clip: true
 
+            // The island's second line — see Widgets/Bezel.qml. The
+            // settings window is the largest rounded thing the shell
+            // draws and so the one with the most corner to read, and
+            // it was the only panel still drawn with a single stroke.
+            // Two shells' worth of edge treatment is one shell too
+            // many.
+            Bezel { outer: sidebar.radius }
+
             Column {
                 anchors.fill: parent
                 anchors.margins: 14
@@ -209,6 +217,11 @@ PanelWindow {
             border.width: 1
             border.color: root.tint(Theme.outline, 0.30)
             clip: true
+
+            // Inside the pane rather than over the Flickable beside
+            // it: the page content is inset by 26 and the edge by 2,
+            // so they never meet.
+            Bezel { outer: pane.radius }
         }
 
         Flickable {

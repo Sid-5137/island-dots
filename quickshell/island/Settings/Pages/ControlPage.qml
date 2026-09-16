@@ -210,6 +210,12 @@ Column {
             border.color: Theme.outlineVariant
             clip: true
 
+            // It claims to be the control centre at its real size, so
+            // it carries the control centre's edge too. A canvas that
+            // is right about the corner and wrong about what is drawn
+            // on it is a preview of something else.
+            Bezel { z: 99; outer: parent.radius }
+
             // The cells, so an empty part of the panel still reads as
             // somewhere a control could go.
             Repeater {
