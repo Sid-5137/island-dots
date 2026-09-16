@@ -40,6 +40,15 @@ def parse_value(raw):
     if raw in ("true", "false"):
         return raw == "true"
 
+    # A default too long for one line, written as "a" + "b" + "c".
+    # Only when every term is a literal — anything else is an
+    # expression whose value this script has no business guessing.
+    if "+" in raw:
+        parts = [p.strip() for p in raw.split("+")]
+        if parts and all(len(p) >= 2 and p.startswith('"') and p.endswith('"')
+                         for p in parts):
+            return "".join(p[1:-1] for p in parts)
+
     if raw.startswith('"') and raw.endswith('"'):
         return raw[1:-1]
 
@@ -61,6 +70,30 @@ def parse_value(raw):
     return raw
 
 
+def logical_lines(text):
+    """Join continuation lines onto the property they belong to.
+
+    A default that does not fit in one line is written as a chain of
+    `+` with the operator leading each continuation. Reading the file
+    line by line sees the first fragment and a run of orphans, and
+    silently writes a truncated default — which is worse than not
+    writing one, because the example config is what people copy.
+    """
+    out = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        # A property whose value starts on the next line, and the
+        # `+` chain that usually follows it.
+        if out and out[-1].rstrip().endswith(":") \
+                and re.match(r'property\s+\w+\s+\w+\s*:$', out[-1].strip()):
+            out[-1] = out[-1].rstrip() + " " + stripped
+        elif out and stripped.startswith("+"):
+            out[-1] = out[-1].rstrip() + " " + stripped
+        else:
+            out.append(line)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
@@ -75,7 +108,7 @@ def main():
     section = None
     version = None
 
-    for line in CONFIG.read_text().splitlines():
+    for line in logical_lines(CONFIG.read_text()):
         stripped = line.strip()
 
         # `property int version: 1` sits on the adapter itself rather
