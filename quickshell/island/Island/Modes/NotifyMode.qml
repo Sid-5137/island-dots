@@ -19,7 +19,26 @@ Item {
     required property var island   // mode flags and media state
     required property var pill     // the shape, for geometry gates
     anchors.fill: parent
-    anchors.margins: 16
+    anchors.margins: inset
+
+    // How far in the popup holds its contents.
+    //
+    // This was a flat 16, which is correct for exactly one setting of
+    // the radius slider: the one it was measured against. A popup is
+    // 104px tall, so its corner is a little over the slider's value,
+    // and at 14 the two happen to agree. Push the slider up and the
+    // corner grows past the margin — the icon tile's top-left and the
+    // reply field's bottom corners end up sitting inside the arc, each
+    // squarely in the part of the panel that is busy curving away from
+    // them. Nothing overlaps, so nothing looks broken; it just looks
+    // like the contents were laid out for a squarer popup and the
+    // corners were rounded afterwards.
+    //
+    // Tied to the slider instead, so the inset opens up with the
+    // corner it has to clear. The multiplier is what keeps today's
+    // default landing on today's 16.
+    readonly property int inset:
+        Math.max(Theme.padCard, Math.round(Config.island.radius * 1.15))
 
     readonly property bool shown: island.isNotify
 
@@ -36,7 +55,15 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 46
         height: 46
-        radius: 10
+        // Not a token, and not concentric with anything: this tile is
+        // vertically centred, so it never comes near a corner of the
+        // popup and has no corner to be concentric with. Its roundness
+        // is a fact about what it is — it stands in for an app icon,
+        // and an app icon is round to about two-ninths of its side on
+        // every platform that draws one. radiusLarge made it 17 of 46,
+        // better than a third, which is the blobby over-rounded tile
+        // that makes the whole popup read as squircle-first.
+        radius: width * 0.225
         color: root.n && root.n.critical
             ? Theme.error : Theme.surfaceHigh
         clip: true
@@ -61,7 +88,7 @@ Item {
         Text {
             anchors.centerIn: parent
             visible: !noticeImg.visible
-            text: "\uf0f3"
+            text: Icons.bell
             color: root.n && root.n.critical
                 ? Theme.textOnError : Theme.textDim
             font.family: Theme.fontFamily
@@ -128,7 +155,12 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 30
-        radius: 8
+        // This one *is* in the corner — it spans the full inner width
+        // along the bottom, so its two bottom corners sit directly
+        // inside the panel's. See Theme.inner: inset from a corner of
+        // 22 by 16 leaves 6, and radiusNormal's 14 on a 30px-tall box
+        // was very nearly a capsule tucked into a gentle corner.
+        radius: Theme.inner(root.pill.radius, root.inset)
         visible: root.canReply
 
         color: replyField.activeFocus
@@ -137,8 +169,8 @@ Item {
         border.color: replyField.activeFocus
             ? Theme.primary : Theme.outlineVariant
 
-        Behavior on color { ColorAnimation { duration: 120 } }
-        Behavior on border.color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+        Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
         TextInput {
             id: replyField
@@ -179,7 +211,7 @@ Item {
             font.weight: Font.DemiBold
             renderType: Text.NativeRendering
 
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
             MouseArea {
                 id: sendHover
@@ -233,43 +265,25 @@ Item {
         spacing: 6
         visible: root.n && root.n.actions.length > 0
 
+        // The first action is the one the sender means, so it is
+        // filled rather than merely filling on hover. Which action a
+        // popup is for is worth knowing before you have moved the
+        // pointer onto one of them.
         Repeater {
             model: root.n ? root.n.actions : []
 
-            Rectangle {
+            Button {
                 required property var modelData
                 required property int index
 
-                width: actionLabel.implicitWidth + 22
-                height: 26
-                radius: 7
-                color: index === 0
-                    ? (actHover.containsMouse ? Theme.primary : Qt.rgba(1, 1, 1, 0.14))
-                    : (actHover.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.06))
+                implicitHeight: 26
+                padding: Theme.padRow
+                text: modelData
+                kind: index === 0 ? "primary" : "plain"
 
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                Text {
-                    id: actionLabel
-                    anchors.centerIn: parent
-                    text: modelData
-                    color: (index === 0 && actHover.containsMouse)
-                        ? Theme.textOnPrimary : Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    font.weight: Font.DemiBold
-                    renderType: Text.NativeRendering
-                }
-
-                MouseArea {
-                    id: actHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        Notifications.invoke(root.n, index);
-                        win.dismissNotice();
-                    }
+                onClicked: {
+                    Notifications.invoke(root.n, index);
+                    win.dismissNotice();
                 }
             }
         }

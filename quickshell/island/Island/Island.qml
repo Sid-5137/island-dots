@@ -821,11 +821,34 @@ Variants {
                     // no terms left at all.
                     expanded: { w: Config.island.controlWidth,
                                 h: ControlLayout.panelHeight },
+                    // padCard twice, top and bottom, around a field
+                    // and however many rows there are.
+                    //
+                    // The bottom one is the list's floor: the rows are
+                    // sized to the pixel, and the gap below them is
+                    // what lets a scrolling row leave the list before
+                    // it reaches the panel's bottom corner. The top one
+                    // is the same inset spent on the field, which used
+                    // to sit hard against the panel's top edge — its
+                    // text centred 23 pixels down, inside a corner
+                    // that is 36 pixels round, so the one part of the
+                    // panel with nothing else in it was also the part
+                    // curving away hardest.
+                    //
+                    // Written as a pair rather than as a tail, because
+                    // that is what makes the empty launcher work: no
+                    // results and the panel is a 70px bar with the
+                    // field centred in it, instead of a field with
+                    // twelve pixels of air above and none below.
+                    // SearchMode reads the same padCard for the
+                    // field's top margin and the list's bottom one, so
+                    // the arithmetic here and the anchors there cannot
+                    // disagree.
                     search:   { w: Config.island.searchWidth,
-                                h: Config.island.searchFieldHeight
+                                h: Theme.padCard * 2
+                                   + Config.island.searchFieldHeight
                                    + Math.min(Search.results.length, Config.island.searchMaxRows)
-                                     * Config.island.searchRowHeight
-                                   + (Search.results.length > 0 ? 10 : 0) },
+                                     * Config.island.searchRowHeight },
                     session:  { w: Config.island.sessionWidth, h: Config.island.sessionHeight },
                     picker:   { w: Config.island.pickerWidth,  h: Config.island.pickerHeight },
                     notify:   { w: Config.island.notifyWidth,
@@ -834,7 +857,11 @@ Variants {
                                       ? Config.island.notifyActionHeight : 0)
                                    + ((root.notice && root.notice.hasReply)
                                       ? Config.island.notifyReplyHeight : 0) },
-                    centre:   { w: Config.island.centreWidth,  h: Config.island.centreHeight },
+                    // Not centreHeight — see CentreMode.contentHeight,
+                    // which treats that setting as a ceiling and works
+                    // out the rest from what is actually in the list.
+                    centre:   { w: Config.island.centreWidth,
+                                h: centreMode.contentHeight },
                     osd:      { w: Config.island.osdWidth,     h: Config.island.osdHeight },
                     auth:     { w: Config.island.authWidth,    h: Config.island.authHeight },
                     switcher: { w: Math.min(Config.island.switcherWidth,
@@ -847,10 +874,10 @@ Variants {
                                             * (Config.island.overviewCard + 12) + 24),
                                 h: Config.island.overviewCard * 0.68 + 36 },
                     clipboard: { w: Config.island.clipWidth,
-                                 h: Config.island.searchFieldHeight
+                                 h: Theme.padCard * 2
+                                    + Config.island.searchFieldHeight
                                     + Math.min(root.clipRows, Config.island.clipMaxRows)
-                                      * Config.island.clipRowHeight
-                                    + (root.clipRows > 0 ? 10 : 0) }
+                                      * Config.island.clipRowHeight }
                 })
 
                 width:  (geometry[island.mode] || geometry.idle).w
@@ -933,13 +960,22 @@ Variants {
                 SessionMode { win: root; island: island; pill: pill }
                 PickerMode  { win: root; island: island; pill: pill }
                 NotifyMode  { win: root; island: island; pill: pill }
-                CentreMode  { win: root; island: island; pill: pill }
+                CentreMode  { id: centreMode; win: root; island: island; pill: pill }
                 ControlMode { id: controlMode; win: root; island: island }
                 OsdMode     { win: root; island: island; pill: pill }
                 AuthMode    { win: root; island: island; pill: pill }
                 ClipboardMode { win: root; island: island; pill: pill }
                 SwitcherMode  { win: root; island: island; pill: pill }
                 OverviewMode  { win: root; island: island; pill: pill }
+
+                // Declared after the modes, so the edge is drawn over
+                // whatever they put against it — a list row scrolling
+                // past, a card that reaches the margin. See
+                // Widgets/Bezel.qml: the pill's outer hairline says
+                // where it ends, and this second one says how round it
+                // is, which is the number every shape inside is
+                // measured against.
+                Bezel { outer: pill.radius }
 
                 // Scroll over the collapsed pill moves a workspace, or
                 // volume, or nothing — island.scrollAction picks. While

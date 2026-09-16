@@ -32,16 +32,26 @@ Item {
     Item {
         id: fieldRow
         anchors.top: parent.top
+        // Off the top edge by the same padCard the list keeps off the
+        // bottom one. Island.qml spends it in the panel's height, so
+        // the field moves down rather than the rows getting shorter —
+        // and an empty panel comes out as a bar with the field centred
+        // in it. See the geometry table there.
+        anchors.topMargin: Theme.padCard
         anchors.left: parent.left
         anchors.right: parent.right
         height: Config.island.searchFieldHeight
 
+        // See SearchMode: one left edge for the whole panel, clearing
+        // both the row's inset and its icon's inset inside that.
+        readonly property int gutter: Theme.padCard + Theme.padRow
+
         Text {
             id: clipCaret
             anchors.left: parent.left
-            anchors.leftMargin: 18
+            anchors.leftMargin: fieldRow.gutter
             anchors.verticalCenter: parent.verticalCenter
-            text: "\uf0ea"
+            text: Icons.clipboard
             color: Theme.primary
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeNormal
@@ -107,7 +117,7 @@ Item {
         Text {
             id: clipCount
             anchors.right: parent.right
-            anchors.rightMargin: 18
+            anchors.rightMargin: fieldRow.gutter
             anchors.verticalCenter: parent.verticalCenter
             text: root.filtered.length
             color: Theme.outline
@@ -120,13 +130,13 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
-            anchors.leftMargin: 14
+            anchors.leftMargin: Theme.padCard
             anchors.right: parent.right
-            anchors.rightMargin: 14
+            anchors.rightMargin: Theme.padCard
             height: 1
             color: Theme.outlineVariant
             opacity: root.filtered.length > 0 ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 120 } }
+            Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
         }
     }
 
@@ -147,8 +157,10 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.topMargin: 4
-        anchors.bottomMargin: 6
+        // The list's floor, above the panel's — see SearchMode, which
+        // explains what sits in the gap when there isn't one. Island
+        // adds the same padCard to this panel's height.
+        anchors.bottomMargin: Theme.padCard
 
         model: ScriptModel {
             objectProp: "id"
@@ -159,12 +171,17 @@ Item {
         currentIndex: 0
         highlightMoveDuration: 110
         highlightRangeMode: ListView.ApplyRange
-        preferredHighlightBegin: 44
-        preferredHighlightEnd: height - 44
+        preferredHighlightBegin: Config.island.clipRowHeight
+        preferredHighlightEnd: height - Config.island.clipRowHeight
 
         Component.onCompleted: win.clipList = list
 
-        delegate: Rectangle {
+        // The same card as SearchMode's, for the same reasons — the
+        // two panels are the same object with a different list in it,
+        // and they looked it everywhere except here.
+        delegate: Item {
+            id: row
+
             required property var modelData
             required property int index
 
@@ -172,82 +189,107 @@ Item {
 
             width: list.width
             height: Config.island.clipRowHeight
-            color: active ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
-
-            Behavior on color { ColorAnimation { duration: 100 } }
 
             Rectangle {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                width: 2
-                height: parent.active ? 20 : 0
-                color: Theme.primary
-                Behavior on height {
-                    NumberAnimation { duration: 130; easing.type: Easing.OutCubic }
+                id: card
+                anchors.fill: parent
+                anchors.leftMargin: Theme.padCard
+                anchors.rightMargin: Theme.padCard
+                anchors.topMargin: Theme.spacingSmall / 2
+                anchors.bottomMargin: Theme.spacingSmall / 2
+
+                // Concentric with the panel — see Theme.inner, and
+                // SearchMode, whose rows this is a copy of down to
+                // the inset it is measured from.
+                radius: Theme.inner(root.pill.radius, Theme.padCard)
+
+                color: row.active
+                    ? Qt.rgba(1, 1, 1, 0.13)
+                    : (rowHover.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent")
+
+                border.width: 1
+                border.color: row.active
+                    ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
+
+                scale: rowHover.pressed ? 0.97 : 1
+
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Motion.hover
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Motion.arrive
+                    }
                 }
-            }
 
-            Text {
-                id: clipIcon
-                anchors.left: parent.left
-                anchors.leftMargin: 16
-                anchors.verticalCenter: parent.verticalCenter
-                width: 20
-                text: modelData.isImage ? "\uf03e" : "\uf15c"
-                color: Theme.outline
-                font.family: Theme.fontFamily
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
-            }
+                Text {
+                    id: clipIcon
+                    anchors.left: parent.left
+                    anchors.leftMargin: Theme.padRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20
+                    text: row.modelData.isImage ? Icons.image : Icons.file
+                    color: Theme.outline
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                }
 
-            Text {
-                anchors.left: clipIcon.right
-                anchors.leftMargin: 10
-                anchors.right: clipDelete.left
-                anchors.rightMargin: 10
-                anchors.verticalCenter: parent.verticalCenter
-                text: modelData.preview
-                color: parent.active ? Theme.primary : Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                font.weight: Config.island.fontWeight
-                elide: Text.ElideRight
-                renderType: Text.NativeRendering
-            }
+                Text {
+                    anchors.left: clipIcon.right
+                    anchors.leftMargin: Theme.spacingSmall
+                    anchors.right: clipDelete.left
+                    anchors.rightMargin: Theme.spacingSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: row.modelData.preview
+                    color: row.active ? Theme.primary : Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    font.weight: Config.island.fontWeight
+                    elide: Text.ElideRight
+                    renderType: Text.NativeRendering
 
-            Text {
-                id: clipDelete
-                anchors.right: parent.right
-                anchors.rightMargin: 16
-                anchors.verticalCenter: parent.verticalCenter
-                text: "\u00d7"
-                color: delHover.containsMouse ? Theme.error : Theme.outline
-                font.family: Theme.fontFamily
-                font.pixelSize: 16
-                font.weight: Font.DemiBold
-                opacity: rowHover.containsMouse || parent.active ? 1 : 0
+                    Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                }
 
-                Behavior on opacity { NumberAnimation { duration: 120 } }
+                Text {
+                    id: clipDelete
+                    anchors.right: parent.right
+                    anchors.rightMargin: Theme.padRow
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "\u00d7"
+                    color: delHover.containsMouse ? Theme.error : Theme.outline
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 16
+                    font.weight: Font.DemiBold
+                    opacity: rowHover.containsMouse || row.active ? 1 : 0
+
+                    Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
+
+                    MouseArea {
+                        id: delHover
+                        anchors.fill: parent
+                        anchors.margins: -8
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Clipboard.remove(row.modelData.id)
+                    }
+                }
 
                 MouseArea {
-                    id: delHover
+                    id: rowHover
                     anchors.fill: parent
-                    anchors.margins: -8
+                    // Clear of the delete cross, which does something
+                    // else with the same click.
+                    anchors.rightMargin: 34
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Clipboard.remove(modelData.id)
-                }
-            }
-
-            MouseArea {
-                id: rowHover
-                anchors.fill: parent
-                anchors.rightMargin: 34
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    list.currentIndex = index;
-                    win.copySelected();
+                    onClicked: {
+                        list.currentIndex = row.index;
+                        win.copySelected();
+                    }
                 }
             }
         }

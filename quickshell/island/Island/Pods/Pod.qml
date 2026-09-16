@@ -166,6 +166,10 @@ Rectangle {
     border.width: 1
     border.color: Theme.outlineVariant
 
+    // The pill's second line too — a pod is the island in a smaller
+    // shape, and half an edge is a shape it would not share.
+    Bezel { z: 49; outer: root.radius }
+
     // Pinning is a state, so it says so rather than leaving you to
     // wonder why the pod stopped closing. Above the content and below
     // the hover area, and inert either way.

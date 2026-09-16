@@ -394,6 +394,18 @@ Singleton {
                 property int notifyDuration: 5000
                 property int notifyCriticalDuration: 12000
                 property int centreWidth: 480
+
+                // A ceiling, not a height. The centre is as tall as
+                // the notifications in it — see
+                // Modes/CentreMode.qml's contentHeight — and this is
+                // where it stops growing and starts scrolling, which
+                // at the shipped row height is four of them.
+                //
+                // No migration: the stored number carries over intact
+                // and still means something true about the panel. It
+                // governs fewer cases than it used to, which is not
+                // the kind of change that can invalidate a value
+                // somebody already chose.
                 property int centreHeight: 440
                 property int centreRowHeight: 88
 
