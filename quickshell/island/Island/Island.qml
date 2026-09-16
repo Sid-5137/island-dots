@@ -878,7 +878,10 @@ Variants {
                         ? Theme.surfaceLowest
                         : Theme.surfaceContainer)
 
-                radius: Config.island.radius
+                // See Theme.corner: the radius grows with the shape
+                // and settles at a capsule, so the pill rounds off as
+                // it collapses and opens up as it expands.
+                radius: Theme.corner(height)
                 // Clipping reveals content by the growing shape, which
                 // is right for every mode whose content sits inside the
                 // pill. The control centre's cards deliberately extend

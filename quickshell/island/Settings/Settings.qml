@@ -99,7 +99,7 @@ PanelWindow {
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             width: 216
-            radius: Config.appearance.panelRadius
+            radius: Theme.radiusNormal
             color: root.tint(Theme.surfaceLowest, Config.appearance.panelOpacity)
             border.width: 1
             border.color: root.tint(Theme.outline, 0.30)
@@ -204,7 +204,7 @@ PanelWindow {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            radius: Config.appearance.panelRadius
+            radius: Theme.radiusNormal
             color: root.tint(Theme.surface, Config.appearance.panelOpacity)
             border.width: 1
             border.color: root.tint(Theme.outline, 0.30)

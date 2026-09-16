@@ -152,7 +152,9 @@ Rectangle {
     // The pill's, exactly: same tint, same radius, same border. A pod
     // is the island in a smaller shape, not a different widget.
 
-    radius: Config.island.radius
+    // The pill's, exactly — the same function against its own height,
+    // so a pod at 34px and a pill at 34px are the same shape.
+    radius: Theme.corner(height)
     clip: true
 
     color: {

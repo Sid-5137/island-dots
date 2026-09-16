@@ -46,20 +46,64 @@ Singleton {
     readonly property int fontSizeLarge:  16
     readonly property int fontSizeTitle:  22
 
-    readonly property int radiusSmall:  8
-    readonly property int radiusNormal: 14
-    readonly property int radiusLarge:  24
+    // ── Shape ────────────────────────────────────────────────
+    //
+    // Derived from the one radius the user actually sets, so moving
+    // that slider moves everything together. They used to be three
+    // constants that nothing referenced — 8, 14 and 24, sitting beside
+    // twenty-one literal `radius: 8`s in the files that needed one.
+    readonly property int radiusSmall:
+        Math.round(Config.appearance.panelRadius * 0.6)
+    readonly property int radiusNormal: Config.appearance.panelRadius
+    readonly property int radiusLarge:
+        Math.round(Config.appearance.panelRadius * 1.2)
 
     readonly property int spacingSmall:  6
     readonly property int spacingNormal: 12
     readonly property int spacingLarge:  20
 
-    readonly property int durationFast:   150
-    readonly property int durationNormal: 300
-    readonly property int durationSlow:   450
+    // ── Inset ────────────────────────────────────────────────
+    //
+    // Two numbers, because there are two kinds of edge. A card in the
+    // control centre sits on the panel and holds its contents in by
+    // `padCard`; a row inside a card or a page is already inset by its
+    // container and needs less, `padRow`.
+    //
+    // Named because they were 7, 8, 9, 10, 11 and 12 depending on who
+    // wrote the file — which is invisible on any one card and very
+    // visible down a column of them, where a badge starting at 9 sits
+    // beside a label starting at 12.
+    readonly property int padCard: 12
+    readonly property int padRow:  10
 
-    readonly property int easingIsland:   Easing.OutBack
-    readonly property int easingStandard: Easing.OutCubic
+    // Badge to the words beside it. Its own number: it is a gap
+    // between two things rather than a margin against an edge, and
+    // they should not have to change together.
+    readonly property int gapBadge: 10
+
+    // The corner a shape of this height should have.
+    //
+    // One number cannot serve both ends of a shape that morphs from a
+    // 34px pill to a 374px panel. At 14 the pill is three pixels short
+    // of a capsule — close enough to look like a mistake rather than a
+    // decision — and the panel gets the same 14, which on something
+    // ten times taller reads as a hard corner with a chamfer.
+    //
+    // So the radius grows with the shape and stops at a capsule. The
+    // pill's height is already spring-animated, which means the corner
+    // opens up as the shape does, for free.
+    //
+    //   34px  ->  16   (a capsule, near enough)
+    //   40px  ->  16
+    //   374px ->  36   (generous, and it matches the cards inside)
+    function corner(h) {
+        return Math.min(h / 2, Config.island.radius + h * 0.06);
+    }
+
+    // Durations and easings used to live here too. Motion is a spring
+    // now and the whole vocabulary is in Services/Motion.qml, which is
+    // where anything animating should look — these were four constants
+    // describing a model the shell no longer uses.
 
     FileView {
         id: colorFile
