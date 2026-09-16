@@ -23,7 +23,15 @@ hl.on("hyprland.start", function()
     -- install.sh links this into ~/.local/bin, so the clone can live
     -- anywhere. A hardcoded ~/island-dots path meant gestures simply
     -- never started on a machine that cloned it somewhere else.
-    hl.exec_cmd("island-gestures")
+    --
+    -- PATH is set here because Hyprland does not have one worth the
+    -- name: its own environment is /usr/local/bin:/usr/bin, with no
+    -- ~/.local/bin in it. So a bare name finds quickshell and
+    -- wl-paste, which live in /usr/bin, and finds nothing at all for
+    -- anything install.sh linked — no error, no log, just a daemon
+    -- that was never running. Volume and brightness swipes did
+    -- nothing and the socket the shell was serving sat empty.
+    hl.exec_cmd('PATH="$HOME/.local/bin:$PATH"; exec island-gestures')
 
     -- The shell itself.
     hl.exec_cmd("quickshell -c island")
