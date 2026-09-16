@@ -8,11 +8,11 @@ Singleton {
     id: root
 
     readonly property var actions: [
-        { id: "lock",     label: "Lock",     glyph: "\uf023" },
-        { id: "logout",   label: "Log out",  glyph: "\uf2f5" },
-        { id: "suspend",  label: "Suspend",  glyph: "\uf186" },
-        { id: "reboot",   label: "Reboot",   glyph: "\uf021" },
-        { id: "shutdown", label: "Shut down", glyph: "\uf011" }
+        { id: "lock",     label: "Lock",      glyph: Icons.lock },
+        { id: "logout",   label: "Log out",   glyph: Icons.logout },
+        { id: "suspend",  label: "Suspend",   glyph: Icons.suspend },
+        { id: "reboot",   label: "Reboot",    glyph: Icons.reboot },
+        { id: "shutdown", label: "Shut down", glyph: Icons.shutdown }
     ]
 
     // Which ones need a second press before they run.

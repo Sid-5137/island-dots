@@ -135,12 +135,12 @@ PanelWindow {
 
                         width: sidebar.width - 28
                         height: 38
-                        radius: 8
+                        radius: Theme.radiusLarge
                         color: active
                             ? Theme.surfaceHigh
                             : (navHover.containsMouse ? Theme.surfaceLow : "transparent")
 
-                        Behavior on color { ColorAnimation { duration: 120 } }
+                        Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
                         // A rail that marks the current page without
                         // relying on the fill alone, which is a very
@@ -151,7 +151,7 @@ PanelWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 3
                             height: parent.active ? 20 : 0
-                            radius: 1.5
+                            radius: width / 2
                             color: Theme.primary
 
                             Behavior on height {
@@ -238,19 +238,19 @@ PanelWindow {
                 // Fade between pages so switching doesn't snap.
                 opacity: 1
                 Behavior on opacity {
-                    NumberAnimation { duration: 120 }
+                    NumberAnimation { duration: Motion.fadeIn }
                 }
             }
         }
     }
 
     readonly property var pages: [
-        { id: "island",  label: "Island",  glyph: "\udb80\udcb5" },
-        { id: "control", label: "Control", glyph: "\udb80\udf3f" },
-        { id: "theme",   label: "Theme",   glyph: "\udb81\udda0" },
-        { id: "input",   label: "Input",   glyph: "\udb80\udf30" },
-        { id: "system",  label: "System",  glyph: "\udb80\uddfd" },
-        { id: "network", label: "Network", glyph: "\udb82\udda8" }
+        { id: "island",  label: "Island",  glyph: Icons.tabIsland },
+        { id: "control", label: "Control", glyph: Icons.tabControl },
+        { id: "theme",   label: "Theme",   glyph: Icons.tabTheme },
+        { id: "input",   label: "Input",   glyph: Icons.tabInput },
+        { id: "system",  label: "System",  glyph: Icons.tabSystem },
+        { id: "network", label: "Network", glyph: Icons.tabNetwork }
     ]
 
     property string page: "island"

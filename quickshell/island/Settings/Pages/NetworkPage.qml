@@ -58,56 +58,19 @@ Column {
         Row {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 8
+            spacing: Theme.spacingSmall
 
-            Rectangle {
-                width: 74; height: 28; radius: 8
-                color: rescanHover.containsMouse ? Theme.surfaceHigh : Theme.surfaceContainer
-                border.width: 1
-                border.color: Theme.outlineVariant
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Rescan"
-                    color: Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    renderType: Text.NativeRendering
-                }
-
-                MouseArea {
-                    id: rescanHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Network.scan()
-                }
+            Button {
+                implicitHeight: 28
+                text: "Rescan"
+                onClicked: Network.scan()
             }
 
-            Rectangle {
-                width: 90; height: 28; radius: 8
+            Button {
+                implicitHeight: 28
                 visible: Network.connected && Network.connType === "wifi"
-                color: dcHover.containsMouse ? Theme.surfaceHigh : Theme.surfaceContainer
-                border.width: 1
-                border.color: Theme.outlineVariant
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Disconnect"
-                    color: Theme.textDim
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    renderType: Text.NativeRendering
-                }
-
-                MouseArea {
-                    id: dcHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Network.disconnect()
-                }
+                text: "Disconnect"
+                onClicked: Network.disconnect()
             }
         }
     }
@@ -134,12 +97,12 @@ Column {
             Rectangle {
                 width: parent.width
                 height: 44
-                radius: 8
+                radius: Theme.radiusLarge
                 color: modelData.active
                     ? Qt.rgba(1, 1, 1, 0.08)
                     : (netHover.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent")
 
-                Behavior on color { ColorAnimation { duration: 120 } }
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
                 Text {
                     id: sig
@@ -147,9 +110,13 @@ Column {
                     anchors.leftMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     width: 22
-                    text: modelData.signal > 70 ? "\udb82\udda8"
-                        : modelData.signal > 40 ? "\udb82\udda5"
-                        : modelData.signal > 15 ? "\udb82\udda3" : "\udb82\udda1"
+                    // Four bars, and until now not one of them: the
+                    // codepoints were a nibble off, so 70% drew a text
+                    // icon, 40% a star face, 15% a square-root box and
+                    // the floor a shower head. See Services/Icons.qml.
+                    text: modelData.signal > 70 ? Icons.wifi4
+                        : modelData.signal > 40 ? Icons.wifi3
+                        : modelData.signal > 15 ? Icons.wifi2 : Icons.wifi1
                     color: modelData.active ? Theme.primary : Theme.textDim
                     font.family: Theme.fontFamily
                     font.pixelSize: 15
@@ -161,7 +128,7 @@ Column {
                     anchors.right: netAction.left
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
-                    text: modelData.ssid + (modelData.secure ? "  \udb84\udf3e" : "")
+                    text: modelData.ssid + (modelData.secure ? "  " + Icons.secure : "")
                     color: modelData.active ? Theme.primary : Theme.text
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall
@@ -221,7 +188,7 @@ Column {
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     height: 28
-                    radius: 6
+                    radius: Theme.radiusSmall
                     color: Qt.rgba(1, 1, 1, 0.06)
                     border.width: 1
                     border.color: Theme.outlineVariant
@@ -268,30 +235,18 @@ Column {
                     }
                 }
 
-                Rectangle {
+                Button {
                     id: joinBtn
                     anchors.right: parent.right
-                    anchors.rightMargin: 12
+                    anchors.rightMargin: Theme.padCard
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 62; height: 28; radius: 6
-                    color: Theme.primary
+                    implicitHeight: 28
+                    text: "Join"
+                    kind: "primary"
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Join"
-                        color: Theme.textOnPrimary
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
-                        renderType: Text.NativeRendering
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            Network.connect(modelData.ssid, page.password);
-                            page.promptFor = "";
-                        }
+                    onClicked: {
+                        Network.connect(modelData.ssid, page.password);
+                        page.promptFor = "";
                     }
                 }
             }
@@ -322,30 +277,12 @@ Column {
             renderType: Text.NativeRendering
         }
 
-        Rectangle {
+        Button {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: 74; height: 28; radius: 8
-            color: btScanHover.containsMouse ? Theme.surfaceHigh : Theme.surfaceContainer
-            border.width: 1
-            border.color: Theme.outlineVariant
-
-            Text {
-                anchors.centerIn: parent
-                text: "Scan"
-                color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                renderType: Text.NativeRendering
-            }
-
-            MouseArea {
-                id: btScanHover
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Bluetooth.scan()
-            }
+            implicitHeight: 28
+            text: "Scan"
+            onClicked: Bluetooth.scan()
         }
     }
 
@@ -357,12 +294,12 @@ Column {
 
             width: page.width
             height: 44
-            radius: 8
+            radius: Theme.radiusLarge
             color: modelData.connected
                 ? Qt.rgba(1, 1, 1, 0.08)
                 : (btHover.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent")
 
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
             Text {
                 id: btIcon
@@ -370,7 +307,7 @@ Column {
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 width: 22
-                text: "\udb80\udcaf"
+                text: Icons.bluetoothDevice
                 color: modelData.connected ? Theme.primary : Theme.textDim
                 font.family: Theme.fontFamily
                 font.pixelSize: 15

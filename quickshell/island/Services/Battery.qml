@@ -19,12 +19,12 @@ Singleton {
 
     // Font Awesome, matching the rest of the shell's icon set.
     readonly property string icon:
-        charging ? "\uf0e7"
-        : level > 80 ? "\uf240"
-        : level > 60 ? "\uf241"
-        : level > 40 ? "\uf242"
-        : level > 20 ? "\uf243"
-        : "\uf244"
+        charging ? Icons.batteryCharging
+        : level > 80 ? Icons.batteryFull
+        : level > 60 ? Icons.batteryHigh
+        : level > 40 ? Icons.batteryHalf
+        : level > 20 ? Icons.batteryLow
+        : Icons.batteryEmpty
 
     readonly property string label: {
         if (!present) return "No battery";

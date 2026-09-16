@@ -18,12 +18,12 @@ Singleton {
     property bool scanning: false
     property string lastError: ""
 
-    // Font Awesome: present in every Nerd Font patch. The Material
-    // wifi glyphs render as boxes on some builds.
-    readonly property string icon: {
-        if (connType === "ethernet") return "\uf6ff";
-        return "\uf1eb";
-    }
+    // Font Awesome for both, which is what the comment here always
+    // claimed and what the wired icon was not: it was U+F6FF, a
+    // Material codepoint from Nerd Fonts v2, and it drew exactly the
+    // box this comment was written to avoid. See Services/Icons.qml.
+    readonly property string icon:
+        connType === "ethernet" ? Icons.ethernet : Icons.wifi
 
     readonly property string label: {
         if (connType === "ethernet") return "Wired";

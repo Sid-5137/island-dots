@@ -28,14 +28,19 @@ Singleton {
 
     property int brightness: 0
 
+    // Muted was U+F6A9, a Material glyph Nerd Fonts v3 moved out from
+    // under it — so the one state you most need to see was the one
+    // that drew nothing at all. See Services/Icons.qml; the whole ramp
+    // is one font family now, which is why that could not happen to
+    // the other three.
     readonly property string volumeIcon:
-        muted ? "\uf6a9"
-        : volume > 66 ? "\uf028"
-        : volume > 33 ? "\uf027"
-        : "\uf026"
+        muted ? Icons.volumeMuted
+        : volume > 66 ? Icons.volumeHigh
+        : volume > 33 ? Icons.volumeMedium
+        : Icons.volumeLow
 
-    readonly property string micIcon: micMuted ? "\uf131" : "\uf130"
-    readonly property string brightnessIcon: "\uf185"
+    readonly property string micIcon: micMuted ? Icons.micOff : Icons.micOn
+    readonly property string brightnessIcon: Icons.brightness
 
     function setVolume(v) {
         if (!sink || !sink.audio) return;

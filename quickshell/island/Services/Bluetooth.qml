@@ -15,7 +15,8 @@ Singleton {
     property var devices: []
     property bool scanning: false
 
-    readonly property string icon: connectedCount > 0 ? "\uf294" : "\uf293"
+    readonly property string icon:
+        connectedCount > 0 ? Icons.bluetoothConnected : Icons.bluetooth
 
     readonly property string label:
         !powered ? "Off"
