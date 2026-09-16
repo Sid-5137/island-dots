@@ -52,9 +52,12 @@ GTK3, GTK4 *and* Hyprland's own window borders. Change the wallpaper,
 the desktop follows. One wallpaper per monitor, if you want.
 
 **A launcher in the pill**
-Fuzzy application search with subsequence matching — `fx` finds
-Firefox, `ed` finds Text Editor. Keyboard-first, results scored not
-filtered.
+Empty until you type, the way Spotlight is. Then fuzzy matching over
+names, keywords, initials and a subsequence fallback — `fx` finds
+Firefox, `ed` finds Text Editor, `dua` finds Disk Usage Analyzer,
+`music` finds whatever your entries call themselves. Keyboard-first,
+results scored not filtered, and the index is built once rather than
+per keystroke.
 
 **Notification daemon**
 Not a client of one. The shell claims
@@ -126,7 +129,9 @@ sections and the whole config can be reset too.
 ![idle](docs/idle.png)
 
 **At rest** — the clock, the date, and a pod of workspace dashes. The
-corner is a capsule at this height and opens up as the shape grows.
+corner is a capsule at this height and opens up as the shape grows. Two
+hairlines rather than one, a pixel apart: the pair has a width, so the
+corner has a radius you can read.
 
 ![control centre](docs/control-centre.png)
 
@@ -140,7 +145,9 @@ grid rather than opening a window somewhere else
 
 ![launcher](docs/launcher.png)
 
-**The launcher** — the same shape, stretched
+**The launcher** — the same shape, stretched. At rest it is just the
+field; the list is what you typed for. Row corners are cut from the
+panel's, so the list looks carved out of it rather than laid on it
 
 ![settings](docs/settings.png)
 
@@ -314,6 +321,25 @@ One radius is set; everything else derives from it. `Theme.radiusSmall`,
 `radiusNormal` and `radiusLarge` are 0.6x, 1x and 1.2x of the panel
 radius, so the slider in Settings → Theme moves every corner in the
 shell together rather than the two that happened to reference it.
+
+Which of the three a shape gets is a question about what kind of thing
+it is, not about how big it is — size is already in the answer, because
+Qt clamps a radius to half the shorter side, so at a large setting a
+28px button becomes a capsule while the panel behind it stays a rounded
+rectangle:
+
+| Token | What it is for |
+|:--|:--|
+| `radiusLarge` | a **card** — something that holds other things and sits on a surface: control-centre cards, a selected row in a list, overview and picker cards, an icon tile, a popup |
+| `radiusNormal` | a **panel**, or a field you type into: the settings window and its sidebar, a segmented control, a password box |
+| `radiusSmall` | a **chip** — a small control holding one word or one glyph: buttons, tabs, a thumbnail inside a card |
+
+There is a fourth case and it is deliberately not a token: a shape whose
+roundness is a fact about the shape rather than a preference. A toggle
+knob, a slider handle, a workspace dash, the cap on a 3px tick — those
+are `height / 2`, written where they are drawn. `radius: 1.5` beside
+`width: 3` is the same number with the reason taken out of it, and it
+stops being a capsule the moment somebody changes the 3.
 
 The island's own corner is a function of its height, not a constant:
 
