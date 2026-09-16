@@ -109,7 +109,8 @@ vdirsyncer, khal — so nothing extra needs installing.
 **Settings that show their work**
 Six pages. The palette is shown as colour, the pill as a live
 preview, and the control centre as itself — you drag the real cards
-around. Anything you have changed grows a revert control beside it;
+around. The wheel scrolls the page; **Ctrl+wheel** over a slider steps
+it by one. Anything you have changed grows a revert control beside it;
 sections and the whole config can be reset too.
 
 </td>
@@ -287,6 +288,25 @@ no spring easing. Tempo is one control in Settings → Island; damping,
 durations and the content lead are each their own slider a fold below
 it, and **Reduce motion** drops the springs and the shape morphs while
 keeping the cross-fades.
+
+### Shape
+
+One radius is set; everything else derives from it. `Theme.radiusSmall`,
+`radiusNormal` and `radiusLarge` are 0.6x, 1x and 1.2x of the panel
+radius, so the slider in Settings → Theme moves every corner in the
+shell together rather than the two that happened to reference it.
+
+The island's own corner is a function of its height, not a constant:
+
+```
+Theme.corner(h) = min(h / 2, island.radius + h * 0.06)
+```
+
+A single number cannot serve both ends of a shape that morphs from a
+34px pill to a 374px panel — at 14 the pill is three pixels short of a
+capsule, and the panel gets that same 14 on something ten times taller.
+The height is already spring-animated, so **the corner opens up as the
+shape does**, for free.
 
 ---
 
