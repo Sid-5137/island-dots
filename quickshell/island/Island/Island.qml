@@ -1270,6 +1270,26 @@ Variants {
             function open(): void { root.openSearch() }
             function show(): void { root.openSearch() }
             function hide(): void { root.closeSearch() }
+
+            // Open it with something already typed.
+            //
+            // Here because the launcher's interesting state is not a
+            // state it can be put into: `open` gives you an empty
+            // field, and the field is the one thing in the shell that
+            // only a keyboard can reach. That is fine until something
+            // that is not a keyboard needs it — a bind that searches
+            // the selection, and docs/RECORDING.md, which drives every
+            // other mode over this socket precisely so the takes come
+            // out the same and no cursor wanders through the shot.
+            //
+            // Sets both, because the TextInput holds the text and
+            // Search holds the query, and onTextChanged only runs for
+            // a change the field itself makes.
+            function query(text: string): void {
+                root.openSearch();
+                if (root.searchInput) root.searchInput.text = text;
+                Search.query = text;
+            }
         }
     }
 }
