@@ -20,13 +20,12 @@ Item {
     required property var pill     // the shape, for geometry gates
     anchors.fill: parent
 
-    opacity: (island.isSession
-              && pill.width > Config.island.sessionWidth * 0.8) ? 1 : 0
+    readonly property bool shown: island.isSession
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     Row {
         anchors.centerIn: parent
@@ -72,6 +71,7 @@ Item {
                                ? Theme.error : Theme.text)
                         font.family: Theme.fontFamily
                         font.pixelSize: 22
+                        font.weight: Config.island.fontWeight
                         Behavior on color { ColorAnimation { duration: 140 } }
                     }
 
@@ -81,6 +81,7 @@ Item {
                         color: parent.parent.armed ? Theme.textOnError : Theme.textDim
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall - 1
+                        font.weight: Font.DemiBold
                         font.letterSpacing: 0.8
                         renderType: Text.NativeRendering
                     }

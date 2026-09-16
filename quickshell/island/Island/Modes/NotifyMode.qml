@@ -21,13 +21,12 @@ Item {
     anchors.fill: parent
     anchors.margins: 16
 
-    opacity: (island.isNotify
-              && pill.width > Config.island.notifyWidth * 0.8) ? 1 : 0
+    readonly property bool shown: island.isNotify
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     readonly property var n: win.notice
 
@@ -67,6 +66,7 @@ Item {
                 ? Theme.textOnError : Theme.textDim
             font.family: Theme.fontFamily
             font.pixelSize: 20
+            font.weight: Config.island.fontWeight
         }
     }
 
@@ -95,6 +95,7 @@ Item {
             color: Theme.textDim
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
+            font.weight: Font.DemiBold
             // Senders send markup whether or not it's
             // advertised; rendering it raw shows tags.
             textFormat: Text.StyledText
@@ -110,6 +111,7 @@ Item {
             color: Theme.outline
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall - 2
+            font.weight: Font.DemiBold
             elide: Text.ElideRight
             renderType: Text.NativeRendering
         }

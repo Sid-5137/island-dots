@@ -73,11 +73,21 @@ PanelWindow {
         opacity: root.open ? 1 : 0
         scale: root.open ? 1 : 0.96
 
+        // The island's own motion, so the settings window arrives the
+        // way everything else does. See Services/Motion.qml.
         Behavior on opacity {
-            NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
+            NumberAnimation {
+                duration: root.open ? Motion.contentIn : Motion.contentOut
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.ease
+            }
         }
         Behavior on scale {
-            NumberAnimation { duration: 240; easing.type: Easing.OutBack; easing.overshoot: 0.6 }
+            NumberAnimation {
+                duration: root.open ? Motion.expand : Motion.collapse
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.open ? Motion.arrive : Motion.settle
+            }
         }
 
         // Swallow clicks so they don't reach the dismiss area behind.
@@ -216,6 +226,7 @@ PanelWindow {
                 width: scroll.width
                 sourceComponent: {
                     switch (root.page) {
+                        case "control": return controlPage;
                         case "theme":   return themePage;
                         case "input":   return inputPage;
                         case "system":  return systemPage;
@@ -235,6 +246,7 @@ PanelWindow {
 
     readonly property var pages: [
         { id: "island",  label: "Island",  glyph: "\udb80\udcb5" },
+        { id: "control", label: "Control", glyph: "\udb80\udf3f" },
         { id: "theme",   label: "Theme",   glyph: "\udb81\udda0" },
         { id: "input",   label: "Input",   glyph: "\udb80\udf30" },
         { id: "system",  label: "System",  glyph: "\udb80\uddfd" },
@@ -249,10 +261,19 @@ PanelWindow {
         appearance: "theme",
         wallpaper:  "theme",
         motion:     "island",
-        session:    "system"
+        session:    "system",
+        // What the control centre's own settings tile opens, and the
+        // name anyone would guess for it.
+        centre:     "control",
+        tiles:      "control"
     })
 
     onPageChanged: {
+        // Back to the top. The Flickable outlives the page inside it,
+        // so without this, arriving at a page lands you wherever you
+        // happened to have scrolled the last one to — and on a short
+        // page that is past the end of it, looking at nothing.
+        scroll.contentY = 0;
         loader.opacity = 0;
         pageFade.restart();
     }
@@ -264,6 +285,7 @@ PanelWindow {
     }
 
     Component { id: islandPage;  IslandPage  { width: scroll.width } }
+    Component { id: controlPage; ControlPage { width: scroll.width } }
     Component { id: themePage;   ThemePage   { width: scroll.width } }
     Component { id: inputPage;   InputPage   { width: scroll.width } }
     Component { id: systemPage;  SystemPage  { width: scroll.width } }

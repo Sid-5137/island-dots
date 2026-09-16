@@ -2,11 +2,11 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
 import Quickshell.Widgets
-import Quickshell.Services.SystemTray
 import QtQuick
 
 import "root:/Services"
 import "root:/Island/Modes"
+import "root:/Island/Pods"
 import "root:/Widgets"
 
 Variants {
@@ -68,22 +68,18 @@ Variants {
 
         property string picker: ""          // "" | wallpaper | theme | icon
 
-        readonly property var faces: ["clock", "media", "tray"]
-        // Falls back if the stored value names a face that no longer
-        // exists — a settings.json written by an older version can.
-        readonly property string face:
-            faces.indexOf(Config.island.face) !== -1
-                ? Config.island.face : "clock"
+        // True while the cursor is over either pod. The pods are
+        // separate shapes but one object with the pill: hovering any
+        // of the three lifts all of them, and keeps the island out
+        // while you are reading one.
+        readonly property bool podsHovered: leftPod.hovered || rightPod.hovered
+        readonly property bool podsHeld:
+            podsHovered || leftPod.pinned || rightPod.pinned
 
         // Touchpads deliver a burst of small deltas per gesture, so a
         // threshold and a cooldown turn one flick into one step rather
         // than four.
         property int scrollAccum: 0
-
-        // The indicator is a confirmation of a change, not a permanent
-        // fixture: shown on every hover it reads as a second row of
-        // workspace dashes.
-        property bool faceHint: false
 
         // ── Switcher and overview ────────────────────────────
 
@@ -243,7 +239,14 @@ Variants {
 
         function closeOverview() { overviewOpen = false }
 
-        function cycleFace(delta) {
+        // Scrolling over the island moves one workspace. It replaces
+        // the gesture that used to cycle the collapsed pill between
+        // three faces — which was the wrong thing to spend the only
+        // gesture the island has on, because two of those three faces
+        // are pods now and the third is the pill itself.
+        //
+        // Up goes left, matching the dashes in the pod and SUPER+left.
+        function scrollWorkspace(delta) {
             if (scrollCooldown.running) return;
 
             scrollAccum += delta;
@@ -253,18 +256,7 @@ Variants {
             scrollAccum = 0;
             scrollCooldown.restart();
 
-            const n = faces.length;
-            const i = faces.indexOf(Config.island.face);
-            Config.island.face = faces[((i < 0 ? 0 : i) + step + n) % n];
-
-            faceHint = true;
-            hintTimer.restart();
-        }
-
-        Timer {
-            id: hintTimer
-            interval: 1400
-            onTriggered: root.faceHint = false
+            Wm.cycleWorkspace(step);
         }
 
         Timer {
@@ -449,7 +441,7 @@ Variants {
         //
         //   control centre + media strip + top margin + slack
         implicitHeight: Math.max(
-                            Config.island.controlHeight + Config.island.mediaStripHeight,
+                            ControlLayout.panelHeight,
                             Config.island.pickerHeight,
                             Config.island.centreHeight,
                             Config.island.authHeight,
@@ -462,19 +454,30 @@ Variants {
                       + 60
         color: "transparent"
 
-        readonly property int morphDuration: Config.motion.morphDuration
-        readonly property real morphOvershoot: Config.motion.morphOvershoot
-        readonly property int fadeOut: Config.motion.fadeOut
-        readonly property int fadeIn: Config.motion.fadeIn
+        // The modes are handed `win`, not the singleton, and reach
+        // for these dozens of times. Everything about how the shape
+        // itself moves lives on `island` below, because it depends on
+        // which way the shape is going.
+        readonly property int fadeOut: Motion.fadeOut
+        readonly property int fadeIn: Motion.fadeIn
 
         readonly property string visibilityMode: Config.island.visibility
         readonly property int revealZone: Config.island.revealZone
         property bool demandsAttention: false
 
+        // The whole object, pods included. Smart hiding asks whether a
+        // window has reached the island, and a window that has reached
+        // the tray pod has reached the island — the pods are not a
+        // separate thing to be overlapped separately.
+        readonly property real leftSpan:
+            leftPod.width > 0 ? leftPod.width + Config.island.podGap : 0
+        readonly property real rightSpan:
+            rightPod.width > 0 ? rightPod.width + Config.island.podGap : 0
+
         readonly property rect islandRect: Qt.rect(
-            (screen.width - pill.width) / 2,
+            (screen.width - pill.width) / 2 - leftSpan,
             Config.island.topMargin,
-            pill.width,
+            pill.width + leftSpan + rightSpan,
             pill.height)
 
         readonly property bool overlapped: {
@@ -513,6 +516,7 @@ Variants {
             || !occluded
             || demandsAttention
             || hoverLatch
+            || podsHeld
             || root.expanded
             || searching
             || sessionOpen
@@ -520,8 +524,15 @@ Variants {
             || notice !== null
             || centreOpen
 
+        // The pods sit outside the pill, and the pill's item is what
+        // the mask was. Without a region of their own they would be
+        // drawn and never clickable — and the gap between a pod and the
+        // pill stays click-through, which is the point of not simply
+        // widening the island's own rectangle to cover all three.
         mask: Region {
             item: root.revealed ? island : revealStrip
+            Region { item: leftPod }
+            Region { item: rightPod }
         }
 
         property bool autoExpanded: false
@@ -668,11 +679,13 @@ Variants {
                 // hovering over them.
                 if (Config.island.hideOnFullscreen && Wm.fullscreen
                     && !pillHover.hovered && !revealArea.containsMouse
-                    && !root.expanded)
+                    && !root.podsHeld && !root.expanded)
                     return "hidden";
                 if (!root.revealed) return "hidden";
                 if (root.expanded) return "expanded";
-                if (pillHover.hovered) return "compact";
+                // A pod counts. The three shapes are one object, so
+                // reaching for the tray lifts the pill with it.
+                if (pillHover.hovered || root.podsHovered) return "compact";
                 return "idle";
             }
 
@@ -684,18 +697,49 @@ Variants {
 
             opacity: mode === "hidden" ? 0 : 1
 
-            Behavior on anchors.topMargin {
+            Behavior on anchors.topMargin { Morph { shape: island } }
+
+            Behavior on opacity {
+                // A fade, not a shape: the spring's overshoot would
+                // only be clamped away at 1.0 anyway.
                 NumberAnimation {
-                    duration: root.morphDuration
-                    easing.type: Easing.OutCubic
+                    duration: island.morphTime
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Motion.ease
                 }
             }
-            Behavior on opacity {
-                NumberAnimation { duration: root.morphDuration }
-            }
+
+            // ── How the shape moves ──────────────────────
+            //
+            // Direction is what an easing curve cannot work out for
+            // itself, so it is decided here and every Behavior on the
+            // pill reads the answer. Opening springs. Closing does
+            // not: a shape on its way out that springs back toward
+            // where it was reads as the interface arguing with you.
+            //
+            // Hover is its own tier because it is a 6px lift, and a
+            // lift given the full 460ms of an expansion feels slack.
+            readonly property bool collapsing:
+                mode === "idle" || mode === "hidden"
+
+            readonly property int morphTime:
+                collapsing ? Motion.collapse
+                           : (mode === "compact" ? Motion.hover
+                                                 : Motion.expand)
+
+            readonly property var morphCurve:
+                collapsing ? Motion.settle : Motion.arrive
 
             readonly property bool media: Player.available && Player.title !== ""
             readonly property bool isExpanded: mode === "expanded"
+
+            // The pill itself, not the group. `compact` covers all
+            // three shapes, which is right for the lift they share and
+            // wrong for anything you are meant to click: the media
+            // transport should appear under the cursor, not two
+            // hundred pixels away from it because a tray icon was
+            // brushed.
+            readonly property bool pillHovered: pillHover.hovered
 
             readonly property bool isSearching: mode === "search"
             readonly property bool isSession: mode === "session"
@@ -709,6 +753,19 @@ Variants {
             readonly property bool isOverview: mode === "overview"
             // Expanded and control are the same thing.
             readonly property bool isControl: mode === "expanded"
+
+            // Declared before the pill, so the expanding panel sweeps
+            // over them on its way open rather than leaving them
+            // sitting on top of it for the length of the fade.
+            WorkspacePod {
+                id: leftPod
+                win: root; island: island; pill: pill
+            }
+
+            TrayPod {
+                id: rightPod
+                win: root; island: island; pill: pill
+            }
 
             Rectangle {
                 id: pill
@@ -753,14 +810,17 @@ Variants {
                     //
                     // The tray no longer lives in the control centre,
                     // so its term is gone.
+                    // The panel is as tall as its layout reaches.
+                    // It used to be a stored height with a term added
+                    // for every optional thing inside it — a short
+                    // month, today's events, the media strip — which
+                    // is four places to remember when a fifth is
+                    // added. The grid knows how many rows it occupies,
+                    // and now that media is a card in that grid rather
+                    // than a strip bolted along the floor, there are
+                    // no terms left at all.
                     expanded: { w: Config.island.controlWidth,
-                                h: Config.island.controlHeight
-                                   + ((Calendar.currentRows || 5) - 5) * 32
-                                   + (island.media ? Config.island.mediaStripHeight : 0)
-                                   + (Calendar.available && Calendar.today
-                                      && Calendar.today.length > 0
-                                      ? Math.min(Calendar.today.length, 3) * 20 + 12
-                                      : 0) },
+                                h: ControlLayout.panelHeight },
                     search:   { w: Config.island.searchWidth,
                                 h: Config.island.searchFieldHeight
                                    + Math.min(Search.results.length, Config.island.searchMaxRows)
@@ -803,12 +863,18 @@ Variants {
                     return Qt.rgba(col.r, col.g, col.b, Config.island.opacity);
                 }
 
-                // Transparent when expanded: the control centre draws
-                // its own cards, and a panel behind them would put a
-                // seam back around the gaps between them.
-                color: island.mode === "expanded"
-                    ? "transparent"
-                    : tint(island.mode === "idle" || island.mode === "hidden"
+                // The control centre is one panel with cards on it,
+                // not four cards floating where a panel used to be.
+                // It went transparent when the cards each carried
+                // their own surface, and the result was three boxes
+                // over the wallpaper with nothing saying they were one
+                // thing — the gaps read as holes rather than as gaps.
+                // Now the panel is the surface and the cards sit on
+                // it, which is also what lets the layout editor move
+                // them around without leaving a shape behind.
+                color: tint(island.mode === "idle"
+                            || island.mode === "hidden"
+                            || island.mode === "expanded"
                         ? Theme.surfaceLowest
                         : Theme.surfaceContainer)
 
@@ -830,7 +896,7 @@ Variants {
                     Qt.color(Theme.outlineVariant).r,
                     Qt.color(Theme.outlineVariant).g,
                     Qt.color(Theme.outlineVariant).b,
-                    island.mode === "expanded" ? 0 : 1)
+                    1)
 
                 Behavior on border.color {
                     // `win` is what the Modes/ components call this
@@ -848,20 +914,11 @@ Variants {
                 // toggles and sliders above it get their clicks; this
                 // only catches presses on empty pill.
 
-                Behavior on width {
-                    NumberAnimation {
-                        duration: root.morphDuration
-                        easing.type: Easing.OutBack
-                        easing.overshoot: root.morphOvershoot
-                    }
-                }
-                Behavior on height {
-                    NumberAnimation {
-                        duration: root.morphDuration
-                        easing.type: Easing.OutBack
-                        easing.overshoot: root.morphOvershoot
-                    }
-                }
+                // Both axes on one curve, so the shape scales as a
+                // shape rather than as two edges that happen to be
+                // moving at the same time.
+                Behavior on width { Morph { shape: island } }
+                Behavior on height { Morph { shape: island } }
                 // The pill's colour is deliberately not animated. In
                 // the expanded state it goes transparent so the cards
                 // read as separate surfaces, and fading a full-width
@@ -874,15 +931,15 @@ Variants {
                 PickerMode  { win: root; island: island; pill: pill }
                 NotifyMode  { win: root; island: island; pill: pill }
                 CentreMode  { win: root; island: island; pill: pill }
-                ControlMode { win: root; island: island; pill: pill }
-                MediaStrip  { win: root; island: island; pill: pill }
+                ControlMode { id: controlMode; win: root; island: island }
                 OsdMode     { win: root; island: island; pill: pill }
                 AuthMode    { win: root; island: island; pill: pill }
                 ClipboardMode { win: root; island: island; pill: pill }
                 SwitcherMode  { win: root; island: island; pill: pill }
                 OverviewMode  { win: root; island: island; pill: pill }
 
-                // Scroll over the collapsed pill cycles the face. While
+                // Scroll over the collapsed pill moves a workspace, or
+                // volume, or nothing — island.scrollAction picks. While
                 // an OSD is up it adjusts that value instead, which is
                 // what the gesture already means in that moment.
                 WheelHandler {
@@ -905,8 +962,20 @@ Variants {
                             return;
                         }
 
-                        if (island.mode === "idle" || island.mode === "compact")
-                            root.cycleFace(dy);
+                        if (island.mode !== "idle" && island.mode !== "compact")
+                            return;
+
+                        const action = Config.island.scrollAction;
+
+                        if (action === "workspace") {
+                            root.scrollWorkspace(dy);
+                        } else if (action === "volume") {
+                            const step = dy > 0 ? Config.island.osdStep
+                                                : -Config.island.osdStep;
+                            Audio.setVolume(
+                                Math.max(0, Math.min(100, Audio.volume + step)));
+                            Osd.show("volume", Audio.volume, Audio.muted);
+                        }
                     }
                 }
 
@@ -981,6 +1050,26 @@ Variants {
                     + " mode=" + island.mode;
             }
 
+            // Everything a pod's size and presence is derived from.
+            // A pod that is not there is one of: switched off, empty,
+            // or undocked because the island is in another mode.
+            function pods(): string {
+                return "workspaces present=" + leftPod.present
+                    + " open=" + leftPod.open
+                    + " pinned=" + leftPod.pinned
+                    + " w=" + Math.round(leftPod.width)
+                    + " (rest=" + Math.round(leftPod.restWidth)
+                    + " open=" + Math.round(leftPod.openWidth) + ")"
+                    + "\ntray       present=" + rightPod.present
+                    + " open=" + rightPod.open
+                    + " pinned=" + rightPod.pinned
+                    + " w=" + Math.round(rightPod.width)
+                    + " (rest=" + Math.round(rightPod.restWidth)
+                    + " open=" + Math.round(rightPod.openWidth) + ")"
+                    + "  items=" + Tray.count
+                    + "\ndocked=" + leftPod.docked + " mode=" + island.mode;
+            }
+
             // Every term the media strip's visibility reads, so a
             // missing strip does not need guessing at.
             function media(): string {
@@ -990,12 +1079,10 @@ Variants {
                     + " isControl=" + island.isControl
                     + " mode=" + island.mode
                     + " pillH=" + Math.round(pill.height)
-                    + " needH=" + Math.round(Config.island.controlHeight * 0.9)
-                    + " controlH=" + Config.island.controlHeight
-                    + " stripH=" + Config.island.mediaStripHeight
-                    + " expectedPillH="
-                    + (Config.island.controlHeight
-                       + (island.media ? Config.island.mediaStripHeight : 0));
+                    + " needH=" + Math.round(ControlLayout.panelHeight * 0.9)
+                    + " controlH=" + ControlLayout.panelHeight
+                    + " rows=" + ControlLayout.rows
+                    + " expectedPillH=" + ControlLayout.panelHeight;
             }
 
             function why(): string {
@@ -1102,6 +1189,20 @@ Variants {
             function open(): void { root.openControl() }
             function show(): void { root.openControl() }
             function hide(): void { root.closeControl() }
+
+            // Straight to a sub-page: "wifi", "bluetooth", "sound",
+            // or "" for the grid. Worth a bind of its own — the point
+            // of the network list living in the panel is that getting
+            // to it is one gesture, and that should include a key.
+            function page(name: string): void {
+                root.openControl();
+                // After the open, not during it. The panel forgets its
+                // sub-page when it closes, and if the panel was shut
+                // when this arrived, that forgetting happens on the
+                // binding pass this call triggers — which would land
+                // after the assignment and wipe it.
+                Qt.callLater(function() { controlMode.page = name });
+            }
         }
 
         IpcHandler {

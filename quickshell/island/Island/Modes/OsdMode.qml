@@ -3,6 +3,7 @@ import Quickshell.Io
 import QtQuick
 
 import "root:/Services"
+import "root:/Widgets"
 
 // Volume, brightness and mic readout. A bar, not a number: the level
 // relative to full is what you're checking, and the value is there for
@@ -17,12 +18,12 @@ Item {
 
     anchors.fill: parent
 
-    opacity: (island.isOsd && pill.width > Config.island.osdWidth * 0.8) ? 1 : 0
+    readonly property bool shown: island.isOsd
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     Text {
         id: osdIcon
@@ -34,6 +35,7 @@ Item {
         color: Osd.muted ? Theme.outline : Theme.primary
         font.family: Theme.fontFamily
         font.pixelSize: 18
+        font.weight: Font.DemiBold
         horizontalAlignment: Text.AlignHCenter
     }
 
@@ -86,6 +88,7 @@ Item {
         color: Theme.textDim
         font.family: Theme.fontMono
         font.pixelSize: Theme.fontSizeNormal
+        font.weight: Font.DemiBold
         renderType: Text.NativeRendering
     }
 }

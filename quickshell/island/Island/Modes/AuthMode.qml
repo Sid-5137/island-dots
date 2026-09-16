@@ -4,6 +4,7 @@ import Quickshell.Widgets
 import QtQuick
 
 import "root:/Services"
+import "root:/Widgets"
 
 // Polkit authorization prompt.
 
@@ -17,12 +18,12 @@ Item {
     anchors.fill: parent
     anchors.margins: 20
 
-    opacity: (island.isAuth && pill.width > Config.island.authWidth * 0.8) ? 1 : 0
+    readonly property bool shown: island.isAuth
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     IconImage {
         id: authIcon
@@ -59,6 +60,7 @@ Item {
             color: Theme.outline
             font.family: Theme.fontMono
             font.pixelSize: Theme.fontSizeSmall - 2
+            font.weight: Font.DemiBold
             elide: Text.ElideMiddle
             renderType: Text.NativeRendering
         }
@@ -139,6 +141,7 @@ Item {
             color: Polkit.supplementaryIsError ? Theme.error : Theme.outline
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
+            font.weight: Font.DemiBold
             elide: Text.ElideRight
             renderType: Text.NativeRendering
         }
@@ -157,6 +160,7 @@ Item {
                 color: Theme.textDim
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
+                font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
             }
 

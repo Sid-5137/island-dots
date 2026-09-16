@@ -23,13 +23,12 @@ Item {
     // Same geometry gate as the other content: the
     // field can't render inside a pill that hasn't
     // widened to hold it yet.
-    opacity: (island.isSearching
-              && pill.width > Config.island.searchWidth * 0.8) ? 1 : 0
+    readonly property bool shown: island.isSearching
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     Item {
         id: fieldRow
@@ -47,6 +46,7 @@ Item {
             color: Theme.primary
             font.family: Theme.fontMono
             font.pixelSize: Theme.fontSizeNormal
+            font.weight: Config.island.fontWeight
             renderType: Text.NativeRendering
         }
 
@@ -110,6 +110,7 @@ Item {
             color: Theme.outline
             font.family: Theme.fontMono
             font.pixelSize: Theme.fontSizeSmall
+            font.weight: Font.DemiBold
             renderType: Text.NativeRendering
         }
 
@@ -191,6 +192,7 @@ Item {
                 color: parent.active ? Theme.primary : Theme.text
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
+                font.weight: Config.island.fontWeight
                 elide: Text.ElideRight
                 renderType: Text.NativeRendering
             }
@@ -206,6 +208,7 @@ Item {
                 color: Theme.outline
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall - 1
+                font.weight: Font.DemiBold
                 elide: Text.ElideRight
                 renderType: Text.NativeRendering
             }

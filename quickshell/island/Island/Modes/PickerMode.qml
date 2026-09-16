@@ -20,13 +20,12 @@ Item {
     required property var pill     // the shape, for geometry gates
     anchors.fill: parent
 
-    opacity: (island.isPicker
-              && pill.width > Config.island.pickerWidth * 0.8) ? 1 : 0
+    readonly property bool shown: island.isPicker
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     readonly property var items: {
         switch (win.picker) {

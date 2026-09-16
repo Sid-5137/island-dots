@@ -20,13 +20,12 @@ Item {
     anchors.fill: parent
     anchors.margins: 16
 
-    opacity: (island.isCentre
-              && pill.width > Config.island.centreWidth * 0.8) ? 1 : 0
+    readonly property bool shown: island.isCentre
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     Item {
         id: centreHeader
@@ -68,6 +67,7 @@ Item {
                 color: Theme.textDim
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
+                font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
             }
 
@@ -96,6 +96,7 @@ Item {
         color: Theme.outline
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSizeSmall
+        font.weight: Font.DemiBold
         renderType: Text.NativeRendering
     }
 
@@ -171,6 +172,7 @@ Item {
                     color: Theme.outline
                     font.family: Theme.fontFamily
                     font.pixelSize: 16
+                    font.weight: Font.DemiBold
                 }
             }
 
@@ -200,6 +202,7 @@ Item {
                     color: Theme.textDim
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall - 1
+                    font.weight: Font.DemiBold
                     textFormat: Text.StyledText
                     wrapMode: Text.WordWrap
                     maximumLineCount: 2
@@ -213,6 +216,7 @@ Item {
                     color: Theme.outline
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall - 2
+                    font.weight: Font.DemiBold
                     elide: Text.ElideRight
                     renderType: Text.NativeRendering
                 }
@@ -228,6 +232,7 @@ Item {
                     ? Theme.text : Theme.outline
                 font.family: Theme.fontFamily
                 font.pixelSize: 18
+                font.weight: Config.island.fontWeight
 
                 MouseArea {
                     id: dismissHover

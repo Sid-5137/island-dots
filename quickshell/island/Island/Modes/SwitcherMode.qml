@@ -4,6 +4,7 @@ import Quickshell.Widgets
 import QtQuick
 
 import "root:/Services"
+import "root:/Widgets"
 
 // Alt+Tab. A row of app icons, most-recently-focused first, with the
 // selected window named beneath. Commits when tabbing stops.
@@ -17,12 +18,12 @@ Item {
 
     anchors.fill: parent
 
-    opacity: (island.isSwitcher && pill.width > 200) ? 1 : 0
+    readonly property bool shown: island.isSwitcher
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     Text {
         anchors.centerIn: parent
@@ -31,6 +32,7 @@ Item {
         color: Theme.outline
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSizeSmall
+        font.weight: Font.DemiBold
         renderType: Text.NativeRendering
     }
 
@@ -133,6 +135,7 @@ Item {
             color: Theme.outline
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
+            font.weight: Font.DemiBold
             elide: Text.ElideRight
             renderType: Text.NativeRendering
         }

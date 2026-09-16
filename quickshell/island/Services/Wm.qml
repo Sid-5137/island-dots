@@ -57,6 +57,16 @@ Singleton {
         dispatch("hl.dsp.focus({ workspace = " + id + " })");
     }
 
+    // One workspace either way. Relative rather than arithmetic on
+    // `workspaces`: `e+1` is Hyprland's own "the next one that
+    // exists", so scrolling the island lands exactly where SUPER+right
+    // lands, including when the numbers have gaps in them.
+    function cycleWorkspace(step) {
+        if (step === 0) return;
+        const rel = (step > 0 ? "+" : "-") + Math.abs(step);
+        dispatch("hl.dsp.focus({ workspace = \"e" + rel + "\" })");
+    }
+
     Process {
         id: query
         running: true

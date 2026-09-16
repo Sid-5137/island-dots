@@ -18,18 +18,59 @@ Singleton {
     // onAdapterUpdated, but this is here for explicit saves.
     // Bump when a key changes meaning rather than merely appearing.
     // New keys need no migration — the merge on load handles those.
-    readonly property int currentVersion: 1
+    readonly property int currentVersion: 4
 
     // Set once the startup merge has run, so the file watcher's reload
     // doesn't start writing in a loop.
     property bool merged: false
 
     function migrate(from) {
-        // No migrations yet. When one is needed:
+        // 1 -> 2: faces are gone.
         //
-        //   if (from < 2) { adapter.island.foo = adapter.island.oldFoo }
+        // The collapsed pill used to hold one of three "faces" —
+        // clock, media or tray — and scrolling over it cycled between
+        // them. Scrolling to find out what is running is not a glance,
+        // so the tray and the workspaces moved out into pods beside
+        // the pill and media morphs the pill itself. island.face and
+        // island.faceIndicator no longer exist; they are dropped from
+        // the file by the write below, because JsonAdapter only ever
+        // writes keys it declares.
         //
-        // then set adapter.version and write.
+        // Nothing carries over. The two faces that were worth keeping
+        // are both on screen at once now, and showWorkspaces — which
+        // survives — means the pod rather than the dashes inside the
+        // pill.
+        //
+        // 2 -> 3: motion is a spring now.
+        //
+        // One duration and one overshoot could not describe motion
+        // that springs open and settles shut, so motion.morphDuration
+        // and motion.morphOvershoot are gone, along with
+        // motion.contentThreshold, which nothing had read since the
+        // content gates moved out of the geometry. The replacements
+        // are declared below and written on the first save.
+        //
+        // Nothing carries over here either: an overshoot constant for
+        // Easing.OutBack has no meaning as a damping fraction, and
+        // guessing at one would be worse than shipping the value the
+        // curves were designed around.
+        //
+        // 3 -> 4: the control centre is a layout now.
+        //
+        // island.controlHeight is gone. The panel's height is what its
+        // layout reaches — pad, plus the rows the controls occupy —
+        // so a number for it could only ever disagree with what was
+        // in the panel. island.controlLayout, controlColumns,
+        // controlCell, controlGap and controlPad replace it, and are
+        // written on the first save.
+        //
+        // Nothing carries over: a height in pixels cannot say where a
+        // Wi-Fi row should sit, and the shipped layout is the one the
+        // delegates were drawn against.
+        //
+        // The next one goes here:
+        //
+        //   if (from < 5) { adapter.island.foo = adapter.island.oldFoo }
         adapter.version = currentVersion;
         file.writeAdapter();
     }
@@ -182,7 +223,7 @@ Singleton {
         JsonAdapter {
             id: adapter
 
-            property int version: 1
+            property int version: 4
 
             property JsonObject island: JsonObject {
                 // "always" — on screen at all times, with the strip
@@ -218,6 +259,12 @@ Singleton {
                 // How long a track change pops the island open.
                 property int attentionDuration: 2500
 
+                // Whether the collapsed pill carries the track title
+                // as well as the equaliser. Off: a title is as long as
+                // whoever named the track decided, and it changes the
+                // pill's width every few minutes.
+                property bool pillTitle: false
+
                 // Expand automatically when a new track starts.
                 property bool expandOnTrackChange: false
 
@@ -244,13 +291,40 @@ Singleton {
 
                 property int fontSize: 13
                 property int fontWeight: 700
+
+                // ── Pods ──────────────────────────────────────
+                //
+                // The two capsules that flank the pill. Workspaces on
+                // the left, the tray on the right. They are separate
+                // shapes rather than more content crammed into the
+                // pill, so a glance at the top of the screen answers
+                // "where am I" and "what is running" without hovering,
+                // scrolling or opening anything.
                 property bool showWorkspaces: true
+                property bool showTray: true
 
+                // Space between a pod and the pill. Small enough that
+                // the three read as one object, wide enough that they
+                // are three shapes and not a broken one.
+                property int podGap: 8
 
-                // Which face the collapsed pill shows. Scrolling over
-                // the pill cycles it; the choice persists.
-                property string face: "clock"
-                property bool faceIndicator: false
+                // A pod opens itself for a moment when what it shows
+                // changes — a workspace switch, a tray icon asking for
+                // attention — then settles back to its resting size.
+                property bool podPeek: true
+                property int podPeekDuration: 1600
+
+                // Icons the tray pod shows at rest. The rest arrive
+                // when it opens, behind a "+n".
+                property int trayRestMax: 4
+
+                // What a scroll over the collapsed pill does.
+                // "workspace" — move one workspace either way
+                // "volume"    — adjust volume and show the OSD
+                // "none"      — nothing
+                // While an OSD is up the gesture always adjusts that
+                // value instead, whatever this says.
+                property string scrollAction: "workspace"
 
                 // Below 1.0 the wallpaper shows through and the
                 // island-bar layer rule blurs it. At 1.0 the pill is
@@ -275,11 +349,31 @@ Singleton {
                 property int sessionWidth: 460
                 property int sessionHeight: 128
 
-                // Control centre: calendar plus quick toggles.
+                // Control centre. Only the width is a number now: the
+                // height is whatever the layout below reaches, so a
+                // panel can never be shorter than the controls in it.
                 property int controlWidth: 564
-                property int controlHeight: 369
-                // Added to the expanded height when media is playing.
-                property int mediaStripHeight: 60
+
+                // The grid the controls sit on. See
+                // Services/ControlLayout.qml for what the layout
+                // string means; the editor on the Control Centre
+                // settings page is what normally writes it.
+                property int controlColumns: 6
+                property int controlCell: 48
+                property int controlGap: 10
+                property int controlPad: 18
+
+                property string controlLayout: "calendar:0,0,3,5"
+                    + ";wifi:3,0,3,1"
+                    + ";bluetooth:3,1,3,1"
+                    + ";media:3,2,3,2"
+                    + ";display:3,4,3,1"
+                    + ";sound:0,5,6,1"
+
+                // How much of the accent is washed over album art, so
+                // a media card belongs to the theme whatever the
+                // record label chose. 0 leaves the artwork alone.
+                property real artTint: 0.28
 
                 // Quick toggles with no daemon behind them yet. Kept
                 // here so the tiles have somewhere to persist, and so
@@ -336,15 +430,46 @@ Singleton {
                 property bool caffeine: false
             }
 
+            // Everything here is read through Services/Motion.qml,
+            // which turns it into easing curves. The comments there
+            // explain the model; these are the dials.
             property JsonObject motion: JsonObject {
-                property int morphDuration: 250
-                property real morphOvershoot: 0.6
-                property int fadeIn: 120
-                property int fadeOut: 70
+                // These are the `fluid` tempo in Services/Motion.qml,
+                // spelled out. The tempo tables are the place to argue
+                // about them; this is only what a fresh install gets.
+                //
+                // The shape. Arrivals spring, departures do not — a
+                // spring on the way out reads as the interface
+                // arguing with you.
+                property int expandDuration: 240
+                property int collapseDuration: 200
+                property int hoverDuration: 200
+                property int popDuration: 300
 
-                // Fraction of target height the pill must reach
-                // before expanded content appears.
-                property real contentThreshold: 0.75
+                // How much the shape overshoots on the way in, as
+                // Apple's damping fraction. 1.0 is no overshoot at
+                // all, 0.8 is about one and a half percent, 0.6 is
+                // visibly springy, 0.4 is a toy.
+                property real arriveDamping: 0.78
+                property real popDamping: 0.55
+
+                // The content follows the shape rather than waiting
+                // for it: it starts `contentLead` into the morph and
+                // is fully in long before the shape has settled. On
+                // the way out it leaves first, and faster.
+                property int contentLead: 40
+                property int contentInDuration: 150
+                property int contentOutDuration: 90
+
+                // Cross-fades that are not part of a morph: a colour
+                // changing, an indicator appearing.
+                property int fadeIn: 90
+                property int fadeOut: 60
+
+                // Takes the springs and the shape morphs away and
+                // leaves the cross-fades, which are not a vestibular
+                // trigger.
+                property bool reduceMotion: false
             }
 
             property JsonObject appearance: JsonObject {

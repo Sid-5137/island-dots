@@ -3,6 +3,7 @@ import Quickshell.Io
 import QtQuick
 
 import "root:/Services"
+import "root:/Widgets"
 
 // Clipboard history. Type to filter, Enter to copy, Escape to close.
 
@@ -15,13 +16,12 @@ Item {
 
     anchors.fill: parent
 
-    opacity: (island.isClipboard
-              && pill.width > Config.island.clipWidth * 0.8) ? 1 : 0
+    readonly property bool shown: island.isClipboard
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     readonly property var filtered: {
         const q = win.clipQuery.trim().toLowerCase();
@@ -45,6 +45,7 @@ Item {
             color: Theme.primary
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeNormal
+            font.weight: Config.island.fontWeight
         }
 
         TextInput {
@@ -112,6 +113,7 @@ Item {
             color: Theme.outline
             font.family: Theme.fontMono
             font.pixelSize: Theme.fontSizeSmall
+            font.weight: Font.DemiBold
             renderType: Text.NativeRendering
         }
 
@@ -135,6 +137,7 @@ Item {
         color: Theme.outline
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSizeSmall
+        font.weight: Font.DemiBold
         renderType: Text.NativeRendering
     }
 
@@ -194,6 +197,7 @@ Item {
                 color: Theme.outline
                 font.family: Theme.fontFamily
                 font.pixelSize: 13
+                font.weight: Font.DemiBold
             }
 
             Text {
@@ -206,6 +210,7 @@ Item {
                 color: parent.active ? Theme.primary : Theme.text
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
+                font.weight: Config.island.fontWeight
                 elide: Text.ElideRight
                 renderType: Text.NativeRendering
             }
@@ -219,6 +224,7 @@ Item {
                 color: delHover.containsMouse ? Theme.error : Theme.outline
                 font.family: Theme.fontFamily
                 font.pixelSize: 16
+                font.weight: Font.DemiBold
                 opacity: rowHover.containsMouse || parent.active ? 1 : 0
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }

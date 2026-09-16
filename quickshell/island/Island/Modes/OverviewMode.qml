@@ -6,6 +6,7 @@ import Quickshell.Widgets
 import QtQuick
 
 import "root:/Services"
+import "root:/Widgets"
 
 // Super+W. Each workspace as a card holding live thumbnails of its
 // windows, captured through the compositor. Click a card to switch,
@@ -21,12 +22,12 @@ Item {
     anchors.fill: parent
     anchors.margins: 12
 
-    opacity: (island.isOverview && pill.width > 200) ? 1 : 0
+    readonly property bool shown: island.isOverview
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
     // Hyprland's toplevel objects carry the address, and each wraps
     // the Wayland toplevel that screencopy can capture. This is the
@@ -86,6 +87,7 @@ Item {
                     color: Theme.outline
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall - 1
+                    font.weight: Font.DemiBold
                     renderType: Text.NativeRendering
                 }
 

@@ -1,13 +1,29 @@
-import Quickshell
-import Quickshell.Io
 import QtQuick
 
-import Quickshell.Services.SystemTray
-
 import "root:/Services"
+import "root:/Widgets"
 
-// The collapsed pill. Scrolling over it cycles the face; hovering adds
-// workspaces and the playing indicator to whichever face is showing.
+// The collapsed pill.
+//
+// It holds the clock and nothing else it does not have to. The
+// workspaces and the tray moved out to the pods either side; what is
+// left is the one thing worth reading at every glance, and the one
+// thing worth morphing the shape for.
+//
+// That one thing is media. A track starting is the island's own
+// gesture — an equaliser appears beside the date and the pill grows a
+// little to fit, because its width is derived from this row. Hovering
+// adds the transport controls. Nothing here appears or disappears:
+// each slot's width falls as the next one's rises, so the pill is
+// always morphing rather than swapping.
+//
+// The title is not in the collapsed pill. It used to be, and it is the
+// one thing here that cannot be read at a glance: it is as long as
+// whoever named the track decided, it changes while you are not
+// looking, and the pill changes width with it — so the shape at rest
+// was a different shape every few minutes. Three animated bars say
+// the same thing the glance is actually asking, which is whether
+// something is playing. `island.pillTitle` puts it back.
 
 Row {
     id: root
@@ -17,151 +33,64 @@ Row {
     required property var pill
 
     anchors.centerIn: parent
-    spacing: 12
 
-    opacity: (!island.isExpanded && !island.isSearching
-              && !island.isSession && !island.isControl && !island.isPicker
-              && !island.isNotify && !island.isCentre && !island.isOsd
-              && !island.isAuth && !island.isClipboard
-              && !island.isSwitcher && !island.isOverview
-              && pill.height < Config.island.compactHeight + 8) ? 1 : 0
-    scale: opacity > 0.5 ? 1.0 : 0.94
+    // Zero, because the gaps belong to the slots. A slot that has
+    // collapsed to nothing must take its spacing with it, or the pill
+    // keeps ten pixels of air where the date used to be.
+    spacing: 0
+
+    // Named for what it is rather than for everything it is not. The
+    // list of twelve negations this replaces also carried a height
+    // gate, which is how the clock came back mid-collapse: the pill
+    // passed under the threshold while it was still moving.
+    readonly property bool shown:
+        island.mode === "idle" || island.mode === "compact"
+
+    opacity: shown ? 1 : 0
     visible: opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutQuad }
-    }
-    Behavior on scale {
-        NumberAnimation { duration: win.fadeIn; easing.type: Easing.OutCubic }
-    }
+    Behavior on opacity { ContentFade { revealing: root.shown } }
 
-    Row {
-        id: hoverLeft
+    // The pill itself. Hovering a pod lifts all three shapes, but it
+    // must not put buttons under a cursor that is somewhere else.
+    readonly property bool hovered: island.pillHovered
+
+    Text {
+        id: timeText
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 10
+        text: Clock.time
+        color: Theme.primary
+        font.family: Theme.fontFamily
+        font.pixelSize: Config.island.fontSize
+        font.weight: Config.island.fontWeight
+        font.letterSpacing: 1.2
+        renderType: Text.NativeRendering
+    }
 
+    // ── The date, while nothing is playing ───────────────────
+
+    Item {
+        id: dateSlot
+
+        // The date stays now that the title has gone: there is room
+        // for both, and a pill whose second field is the date except
+        // when music is on is a pill you have to read twice.
         readonly property bool shown:
-            island.mode === "compact" && win.face !== "workspaces"
+            !(root.island.media && Config.island.pillTitle)
 
-        width: shown ? implicitWidth : 0
-        opacity: shown ? 1 : 0
+        anchors.verticalCenter: parent.verticalCenter
+        width: shown ? dateText.implicitWidth + 10 : 0
+        height: dateText.implicitHeight
         clip: true
 
-        Behavior on width {
-            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-        }
-        Behavior on opacity { NumberAnimation { duration: 150 } }
-
-        Row {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
-            visible: Config.island.showWorkspaces && Wm.workspaces.length > 0
-            width: visible ? implicitWidth : 0
-
-            Repeater {
-                model: Wm.workspaces
-
-                Rectangle {
-                    required property var modelData
-                    readonly property bool active: modelData.id === Wm.activeId
-
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: active ? 16 : (modelData.windows > 0 ? 7 : 4)
-                    height: 3
-                    radius: 1.5
-                    color: active
-                        ? Theme.primary
-                        : (modelData.windows > 0 ? Theme.textDim : Theme.outline)
-
-                    Behavior on width {
-                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-                    }
-                    Behavior on color { ColorAnimation { duration: 200 } }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -5
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: Wm.switchTo(modelData.id)
-                    }
-                }
-            }
-        }
-
-        // Playing indicator. Sits beside the workspaces on every face,
-        // so a glance at the collapsed pill says whether something is
-        // running without having to scroll to the media face.
-        Row {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
-            // Not on the media face — that face draws its own bars, and
-            // two sets side by side is just noise.
-            visible: island.media && win.face !== "media"
-            width: visible ? implicitWidth : 0
-
-            Repeater {
-                model: 3
-
-                Rectangle {
-                    id: liveBar
-
-                    // Declared, not assumed: without it the stagger
-                    // below computes a NaN duration and the animation
-                    // never starts.
-                    required property int index
-
-                    width: 2
-                    height: 9
-                    radius: 1
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: Player.playing ? Theme.primary : Theme.outline
-
-                    Behavior on color { ColorAnimation { duration: 200 } }
-
-                    SequentialAnimation on height {
-                        running: Player.playing && hoverLeft.shown
-                        loops: Animation.Infinite
-
-                        PauseAnimation { duration: liveBar.index * 120 }
-                        NumberAnimation {
-                            to: 14; duration: 320; easing.type: Easing.InOutQuad
-                        }
-                        NumberAnimation {
-                            to: 5; duration: 320; easing.type: Easing.InOutQuad
-                        }
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            width: 1
-            height: 13
-            color: Theme.outlineVariant
-        }
-    }
-
-    // Only the current face is laid out, so the pill's derived width
-    // tracks whichever one is showing.
-
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 10
-        visible: win.face === "clock"
+        // On the pill's own curve: these slots are the pill's
+        // width, one level down.
+        Behavior on width { Morph { shape: island } }
 
         Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: Clock.time
-            color: Theme.primary
-            font.family: Theme.fontFamily
-            font.pixelSize: Config.island.fontSize
-            font.weight: Config.island.fontWeight
-            font.letterSpacing: 1.2
-            renderType: Text.NativeRendering
-        }
-
-        Text {
+            id: dateText
+            anchors.left: parent.left
+            anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
             text: Clock.date
             color: Theme.textDim
@@ -173,242 +102,158 @@ Row {
         }
     }
 
-    Row {
+    // ── The track, while something is ────────────────────────
+
+    Item {
+        id: mediaSlot
+
+        readonly property bool shown: root.island.media
+
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 9
-        visible: win.face === "media"
-
-        Row {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 2
-            visible: island.media
-
-            Repeater {
-                model: 3
-
-                Rectangle {
-                    id: bar
-
-                    // Declared, not assumed. A delegate only receives
-                    // `index` implicitly under some conditions in Qt 6;
-                    // where it doesn't, the stagger below computes a
-                    // NaN duration and the whole animation silently
-                    // fails to start.
-                    required property int index
-
-                    width: 2
-                    // Resting height is what a paused player shows, so
-                    // it has to be legible on its own.
-                    height: 9
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: Player.playing ? Theme.primary : Theme.outline
-                    radius: 1
-
-                    Behavior on color { ColorAnimation { duration: 200 } }
-
-                    SequentialAnimation on height {
-                        running: Player.playing && win.face === "media"
-                        loops: Animation.Infinite
-                        alwaysRunToEnd: false
-
-                        PauseAnimation { duration: bar.index * 120 }
-                        NumberAnimation {
-                            to: 13; duration: 320; easing.type: Easing.InOutQuad
-                        }
-                        NumberAnimation {
-                            to: 5; duration: 320; easing.type: Easing.InOutQuad
-                        }
-                    }
-                }
-            }
-        }
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: island.media ? Player.title : "Nothing playing"
-            color: island.media ? Theme.primary : Theme.outline
-            font.family: Theme.fontFamily
-            font.pixelSize: Config.island.fontSize
-            font.weight: Config.island.fontWeight
-            elide: Text.ElideRight
-            width: Math.min(implicitWidth, 190)
-            renderType: Text.NativeRendering
-        }
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: island.media && Player.artist !== ""
-            text: Player.artist
-            color: Theme.textDim
-            font.family: Theme.fontFamily
-            font.pixelSize: Config.island.fontSize - 1
-            elide: Text.ElideRight
-            width: visible ? Math.min(implicitWidth, 130) : 0
-            renderType: Text.NativeRendering
-        }
-    }
-
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 6
-        visible: win.face === "workspaces"
-
-        Repeater {
-            model: Wm.workspaces
-
-            Rectangle {
-                required property var modelData
-                readonly property bool active: modelData.id === Wm.activeId
-
-                anchors.verticalCenter: parent.verticalCenter
-                width: active ? 24 : 18
-                height: 18
-                radius: 5
-                color: active ? Theme.primary
-                    : (modelData.windows > 0 ? Qt.rgba(1, 1, 1, 0.12) : "transparent")
-                border.width: modelData.windows > 0 || active ? 0 : 1
-                border.color: Theme.outline
-
-                Behavior on width {
-                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-                }
-                Behavior on color { ColorAnimation { duration: 200 } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: modelData.id
-                    color: parent.active ? Theme.textOnPrimary : Theme.textDim
-                    font.family: Theme.fontMono
-                    font.pixelSize: Config.island.fontSize - 3
-                    font.weight: Font.DemiBold
-                    renderType: Text.NativeRendering
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Wm.switchTo(modelData.id)
-                }
-            }
-        }
-    }
-
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 10
-        visible: win.face === "tray"
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: Tray.count === 0
-            text: "No tray icons"
-            color: Theme.outline
-            font.family: Theme.fontFamily
-            font.pixelSize: Config.island.fontSize - 1
-            renderType: Text.NativeRendering
-        }
-
-        Repeater {
-            model: Tray.items
-
-            Item {
-                id: trayItem
-                required property var modelData
-
-                readonly property bool attention:
-                    modelData.status === Status.NeedsAttention
-
-                width: 18
-                height: 18
-                anchors.verticalCenter: parent.verticalCenter
-
-                Image {
-                    anchors.fill: parent
-                    source: trayItem.modelData.icon
-                    asynchronous: true
-                    fillMode: Image.PreserveAspectFit
-                    opacity: trayMouse.containsMouse ? 1 : 0.8
-
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
-                }
-
-                Rectangle {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: -1
-                    width: 6
-                    height: 6
-                    radius: 3
-                    visible: trayItem.attention
-                    color: Theme.error
-                }
-
-                MouseArea {
-                    id: trayMouse
-                    anchors.fill: parent
-                    anchors.margins: -3
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-
-                    onClicked: function(mouse) {
-                        const item = trayItem.modelData;
-
-                        if (mouse.button === Qt.RightButton || item.onlyMenu) {
-                            if (item.hasMenu) {
-                                // Relative to the window, not the icon.
-                                const p = trayItem.mapToItem(
-                                    null, 0, trayItem.height + 8);
-                                item.display(win, p.x, p.y);
-                            }
-                            return;
-                        }
-
-                        if (mouse.button === Qt.MiddleButton) {
-                            item.secondaryActivate();
-                            return;
-                        }
-
-                        item.activate();
-                    }
-                }
-            }
-        }
-    }
-
-    // Which face, as dots. Without it nothing says the pill scrolls.
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 3
-
-        readonly property bool shown:
-            Config.island.faceIndicator && win.faceHint
-
-        width: shown ? implicitWidth : 0
-        opacity: shown ? 1 : 0
+        width: shown ? mediaRow.implicitWidth + 10 : 0
+        height: mediaRow.implicitHeight
         clip: true
 
-        Behavior on width {
-            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-        }
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        // On the pill's own curve: these slots are the pill's
+        // width, one level down.
+        Behavior on width { Morph { shape: island } }
 
-        Repeater {
-            model: win.faces
+        Row {
+            id: mediaRow
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 8
 
-            Rectangle {
-                required property var modelData
+            // The equaliser. It reads as "this is playing" faster than
+            // a glyph does, and it is what tells a paused player from
+            // a running one without any text at all.
+            Row {
                 anchors.verticalCenter: parent.verticalCenter
-                width: 3
-                height: 3
-                radius: 1.5
-                opacity: modelData === win.face ? 1 : 0.35
-                color: Theme.textDim
+                spacing: 2
 
-                Behavior on width {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                Repeater {
+                    model: 3
+
+                    Rectangle {
+                        id: bar
+
+                        // Declared rather than assumed. A delegate only
+                        // receives `index` implicitly under some
+                        // conditions in Qt 6; where it does not, the
+                        // stagger below computes a NaN duration and the
+                        // whole animation silently fails to start.
+                        required property int index
+
+                        width: 2
+                        // The resting height is what a paused player
+                        // shows, so it has to be legible on its own.
+                        height: 9
+                        radius: 1
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: Player.playing ? Theme.primary : Theme.outline
+
+                        Behavior on color { ColorAnimation { duration: 200 } }
+
+                        SequentialAnimation on height {
+                            running: Player.playing && mediaSlot.shown
+                                     && root.visible
+                            loops: Animation.Infinite
+
+                            PauseAnimation { duration: bar.index * 120 }
+                            NumberAnimation {
+                                to: 14; duration: 320
+                                easing.type: Easing.InOutQuad
+                            }
+                            NumberAnimation {
+                                to: 5; duration: 320
+                                easing.type: Easing.InOutQuad
+                            }
+                        }
+                    }
                 }
-                Behavior on color { ColorAnimation { duration: 150 } }
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: Config.island.pillTitle
+                text: Player.title
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: Config.island.fontSize
+                font.weight: Config.island.fontWeight
+                elide: Text.ElideRight
+                // A title is allowed to make the pill wider, up to a
+                // point. Past it the island stops being an island.
+                width: Math.min(implicitWidth, 190)
+                renderType: Text.NativeRendering
+            }
+
+            // Transport, on hover. Three targets is as much as the
+            // collapsed shape can carry, and they are the three you
+            // reach for.
+            Item {
+                id: transportSlot
+
+                readonly property bool shown: root.hovered
+
+                anchors.verticalCenter: parent.verticalCenter
+                width: shown ? transport.implicitWidth + 6 : 0
+                height: transport.implicitHeight
+                clip: true
+
+                Behavior on width { Morph { shape: island } }
+
+                Row {
+                    id: transport
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+
+                    opacity: transportSlot.shown ? 1 : 0
+
+                    Behavior on opacity {
+                        ContentFade { revealing: transportSlot.shown }
+                    }
+
+                    Repeater {
+                        model: [
+                            { g: "⏮", act: "prev" },
+                            { g: "",        act: "toggle" },
+                            { g: "⏭", act: "next" }
+                        ]
+
+                        Text {
+                            required property var modelData
+
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.act === "toggle"
+                                ? (Player.playing ? "⏸" : "▶")
+                                : modelData.g
+                            color: modelData.act === "toggle"
+                                ? Theme.primary : Theme.textDim
+                            font.pixelSize: Config.island.fontSize
+                            font.weight: Config.island.fontWeight
+
+                            MouseArea {
+                                anchors.fill: parent
+                                anchors.margins: -5
+                                cursorShape: Qt.PointingHandCursor
+                                // Not hoverEnabled: a hovering child
+                                // swallows the pill's own hover, and
+                                // the pill would collapse out of
+                                // compact the moment you reached for
+                                // the button that only exists there.
+                                onClicked: {
+                                    if (modelData.act === "prev") Player.prev();
+                                    else if (modelData.act === "next") Player.next();
+                                    else Player.toggle();
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

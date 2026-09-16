@@ -54,6 +54,66 @@ Singleton {
         if (source && source.audio) source.audio.muted = !source.audio.muted;
     }
 
+    // Somewhere to send it.
+    //
+    // The sliders in the control centre move the default sink, which
+    // is the right answer right up until the moment headphones are
+    // plugged in and the question becomes "which one". Listing them is
+    // nearly free — PipeWire is already bound for the volume — so the
+    // Sound page behind the slider's chevron is a list of these rather
+    // than a button that opens a settings window.
+    readonly property var sinks: {
+        const out = [];
+        for (const node of Pipewire.nodes.values) {
+            if (!node || !node.isSink || node.isStream) continue;
+            out.push(node);
+        }
+        return out;
+    }
+
+    function sinkName(node) {
+        if (!node) return "";
+        // description is the human one ("Built-in Audio Analog
+        // Stereo"); name is the id ("alsa_output.pci-0000_00..."),
+        // which is not something to show anybody.
+        return node.description || node.nickname || node.name || "";
+    }
+
+    // What every output on this machine is called, which is therefore
+    // the part that distinguishes none of them.
+    //
+    // One controller with four ports gives four descriptions reading
+    // "500 Series Chipset Family On-Package High Definition Audio (HD
+    // Audio) Speaker" and the same again with HDMI 1, 2 and 3 — sixty
+    // identical characters, and then the only word that matters,
+    // somewhere off the right-hand edge of any list narrow enough to
+    // sit in a panel. So the shared head is measured and dropped.
+    readonly property string sinkPrefix: {
+        const names = sinks.map(sinkName).filter(n => n !== "");
+        if (names.length < 2) return "";
+
+        let end = 0;
+        while (end < names[0].length
+               && names.every(n => n[end] === names[0][end]))
+            end++;
+
+        // Back off to a word boundary, or "HDMI / DisplayPort 1" and
+        // "HDMI / DisplayPort 2" would come back as "1" and "2".
+        const head = names[0].slice(0, end);
+        const cut = head.lastIndexOf(" ");
+        return cut > 0 ? head.slice(0, cut + 1) : "";
+    }
+
+    function sinkLabel(node) {
+        const full = sinkName(node);
+        return sinkPrefix !== "" && full.startsWith(sinkPrefix)
+            ? full.slice(sinkPrefix.length) : full;
+    }
+
+    function setSink(node) {
+        if (node) Pipewire.preferredDefaultAudioSink = node;
+    }
+
     function setBrightness(v) {
         const b = Math.max(0, Math.min(100, Math.round(v)));
         brightness = b;
@@ -71,6 +131,18 @@ Singleton {
     // and writable; without it they report defaults.
     PwObjectTracker {
         objects: [root.sink, root.source]
+    }
+
+    // The outputs get their own tracker rather than being concatenated
+    // into the one above. An untracked node reports no description, so
+    // the Sound page would list the right number of outputs under the
+    // wrong labels — but binding the default sink's tracker to a list
+    // derived from Pipewire.nodes puts tracking on both sides of the
+    // same binding, and Qt resolves that by dropping it. The symptom
+    // is not a warning: it is the volume reading zero forever, because
+    // the default sink quietly stopped being bound.
+    PwObjectTracker {
+        objects: root.sinks
     }
 
     // Only the backlight needs polling now — PipeWire pushes volume.
@@ -92,5 +164,26 @@ Singleton {
         interval: 5000
         repeat: true
         onTriggered: root.refresh()
+    }
+
+    // Every other service here can be asked what it thinks is true.
+    // This one could not, which is why working out whether a slider
+    // reading zero was the slider's fault or PipeWire's took four
+    // screenshots rather than one command.
+    IpcHandler {
+        target: "audio"
+
+        function status(): string {
+            return "volume=" + root.volume
+                + " muted=" + root.muted
+                + " mic=" + (root.micMuted ? "muted" : "live")
+                + " brightness=" + root.brightness
+                + " sink='" + root.sinkName(root.sink) + "'";
+        }
+
+        function outputs(): string {
+            return root.sinks.map(n =>
+                (n === root.sink ? "* " : "  ") + root.sinkName(n)).join("\n");
+        }
     }
 }

@@ -41,35 +41,60 @@ Column {
         onToggled: function(v) { Config.island.hideOnFullscreen = v }
     }
 
-    SectionHeader { text: "Collapsed face" }
-
-    ChoiceRow {
-        configKey: "island.face"
-        label: "Shows"
-        description: "Scroll over the pill to cycle without coming here."
-        current: Config.island.face
-        options: [
-            { value: "clock", label: "Clock" },
-            { value: "media", label: "Media" },
-            { value: "tray",  label: "Tray" }
-        ]
-        onSelected: function(v) { Config.island.face = v }
-    }
+    SectionHeader { text: "Pods" }
 
     ToggleRow {
         configKey: "island.showWorkspaces"
-        label: "Show workspaces"
-        description: "Dashes on hover; click one to switch."
+        label: "Workspace pod"
+        description: "A capsule left of the island. Dashes at rest,"
+            + " numbered chips when you point at it; click one to"
+            + " switch."
         checked: Config.island.showWorkspaces
         onToggled: function(v) { Config.island.showWorkspaces = v }
     }
 
     ToggleRow {
-        configKey: "island.faceIndicator"
-        label: "Face indicator"
-        description: "Dots on hover showing which face is active."
-        checked: Config.island.faceIndicator
-        onToggled: function(v) { Config.island.faceIndicator = v }
+        configKey: "island.showTray"
+        label: "Tray pod"
+        description: "A capsule right of the island. What is running is"
+            + " on screen rather than a scroll away, and it collapses"
+            + " when the tray is empty."
+        checked: Config.island.showTray
+        onToggled: function(v) { Config.island.showTray = v }
+    }
+
+    ToggleRow {
+        configKey: "island.podPeek"
+        label: "Peek on change"
+        description: "A pod opens itself for a moment when what it"
+            + " shows changes — a workspace switch, a tray icon asking"
+            + " for attention — then settles back."
+        checked: Config.island.podPeek
+        onToggled: function(v) { Config.island.podPeek = v }
+    }
+
+    SliderRow {
+        configKey: "island.trayRestMax"
+        label: "Tray icons at rest"
+        description: "Anything past this waits behind a count until the"
+            + " pod opens."
+        from: 1; to: 8; stepSize: 1
+        value: Config.island.trayRestMax
+        onMoved: function(v) { Config.island.trayRestMax = v }
+    }
+
+    ChoiceRow {
+        configKey: "island.scrollAction"
+        label: "Scroll over the island"
+        description: "While an OSD is up the gesture always adjusts that"
+            + " value instead, whatever this says."
+        current: Config.island.scrollAction
+        options: [
+            { value: "workspace", label: "Workspace" },
+            { value: "volume",    label: "Volume" },
+            { value: "none",      label: "Nothing" }
+        ]
+        onSelected: function(v) { Config.island.scrollAction = v }
     }
 
     SectionHeader { text: "Shape" }
@@ -132,6 +157,25 @@ Column {
         }
 
         SliderRow {
+            configKey: "island.podGap"
+            label: "Pod gap"
+            description: "Space between a pod and the pill. Small enough"
+                + " that the three read as one object; wide enough that"
+                + " they are three shapes and not a broken one."
+            from: 0; to: 24; stepSize: 1; suffix: " px"
+            value: Config.island.podGap
+            onMoved: function(v) { Config.island.podGap = v }
+        }
+
+        SliderRow {
+            configKey: "island.podPeekDuration"
+            label: "Peek time"
+            from: 600; to: 4000; stepSize: 100; suffix: " ms"
+            value: Config.island.podPeekDuration
+            onMoved: function(v) { Config.island.podPeekDuration = v }
+        }
+
+        SliderRow {
             configKey: "island.idleWidth"
             label: "Minimum width"
             description: "The pill never narrows past this."
@@ -146,14 +190,6 @@ Column {
             from: 420; to: 720; stepSize: 4; suffix: " px"
             value: Config.island.controlWidth
             onMoved: function(v) { Config.island.controlWidth = v }
-        }
-
-        SliderRow {
-            configKey: "island.controlHeight"
-            label: "Control centre height"
-            from: 240; to: 460; stepSize: 4; suffix: " px"
-            value: Config.island.controlHeight
-            onMoved: function(v) { Config.island.controlHeight = v }
         }
 
         SliderRow {
@@ -260,6 +296,17 @@ Column {
         hint: "2 settings"
 
         ToggleRow {
+            configKey: "island.pillTitle"
+            label: "Track title in the pill"
+            description: "Off, a playing track is three animated bars"
+                + " beside the date. On, the title takes the date's"
+                + " place — and takes the pill's width with it every"
+                + " time the track changes."
+            checked: Config.island.pillTitle
+            onToggled: function(v) { Config.island.pillTitle = v }
+        }
+
+        ToggleRow {
             configKey: "island.expandOnTrackChange"
             label: "Expand on track change"
             description: "Briefly open the island when a new song starts."
@@ -276,43 +323,136 @@ Column {
         }
     }
 
+    SectionHeader { text: "Motion" }
+
+    ChoiceRow {
+        label: "Tempo"
+        // Eleven numbers, three answers. The sliders below still set
+        // each one; this is for the question people actually have,
+        // which is whether the thing should feel quicker.
+        description: "Fluid is the tempo measured off Dynamite V3 — the"
+            + " same spring, about two and a half times faster. Calm is"
+            + " what shipped before. Springy keeps the speed and spends"
+            + " the damping instead."
+        current: Motion.tempo
+        options: Motion.tempo === "custom"
+            ? [{ value: "fluid",   label: "Fluid" },
+               { value: "calm",    label: "Calm" },
+               { value: "springy", label: "Springy" },
+               { value: "custom",  label: "Custom" }]
+            : [{ value: "fluid",   label: "Fluid" },
+               { value: "calm",    label: "Calm" },
+               { value: "springy", label: "Springy" }]
+        // "custom" is not a tempo you can pick, only one you can be
+        // in, so setTempo ignores it rather than this having to.
+        onSelected: function(v) { Motion.setTempo(v) }
+    }
+
+    ToggleRow {
+        configKey: "motion.reduceMotion"
+        label: "Reduce motion"
+        description: "Drops the springs and the shape morphs and keeps"
+            + " the cross-fades, which are not a vestibular trigger."
+        checked: Config.motion.reduceMotion
+        onToggled: function(v) { Config.motion.reduceMotion = v }
+    }
+
     Disclosure {
         width: parent.width
-        text: "Motion"
-        hint: "how the shape moves"
+        text: "By hand"
+        hint: "each number on its own"
 
         SliderRow {
-            configKey: "motion.morphDuration"
-            label: "Morph duration"
-            from: 100; to: 800; stepSize: 10; suffix: " ms"
-            value: Config.motion.morphDuration
-            onMoved: function(v) { Config.motion.morphDuration = v }
-        }
-
-        SliderRow {
-            configKey: "motion.morphOvershoot"
+            configKey: "motion.arriveDamping"
             label: "Overshoot"
-            description: "How far the shape springs past its target."
-                + " 0 is a flat decelerate. The preview above uses the"
-                + " same curve."
-            from: 0; to: 2; stepSize: 0.05; decimals: 2
-            value: Config.motion.morphOvershoot
-            onMoved: function(v) { Config.motion.morphOvershoot = v }
+            description: "The damping fraction of the spring the shape"
+                + " opens on. 1.00 never overshoots; 0.80 goes about a"
+                + " percent and a half past and settles; below 0.60 it"
+                + " is a toy. The preview above uses the same curve."
+            from: 0.5; to: 1.0; stepSize: 0.02; decimals: 2
+            value: Config.motion.arriveDamping
+            onMoved: function(v) { Config.motion.arriveDamping = v }
         }
 
         SliderRow {
-            configKey: "motion.contentThreshold"
-            label: "Reveal threshold"
-            description: "How far the pill must grow before its contents"
-                + " appear. Higher means the shape leads more."
-            from: 0.3; to: 1.0; stepSize: 0.05; decimals: 2
-            value: Config.motion.contentThreshold
-            onMoved: function(v) { Config.motion.contentThreshold = v }
+            configKey: "motion.expandDuration"
+            label: "Open"
+            description: "How long the shape takes to reach a panel."
+            from: 160; to: 900; stepSize: 10; suffix: " ms"
+            value: Config.motion.expandDuration
+            onMoved: function(v) { Config.motion.expandDuration = v }
+        }
+
+        SliderRow {
+            configKey: "motion.collapseDuration"
+            label: "Close"
+            description: "Shorter than opening, and without the spring."
+                + " A shape on its way out that springs back toward"
+                + " where it was reads as an argument."
+            from: 120; to: 600; stepSize: 10; suffix: " ms"
+            value: Config.motion.collapseDuration
+            onMoved: function(v) { Config.motion.collapseDuration = v }
+        }
+
+        SliderRow {
+            configKey: "motion.hoverDuration"
+            label: "Hover lift"
+            from: 120; to: 600; stepSize: 10; suffix: " ms"
+            value: Config.motion.hoverDuration
+            onMoved: function(v) { Config.motion.hoverDuration = v }
+        }
+
+        SliderRow {
+            configKey: "motion.contentLead"
+            label: "Content lead"
+            description: "How long the shape moves alone before its"
+                + " contents start to arrive. This is what makes a"
+                + " morph read as one movement rather than as a resize"
+                + " followed by a screen."
+            from: 0; to: 260; stepSize: 10; suffix: " ms"
+            value: Config.motion.contentLead
+            onMoved: function(v) { Config.motion.contentLead = v }
+        }
+
+        SliderRow {
+            configKey: "motion.contentInDuration"
+            label: "Content in"
+            from: 60; to: 500; stepSize: 10; suffix: " ms"
+            value: Config.motion.contentInDuration
+            onMoved: function(v) { Config.motion.contentInDuration = v }
+        }
+
+        SliderRow {
+            configKey: "motion.contentOutDuration"
+            label: "Content out"
+            description: "Quicker than the way in, and never delayed."
+            from: 40; to: 300; stepSize: 10; suffix: " ms"
+            value: Config.motion.contentOutDuration
+            onMoved: function(v) { Config.motion.contentOutDuration = v }
+        }
+
+        SliderRow {
+            configKey: "motion.popDuration"
+            label: "Pod peek"
+            description: "The bounce a pod opens itself with when what"
+                + " it shows changes."
+            from: 200; to: 900; stepSize: 10; suffix: " ms"
+            value: Config.motion.popDuration
+            onMoved: function(v) { Config.motion.popDuration = v }
+        }
+
+        SliderRow {
+            configKey: "motion.popDamping"
+            label: "Peek bounce"
+            from: 0.3; to: 1.0; stepSize: 0.02; decimals: 2
+            value: Config.motion.popDamping
+            onMoved: function(v) { Config.motion.popDamping = v }
         }
 
         SliderRow {
             configKey: "motion.fadeIn"
-            label: "Content fade in"
+            label: "Cross-fade in"
+            description: "Colours and indicators, not shapes."
             from: 40; to: 400; stepSize: 10; suffix: " ms"
             value: Config.motion.fadeIn
             onMoved: function(v) { Config.motion.fadeIn = v }
@@ -320,7 +460,7 @@ Column {
 
         SliderRow {
             configKey: "motion.fadeOut"
-            label: "Content fade out"
+            label: "Cross-fade out"
             from: 20; to: 300; stepSize: 10; suffix: " ms"
             value: Config.motion.fadeOut
             onMoved: function(v) { Config.motion.fadeOut = v }
