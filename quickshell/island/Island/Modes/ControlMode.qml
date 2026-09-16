@@ -50,7 +50,20 @@ Item {
     // Closing the panel has to close the page with it, or reopening
     // the control centre lands you back inside a network list you left
     // three hours ago.
-    onShownChanged: if (!shown) page = ""
+    //
+    // It also lets nmcli and bluetoothctl go back to sleep. Those two
+    // poll by spawning processes, and this is the only thing on screen
+    // that reads them.
+    onShownChanged: {
+        if (shown) {
+            Network.hold();
+            Bluetooth.hold();
+        } else {
+            page = "";
+            Network.release();
+            Bluetooth.release();
+        }
+    }
 
     function openPage(name) {
         switch (name) {

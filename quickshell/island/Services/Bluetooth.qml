@@ -88,8 +88,31 @@ Singleton {
         onExited: { root.scanning = false; root.refresh(); }
     }
 
+    // ── Who is looking ───────────────────────────────────────
+    //
+    // Nothing on the collapsed pill reads this. The control centre
+    // does, the settings pages do, and that is all — so polling it
+    // around the clock spends three bluetoothctl spawns every six seconds to
+    // answer a question nobody asked. The timer runs while something
+    // holds it and not otherwise, and the first hold refreshes
+    // immediately so the panel opens on current data rather than on
+    // whatever was true when the last watcher let go.
+    //
+    // A missed release costs a poll that keeps running; a missed hold
+    // costs one stale reading. Neither is worth a destructor for.
+    property int watchers: 0
+
+    function hold() {
+        watchers++;
+        if (watchers === 1) refresh();
+    }
+
+    function release() {
+        watchers = Math.max(0, watchers - 1);
+    }
+
     Timer {
-        running: true
+        running: root.watchers > 0
         interval: 6000
         repeat: true
         onTriggered: root.refresh()

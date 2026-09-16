@@ -10,6 +10,12 @@ Column {
     id: page
     spacing: 4
 
+    // nmcli and bluetoothctl poll by spawning processes, and they do
+    // it only while something is reading them. This page is one of
+    // the two places that does.
+    Component.onCompleted: { Network.hold(); Bluetooth.hold() }
+    Component.onDestruction: { Network.release(); Bluetooth.release() }
+
     // Which network's password field is open. Empty means none.
     property string promptFor: ""
     property string password: ""
