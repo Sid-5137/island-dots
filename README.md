@@ -370,10 +370,11 @@ The script symlinks `hypr/` and `quickshell/island/` into `~/.config`
 and `bin/` into `~/.local/bin`, creates the state directories,
 generates `~/.config/island/matugen.toml` with this machine's absolute
 paths, puts `~/.config/gtk-{3,4}.0/gtk.css` under the shell's control,
-and reports missing dependencies. It also offers to install the icon
-font if it is absent or too old, and `/etc/pam.d/island`, which is the
-only thing it does that needs root — say no and the lock screen still
-works, just without a fingerprint reader. Re-run it any time; it is
+and reports missing dependencies — including the icon font, which it
+checks by glyph rather than by name. It installs nothing for you; the
+one exception it offers is `/etc/pam.d/island`, which is also the only
+thing it does that needs root — say no and the lock screen still works,
+just without a fingerprint reader. Re-run it any time; it is
 idempotent.
 
 **Requires**
@@ -391,8 +392,8 @@ it moved the whole Material Design range from `U+F500..U+FD46` up to
 has the same family name and satisfies any check for it, then draws
 nothing where the Wi-Fi bars, the settings tab icons and the padlock on
 a secured network go. `install.sh` checks for a glyph rather than for a
-name, and offers to fetch v3 into `~/.local/share/fonts` if it does not
-find one. To check by hand:
+name for exactly that reason, and reports a v2 patch as something to
+replace rather than something to add to. To check by hand:
 
 ```bash
 fc-list ':charset=f0928' family   # md-wifi_strength_4; v3 only

@@ -22,11 +22,6 @@ CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}"
 BIN="$HOME/.local/bin"
 
-# Set if the icon font is still unusable when we finish. Read by the
-# summary at the bottom, which is the only place that should decide
-# whether an install "worked".
-missing_font=0
-
 link() {
     local src="$1" dst="$2"
     if [ -L "$dst" ]; then
@@ -156,132 +151,6 @@ if [ -f "$DOTS/pam/island.in" ] && [ ! -e /etc/pam.d/island ]; then
     fi
 fi
 
-# ── The icon font ────────────────────────────────────────────────
-#
-# Every glyph the shell draws comes out of one patched font, named in
-# Services/Theme.qml and enumerated in Services/Icons.qml. Without it
-# the shell still runs and every icon in it is a box.
-#
-# The version matters, which is the part worth automating. Nerd Fonts
-# v3 moved the whole Material Design range from U+F500..U+FD46 up to
-# U+F0000 and beyond, and the shell's glyphs are the new ones — the
-# four Wi-Fi bars, the settings tabs, the padlock on a secured network.
-# A v2 patch has the family name, satisfies a `fc-list` check for it,
-# and draws nothing where those go. That failure is silent and it looks
-# like a shell bug rather than a font one, so the check below is for a
-# glyph rather than for a name.
-
-NERD_FAMILY="JetBrainsMono Nerd Font"
-
-# md-wifi_strength_4. Any U+F0000-range glyph would do; this one is
-# picked because it is in the shell's own register and so cannot
-# quietly stop being used.
-NERD_PROBE="f0928"
-
-font_has_glyph() {
-    fc-list ":charset=$1" family 2>/dev/null | grep -qi "jetbrainsmono nerd"
-}
-
-install_nerd_font() {
-    local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
-    local dest="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/JetBrainsMonoNerdFont"
-    local tmp fetch
-
-    if command -v curl >/dev/null 2>&1; then
-        fetch=(curl -fsSL -o)
-    elif command -v wget >/dev/null 2>&1; then
-        fetch=(wget -qO)
-    else
-        echo "  Need curl or wget to fetch it. Install one, or grab"
-        echo "  JetBrainsMono from https://nerdfonts.com and unzip it"
-        echo "  into $dest"
-        return 1
-    fi
-
-    if ! command -v unzip >/dev/null 2>&1; then
-        echo "  Need unzip to unpack it."
-        return 1
-    fi
-
-    tmp="$(mktemp -d)"
-    echo "  Downloading JetBrainsMono Nerd Font..."
-    if ! "${fetch[@]}" "$tmp/JetBrainsMono.zip" "$url"; then
-        echo "  Download failed. Leaving fonts alone."
-        rm -rf "$tmp"
-        return 1
-    fi
-
-    # Into a directory of its own, so uninstalling is one rm and so a
-    # second run replaces rather than accumulates.
-    mkdir -p "$dest"
-    if ! unzip -qo "$tmp/JetBrainsMono.zip" -d "$dest"; then
-        echo "  Could not unpack the archive. Leaving fonts alone."
-        rm -rf "$tmp"
-        return 1
-    fi
-    rm -rf "$tmp"
-
-    fc-cache -f "$dest" >/dev/null 2>&1 || fc-cache -f >/dev/null 2>&1 || true
-    echo "  $dest"
-    return 0
-}
-
-echo
-echo "Icon font:"
-
-if font_has_glyph "$NERD_PROBE"; then
-    echo "  ok   $NERD_FAMILY (v3)"
-else
-    # `fc-list : family`, not `fc-list family` — the first argument is
-    # a pattern, so the bare form asks for fonts whose family is
-    # literally "family" and prints nothing. The colon is the
-    # match-everything pattern, and without it this branch can never be
-    # taken: a v2 patch would be reported as no font at all.
-    if fc-list : family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
-        echo "  $NERD_FAMILY is installed, but it is a Nerd Fonts v2"
-        echo "  patch: it has no U+F0928, so the Wi-Fi bars, the settings"
-        echo "  tab icons and the secured-network padlock will be blank."
-        prompt="  Install the v3 build alongside it? [Y/n] "
-    else
-        echo "  $NERD_FAMILY is not installed. Without it every icon in"
-        echo "  the shell — and all of its text — falls back to whatever"
-        echo "  fontconfig picks."
-        prompt="  Install it now (~30MB, no root needed)? [Y/n] "
-    fi
-
-    # Default yes on a bare Enter, because at a real prompt that is
-    # what the person meant. But a read that FAILS is not a yes — it
-    # is nobody there to ask, and treating it as consent means a run
-    # with no controlling terminal fetches 30MB on its own. Asked for
-    # and answered are different things.
-    printf '%s' "$prompt"
-    # Braces so the redirection failure is swallowed too: when there is
-    # no controlling terminal it is the shell, not `read`, that
-    # complains, and 2>/dev/null on the read alone does not catch it.
-    if { read -r answer </dev/tty; } 2>/dev/null; then
-        answer="${answer:-y}"
-    else
-        answer="n"
-        echo
-        echo "  (no terminal to ask on)"
-    fi
-
-    case "$answer" in
-        [nN]*)
-            echo "  Skipped."
-            missing_font=1
-            ;;
-        *)
-            if install_nerd_font && font_has_glyph "$NERD_PROBE"; then
-                echo "  ok   $NERD_FAMILY (v3)"
-            else
-                echo "  Still not resolving. Check with:"
-                echo "    fc-list ':charset=$NERD_PROBE' family"
-                missing_font=1
-            fi
-            ;;
-    esac
-fi
 
 echo
 echo "Checking dependencies:"
@@ -298,6 +167,36 @@ do
         missing+=("$cmd")
     fi
 done
+
+# ── The icon font ────────────────────────────────────────────────
+#
+# Every glyph the shell draws comes out of one patched font, named in
+# Services/Theme.qml and enumerated in Services/Icons.qml. Without it
+# the shell still runs and every icon in it is a box.
+#
+# Checked by glyph rather than by name, which is the whole point of
+# checking it here at all. Nerd Fonts v3 moved the Material Design
+# range from U+F500..U+FD46 up into U+F0000 and beyond, and the shell's
+# icons are the new ones — the four Wi-Fi bars, the settings tabs, the
+# padlock on a secured network. A v2 patch has the same family name, so
+# asking "is JetBrainsMono Nerd Font installed" gets yes and the icons
+# are blank anyway. Asking for U+F0928 cannot be answered wrongly.
+#
+# The probe is md-wifi_strength_4, picked because it is in the shell's
+# own register and so cannot quietly stop being used.
+if fc-list ":charset=f0928" family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
+    printf '  ok   %s\n' "JetBrainsMono Nerd Font (v3)"
+elif fc-list : family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
+    # `fc-list : family`, not `fc-list family` — the first argument is a
+    # pattern, so the bare form asks for fonts whose family is literally
+    # "family" and prints nothing, and this branch could never be taken.
+    printf '  MISS %s\n' "JetBrainsMono Nerd Font — installed, but a v2 patch"
+    missing+=("jetbrains-mono-nerd-fonts")
+    font_is_v2=1
+else
+    printf '  MISS %s\n' "JetBrainsMono Nerd Font"
+    missing+=("jetbrains-mono-nerd-fonts")
+fi
 
 # Not commands, but the shell is visibly wrong without them.
 if [ ! -d /usr/share/themes/adw-gtk3 ]; then
@@ -360,18 +259,16 @@ if [ ${#missing[@]} -gt 0 ]; then
     echo "      wireplumber brightnessctl playerctl NetworkManager bluez \\"
     echo "      cliphist wl-clipboard hyprshot slurp adw-gtk3-theme qt6ct hypridle \\"
     echo "      mate-polkit xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \\"
-    echo "      adwaita-icon-theme hicolor-icon-theme"
-elif [ "$missing_font" -eq 0 ]; then
+    echo "      adwaita-icon-theme hicolor-icon-theme jetbrains-mono-nerd-fonts"
+    if [ "${font_is_v2:-0}" -ne 0 ]; then
+        echo
+        echo "The Nerd Font you have is a v2 patch: it carries the right"
+        echo "family name and none of the glyphs the shell asks for. It"
+        echo "needs replacing rather than adding to. Check with:"
+        echo "  fc-list ':charset=f0928' family"
+    fi
+else
     echo "All dependencies present."
-fi
-
-if [ "$missing_font" -ne 0 ]; then
-    echo
-    echo "The icon font is still missing or too old. The shell will run,"
-    echo "but its icons will not. Fedora ships a v3 patch as:"
-    echo "  sudo dnf install jetbrains-mono-nerd-fonts"
-    echo "or unzip JetBrainsMono.zip from https://nerdfonts.com into"
-    echo "  ~/.local/share/fonts/  &&  fc-cache -f"
 fi
 
 case ":$PATH:" in
