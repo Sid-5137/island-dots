@@ -682,13 +682,15 @@ Things that cost real time to work out:
   is the useful half: the alpha being written is not faint, so no
   threshold saves you.
 
-  `Canvas` does work. It rasterises with `QPainter` into a texture of
-  its own and adds no `Shape` node to the scene, so the surface's alpha
-  is whatever the texture says. That is `packages/qml-squircle`, which
-  is a single drop-in QML file with no build step — the shell uses it
-  for the pill, the shelf, the pods and both windows, and Hyprland
-  draws the matching curve for windows from the same
-  `appearance.cornerSmoothing` via `decoration:rounding_power`.
+  A `ShaderEffect` does work — one quad, an SDF with the `L^n` norm in
+  place of `length()`, and the alpha it writes is the alpha you get —
+  and so does `Canvas`, which rasterises with `QPainter` into its own
+  texture. Neither adds a `Shape` node. That is `packages/qml-squircle`:
+  the shader as `Squircle.qml` with its baked `.qsb` committed, and
+  the Canvas as a no-binary fallback. The shell uses it for the pill,
+  the shelf, the pods and both windows, and Hyprland draws the
+  matching curve for windows from the same `appearance.cornerSmoothing`
+  via `decoration:rounding_power`.
 
 - **A file watcher can eat the setting you just made.** `Config.qml`
   wrote `settings.json` on every property change and reloaded it on

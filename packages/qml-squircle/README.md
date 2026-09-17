@@ -4,7 +4,8 @@
 
 **continuous corners for QML, on surfaces a compositor blurs**
 
-A single drop-in QML file. No build step, no C++, no shader compiler.
+Two files to copy — a QML component and a baked shader — or one, if
+you take the Canvas fallback. No build step, no C++.
 
 </div>
 
@@ -76,26 +77,44 @@ The last row is what makes it the `Shape` and not the path. That it
 survives an `ignore_alpha` of `0.5` is the useful detail: the alpha
 being written is not faint, so no threshold saves you.
 
-`Canvas` rasterises with `QPainter` into a texture of its own and adds
-no `Shape` node to the scene, so the surface's alpha is whatever the
-texture says. That is the whole trick.
+Two things do not have the problem, and this package ships both.
+A `ShaderEffect` is one quad with a fragment shader: the alpha it
+writes is the alpha you get. `Canvas` rasterises with `QPainter` into a
+texture of its own. Neither adds a `Shape` node to the scene, and that
+is the whole trick.
 
 ---
 
-## Cost
+## Which file
 
-`Canvas` repaints on the CPU rather than being re-rasterised by the
-GPU, so a surface that animates its own geometry repaints per frame.
-For the sizes a shell uses — a few hundred pixels square — that is
-cheap, and `paintWhileResizing: false` coalesces a resize into one
-paint when it settles if you would rather spend a frame of lag than the
-raster.
+| | `Squircle.qml` | `SquircleCanvas.qml` |
+|:--|:--|:--|
+| draws with | a fragment shader (`squircle.frag.qsb`) | `QPainter`, via `Canvas` |
+| needs | the `.qsb` beside it | nothing |
+| on resize | free — it is one quad | a repaint |
+| edge | exact to the pixel through the corner | polygon antialiasing, a touch softer |
 
-A fragment shader would be faster and has the same property — an SDF
-with the `L^n` norm in place of `length()` is about six lines. It needs
-`qsb` at build time, which a single drop-in QML file should not.
+The shader is the default. The `.qsb` is committed and carries SPIR-V,
+GLSL 300 es and 330, HLSL and MSL, so nobody using the component needs
+a shader compiler; only somebody changing `squircle.frag` runs
+`build.sh`, which wants `qsb` from Qt's shader tools
+(`qt6-qtshadertools-devel` on Fedora).
 
----
+The shader is six lines of maths: the usual rounded-box SDF with the
+`L^n` norm in place of `length()`, which turns a circular corner into a
+superellipse of exponent `n`. Everything about *which* `n` and *which*
+extent — the rules below — is decided in QML and handed to it.
+
+Two things worth knowing if you touch the shader. Qt caches compiled
+pipelines by URL for the life of the process, so after `build.sh` the
+app has to be restarted — a QML hot-reload keeps drawing with the old
+`.qsb`, which looks exactly like the edit having done nothing. And Qt hands a QML
+`color` to a uniform already premultiplied, and the scene graph blends
+premultiplied. Multiplying by alpha again in the shader is a fill a few
+levels too dark and a 14%-alpha line reduced to 2% — a bezel that
+disappears — which is how that line was found. Checked against
+`Rectangle` at 50% alpha over a known grey: all three come out at the
+same pixel value.
 
 ## Radius means how round it looks
 
@@ -180,14 +199,15 @@ two disagreeing curves.
 | `borderColor` | `transparent` | stroke |
 | `segments` | `14` | points per corner |
 | `effectiveSmoothing` | — | read-only; `smoothing` after the capsule taper |
-| `paintWhileResizing` | `true` | repaint per frame, or once on settle |
+| `paintWhileResizing` | `true` | Canvas only: repaint per frame, or once on settle |
 
 ---
 
 ## Install
 
-Copy `Squircle.qml` next to your other QML files. That is the whole
-installation.
+Copy `Squircle.qml` and `squircle.frag.qsb` next to your other QML
+files. That is the whole installation. If you would rather not carry a
+binary, copy `SquircleCanvas.qml` alone and use that.
 
 ## Licence
 
