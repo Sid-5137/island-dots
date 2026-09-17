@@ -26,7 +26,7 @@ import "root:/Widgets"
 // are ordered by z rather than by declaration, so a pod can be
 // subclassed without having to be threaded through an alias.
 
-Rectangle {
+Item {
     id: root
 
     required property var win      // the PanelWindow
@@ -153,18 +153,28 @@ Rectangle {
     // is the island in a smaller shape, not a different widget.
 
     // The pill's, exactly — the same function against its own height,
-    // so a pod at 34px and a pill at 34px are the same shape.
-    radius: Theme.corner(height)
+    // so a pod at 34px and a pill at 34px are the same shape, and now
+    // the same curve as well.
+    readonly property real radius: Theme.corner(height)
     clip: true
 
-    color: {
+    readonly property color fill: {
         const c = Qt.color(island.mode === "idle" || island.mode === "hidden"
             ? Theme.surfaceLowest : Theme.surfaceContainer);
         return Qt.rgba(c.r, c.g, c.b, Config.island.opacity);
     }
 
-    border.width: 1
-    border.color: Theme.outlineVariant
+    // Declared first so it sits under everything, which is what the
+    // Rectangle's own background used to do. See Widgets/Squircle.qml
+    // for why a pod cannot simply be a Rectangle any more.
+    Squircle {
+        smoothing: Config.appearance.cornerSmoothing
+        anchors.fill: parent
+        radius: root.radius
+        color: root.fill
+        borderWidth: 1
+        borderColor: Theme.outlineVariant
+    }
 
     // The pill's second line too — a pod is the island in a smaller
     // shape, and half an edge is a shape it would not share.
@@ -173,13 +183,14 @@ Rectangle {
     // Pinning is a state, so it says so rather than leaving you to
     // wonder why the pod stopped closing. Above the content and below
     // the hover area, and inert either way.
-    Rectangle {
+    Squircle {
         z: 50
         anchors.fill: parent
         radius: parent.radius
+        smoothing: Config.appearance.cornerSmoothing
         color: "transparent"
-        border.width: 1
-        border.color: Theme.primary
+        borderWidth: 1
+        borderColor: Theme.primary
         opacity: root.pinned ? 0.55 : 0
         visible: opacity > 0.01
 

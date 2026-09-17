@@ -1,0 +1,435 @@
+#!/usr/bin/env python3
+"""island-dots — read and set the desktop's default applications.
+
+Copyright (C) 2026 Siddhartha Mallavolu
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version. See LICENSE.
+
+Usage:
+    island-mime query <spec>...          JSON on stdout
+    island-mime set <app-id> <mime>...   point those types at that app
+
+A spec is either a MIME type — "image/png" — or "@Category", a desktop
+entry category such as "@TerminalEmulator". The second form exists
+because a terminal emulator is not the handler of any MIME type, so
+there is nothing to ask the association database about; the answer has
+to come from what the entries say they are.
+
+Query prints one object per spec:
+
+    {"image/png": {"default": "org.gnome.Loupe.desktop",
+                   "apps": [{"id": ..., "name": ..., "exec": ...}]}}
+
+This does the work itself rather than shelling out to `gio mime` or
+`xdg-mime query`, for two reasons. gio prints prose — "Default
+application for “image/png”: ..." — which is translated, so parsing it
+works until somebody runs the shell in French. And both of them answer
+one question per process, where the settings page asks ten at once and
+needs the candidate lists as well, which neither tool will give you in
+a machine-readable form at all.
+
+Only the standard library is used, deliberately: this runs whenever
+the Apps page is opened, and the association database is a handful of
+ini files, not a problem worth a dependency.
+
+Exit status:
+    0   ran
+    2   bad arguments
+    3   the app id passed to `set` is not installed
+"""
+
+import json
+import os
+import shlex
+import sys
+from pathlib import Path
+
+
+# ── Where things live ────────────────────────────────────────
+
+
+def _dirs(var, fallback):
+    raw = os.environ.get(var) or fallback
+    return [Path(p) for p in raw.split(":") if p]
+
+
+def _home(var, fallback):
+    raw = os.environ.get(var)
+    return Path(raw) if raw else Path.home() / fallback
+
+
+def app_dirs():
+    """Every applications directory, most specific first."""
+    return [_home("XDG_DATA_HOME", ".local/share") / "applications"] + [
+        d / "applications" for d in _dirs("XDG_DATA_DIRS", "/usr/local/share:/usr/share")
+    ]
+
+
+def current_desktops():
+    raw = os.environ.get("XDG_CURRENT_DESKTOP", "")
+    return [d for d in raw.split(":") if d]
+
+
+def mimeapps_files():
+    """The association files, in the order the spec says to read them.
+
+    Config comes before data — a choice the user made outranks one a
+    distribution shipped — and within each directory the files named
+    for the running desktop come before the generic one.
+    """
+    out = []
+    desktops = current_desktops()
+
+    roots = [_home("XDG_CONFIG_HOME", ".config")]
+    roots += _dirs("XDG_CONFIG_DIRS", "/etc/xdg")
+    roots += app_dirs()
+
+    for root in roots:
+        for desktop in desktops:
+            out.append(root / f"{desktop.lower()}-mimeapps.list")
+        out.append(root / "mimeapps.list")
+
+    return out
+
+
+def user_mimeapps():
+    """The one file we write. Everything else here is read-only."""
+    return _home("XDG_CONFIG_HOME", ".config") / "mimeapps.list"
+
+
+# ── Desktop entries ──────────────────────────────────────────
+
+
+def parse_entry(path):
+    """The [Desktop Entry] group of a .desktop file, as a dict.
+
+    Written out rather than handed to configparser because a desktop
+    file is not quite ini: keys repeat with locale suffixes
+    (`Name[de]`), and configparser's duplicate handling would either
+    raise or let a translation win over the untranslated key.
+    """
+    out = {}
+    group = None
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return out
+
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            group = line[1:-1]
+            continue
+        if group != "Desktop Entry" or "=" not in line:
+            continue
+
+        key, _, value = line.partition("=")
+        key = key.strip()
+        # Locale variants are skipped rather than merged: the name to
+        # show is the shell's business, and it reads the untranslated
+        # one everywhere else.
+        if key.endswith("]"):
+            continue
+        out.setdefault(key, value.strip())
+
+    return out
+
+
+def strip_field_codes(exec_string):
+    """An Exec line with the %-codes taken out.
+
+    A keybind runs a command, not a desktop entry, so `firefox %u`
+    has to become `firefox` — the %u is a placeholder for a file the
+    launcher would have substituted and there is nothing to put there.
+    %% is a literal percent and survives.
+    """
+    try:
+        words = shlex.split(exec_string)
+    except ValueError:
+        # An Exec line with an unbalanced quote. Rare, and always a
+        # broken entry rather than something to guess at.
+        return ""
+
+    out = []
+
+    for word in words:
+        if word == "%%":
+            out.append("%")
+            continue
+        # %f %F %u %U %i %c %k %d %D %n %N %v %m — all of them are
+        # substitutions, and an unrecognised one is still a code.
+        if len(word) == 2 and word[0] == "%":
+            continue
+        # Always through shlex.quote, not only for words with spaces:
+        # the result is run by a shell, and a word carrying a $ or a
+        # backtick is the one that matters. quote() leaves an ordinary
+        # word exactly as it found it.
+        out.append(shlex.quote(word))
+
+    return " ".join(out)
+
+
+def scan_apps():
+    """id -> entry, for every installed application.
+
+    Ids are the path under the applications directory with separators
+    turned into dashes, which is what the association files use:
+    `kde/org.kde.dolphin.desktop` is `kde-org.kde.dolphin.desktop`.
+    The first directory to define an id wins, so a copy in ~/.local
+    shadows the system one — the same precedence a launcher uses.
+    """
+    apps = {}
+
+    for root in app_dirs():
+        if not root.is_dir():
+            continue
+
+        for path in sorted(root.rglob("*.desktop")):
+            app_id = str(path.relative_to(root)).replace(os.sep, "-")
+            if app_id in apps:
+                continue
+
+            entry = parse_entry(path)
+            if entry.get("Type", "Application") != "Application":
+                continue
+
+            exec_string = entry.get("Exec", "")
+            if not exec_string:
+                continue
+
+            # TryExec names the binary to test for. An entry whose
+            # binary is gone is an entry for an app that was removed
+            # and left its .desktop file behind.
+            try_exec = entry.get("TryExec", "")
+            if try_exec and not _on_path(try_exec):
+                continue
+
+            apps[app_id] = {
+                "id": app_id,
+                "name": entry.get("Name", app_id),
+                "exec": strip_field_codes(exec_string),
+                "mimes": _list(entry.get("MimeType", "")),
+                "categories": _list(entry.get("Categories", "")),
+                "hidden": entry.get("NoDisplay", "").lower() == "true"
+                or entry.get("Hidden", "").lower() == "true",
+            }
+
+    return apps
+
+
+def _on_path(binary):
+    path = Path(binary)
+    if path.is_absolute():
+        return path.exists()
+    return any(
+        (Path(d) / binary).exists()
+        for d in os.environ.get("PATH", "/usr/bin").split(":")
+        if d
+    )
+
+
+def _list(value):
+    return [v for v in value.split(";") if v]
+
+
+# ── The association database ─────────────────────────────────
+
+
+def read_groups(path):
+    """{group: {key: value}} for one mimeapps.list."""
+    out = {}
+    group = None
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return out
+
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            group = line[1:-1]
+            out.setdefault(group, {})
+            continue
+        if group is None or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        out[group][key.strip()] = value.strip()
+
+    return out
+
+
+def default_for(mime, apps):
+    """The app that opens this type, or None.
+
+    Walks the files in order and takes the first named app that is
+    actually installed and has not been removed by a file read before
+    it — which is the whole of the lookup the spec describes, and the
+    reason a stale `mimeapps.list` pointing at an uninstalled app
+    falls through to the next answer instead of winning.
+    """
+    removed = set()
+
+    for path in mimeapps_files():
+        groups = read_groups(path)
+
+        for app_id in _list(groups.get("Default Applications", {}).get(mime, "")):
+            if app_id in removed:
+                continue
+            if app_id in apps:
+                return app_id
+
+        removed.update(_list(groups.get("Removed Associations", {}).get(mime, "")))
+
+    # Nothing chose one, so it falls to whichever installed app claims
+    # the type first — an approximation of what a launcher lands on,
+    # and honest about the fact that nobody has actually picked.
+    for app_id, app in sorted(apps.items()):
+        if mime in app["mimes"] and not app["hidden"]:
+            return app_id
+
+    return None
+
+
+def candidates(spec, apps):
+    """Every app that could serve this spec, best name order."""
+    if spec.startswith("@"):
+        category = spec[1:]
+        matches = [a for a in apps.values() if category in a["categories"]]
+    else:
+        matches = [a for a in apps.values() if spec in a["mimes"]]
+
+    # A NoDisplay entry is one the packager hid from menus — usually a
+    # second copy of an app under a different name. Offering it gives
+    # the list two rows that do the same thing and one of them has no
+    # reason to be there.
+    matches = [a for a in matches if not a["hidden"]]
+
+    return sorted(matches, key=lambda a: (a["name"].lower(), a["id"]))
+
+
+# ── Commands ─────────────────────────────────────────────────
+
+
+def cmd_query(specs):
+    apps = scan_apps()
+    out = {}
+
+    for spec in specs:
+        out[spec] = {
+            # A category has no system-wide default to report: the
+            # shell keeps that choice in its own settings.
+            "default": None if spec.startswith("@") else default_for(spec, apps),
+            "apps": [
+                {"id": a["id"], "name": a["name"], "exec": a["exec"]}
+                for a in candidates(spec, apps)
+            ],
+        }
+
+    json.dump(out, sys.stdout)
+    sys.stdout.write("\n")
+    return 0
+
+
+def cmd_set(app_id, mimes):
+    apps = scan_apps()
+    if app_id not in apps:
+        print(f"island-mime: no such application: {app_id}", file=sys.stderr)
+        return 3
+
+    declared = set(apps[app_id]["mimes"])
+    path = user_mimeapps()
+    groups = read_groups(path)
+
+    defaults = groups.setdefault("Default Applications", {})
+    added = groups.setdefault("Added Associations", {})
+    removed = groups.get("Removed Associations", {})
+
+    for mime in mimes:
+        defaults[mime] = app_id
+
+        # An app can only be the default for a type it is associated
+        # with, so a type the entry does not declare needs saying out
+        # loud. The usual case declares it and this stays empty.
+        if mime not in declared:
+            existing = _list(added.get(mime, ""))
+            if app_id not in existing:
+                added[mime] = ";".join([app_id] + existing) + ";"
+
+        # A type this app was explicitly removed from would be
+        # filtered straight back out again by the lookup above, so the
+        # choice would appear to do nothing at all.
+        if mime in removed:
+            keep = [a for a in _list(removed[mime]) if a != app_id]
+            if keep:
+                removed[mime] = ";".join(keep) + ";"
+            else:
+                del removed[mime]
+
+    write_groups(path, groups)
+    return 0
+
+
+def write_groups(path, groups):
+    """Rewrite mimeapps.list from the parsed groups.
+
+    Comments and blank lines are not preserved. They could be, with a
+    line-oriented edit, but that trades a readable function for the
+    formatting of a file that no human writes by hand — every desktop
+    that touches this file rewrites it the same way.
+    """
+    lines = []
+
+    # The order matters only to people reading the file, so it is the
+    # order the spec lists them in.
+    for group in ("Default Applications", "Added Associations", "Removed Associations"):
+        entries = groups.pop(group, None)
+        if entries:
+            lines.append(f"[{group}]")
+            lines.extend(f"{key}={value}" for key, value in sorted(entries.items()))
+            lines.append("")
+
+    # Anything else the file had, kept rather than dropped.
+    for group, entries in groups.items():
+        if not entries:
+            continue
+        lines.append(f"[{group}]")
+        lines.extend(f"{key}={value}" for key, value in sorted(entries.items()))
+        lines.append("")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Written beside the target and renamed over it, so a reader that
+    # opens the file while this runs gets the old one or the new one
+    # and never half of either.
+    temp = path.with_name(path.name + ".island-tmp")
+    temp.write_text("\n".join(lines).rstrip("\n") + "\n", encoding="utf-8")
+    temp.replace(path)
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+
+    command, rest = argv[1], argv[2:]
+
+    if command == "query" and rest:
+        return cmd_query(rest)
+    if command == "set" and len(rest) >= 2:
+        return cmd_set(rest[0], rest[1:])
+
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

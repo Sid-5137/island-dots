@@ -118,8 +118,9 @@ Singleton {
     // rather than what a mistyped codepoint happened to land on.
     readonly property string tabIsland:  glyph(0xF1513)  // md-dock_top
     readonly property string tabControl: glyph(0xF062E)  // md-tune
-    readonly property string tabTheme:   glyph(0xF03D8)  // md-palette
+    readonly property string tabAppearance: glyph(0xF03D8)  // md-palette
     readonly property string tabInput:   glyph(0xF030C)  // md-keyboard
     readonly property string tabSystem:  glyph(0xF0493)  // md-cog
     readonly property string tabNetwork: glyph(0xF05A9)  // md-wifi
+    readonly property string tabApps:    glyph(0xF003B)  // md-apps
 }

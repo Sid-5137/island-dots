@@ -2,150 +2,68 @@ import QtQuick
 import "root:/Services"
 import "root:/Widgets"
 
-// What the compositor does with windows, and what happens when you
-// stop using the machine.
+// The machine rather than the desktop: how loud, when it goes to
+// sleep, how it unlocks, and the way back to the shipped defaults.
 //
-// These were two pages, Appearance and Session, split along the lines
-// of which config section a value happens to live in rather than what
-// it does. Window rounding and idle timeouts have nothing in common
-// with each other but both are "the system", and neither belongs next
-// to a colour scheme.
+// Window rounding, gaps, shadows and blur used to be here too, on the
+// argument that a compositor is "the system". On screen they are the
+// same question as the panel settings — how this desktop looks — and
+// asking it meant two pages and three sliders that had never heard of
+// each other. They live on Appearance now, under one corner control.
 //
-// Everything on this page is applied to Hyprland live, and to hypridle
-// by regenerating its config and restarting it.
+// What is left is the machine's own behaviour. The volume scale is
+// here rather than in the control centre's settings because it is the
+// scale the OSD, the media keys and the gestures all read, so it is
+// not the control centre's to own. Idle is applied by regenerating
+// hypridle's config and restarting it.
 
 Column {
     id: page
     spacing: 4
 
-    SectionHeader { text: "Windows"; section: "appearance" }
+    SectionHeader { text: "Sound"; section: "audio" }
 
-    SliderRow {
-        configKey: "appearance.windowRounding"
-        label: "Corner radius"
-        from: 0; to: 24; stepSize: 1; suffix: " px"
-        value: Config.appearance.windowRounding
-        onMoved: function(v) { Config.appearance.windowRounding = v }
-    }
-
-    SliderRow {
-        configKey: "appearance.gapsIn"
-        label: "Inner gaps"
-        description: "Between tiled windows."
-        from: 0; to: 32; stepSize: 1; suffix: " px"
-        value: Config.appearance.gapsIn
-        onMoved: function(v) { Config.appearance.gapsIn = v }
-    }
-
-    SliderRow {
-        configKey: "appearance.gapsOut"
-        label: "Outer gaps"
-        description: "Between the tiling area and the screen edge."
-        from: 0; to: 48; stepSize: 1; suffix: " px"
-        value: Config.appearance.gapsOut
-        onMoved: function(v) { Config.appearance.gapsOut = v }
-    }
-
-    SliderRow {
-        configKey: "appearance.inactiveOpacity"
-        label: "Inactive opacity"
-        description: "How far unfocused windows fade back."
-        from: 0.6; to: 1.0; stepSize: 0.02; decimals: 2
-        value: Config.appearance.inactiveOpacity
-        onMoved: function(v) { Config.appearance.inactiveOpacity = v }
-    }
-
-    ToggleRow {
-        configKey: "appearance.shadows"
-        label: "Window shadows"
-        checked: Config.appearance.shadows
-        onToggled: function(v) { Config.appearance.shadows = v }
-    }
-
-    SectionHeader { text: "Blur" }
-
-    SliderRow {
-        configKey: "appearance.blurSize"
-        label: "Size"
-        description: "Applies to windows and to everything the shell"
-            + " draws translucently."
-        from: 0; to: 20; stepSize: 1
-        value: Config.appearance.blurSize
-        onMoved: function(v) { Config.appearance.blurSize = v }
-    }
-
-    SliderRow {
-        configKey: "appearance.blurPasses"
-        label: "Passes"
-        description: "Smoother, and more GPU. 3 is a good default."
-        from: 1; to: 6; stepSize: 1
-        value: Config.appearance.blurPasses
-        onMoved: function(v) { Config.appearance.blurPasses = v }
-    }
-
-    ToggleRow {
-        configKey: "appearance.blurOptimize"
-        label: "Cache the blur"
-        description: "Recompute a blurred surface only when something"
-            + " behind it moved. Off, every pass runs every frame —"
-            + " including behind the island while it is morphing."
-        checked: Config.appearance.blurOptimize
-        onToggled: function(v) { Config.appearance.blurOptimize = v }
-    }
-
-    Disclosure {
-        width: parent.width
-        text: "Blur tone"
-        hint: "brightness, contrast"
-
-        SliderRow {
-            configKey: "appearance.blurBrightness"
-            label: "Brightness"
-            from: 0.3; to: 1.5; stepSize: 0.05; decimals: 2
-            value: Config.appearance.blurBrightness
-            onMoved: function(v) { Config.appearance.blurBrightness = v }
-        }
-
-        SliderRow {
-            configKey: "appearance.blurContrast"
-            label: "Contrast"
-            from: 0.3; to: 2.0; stepSize: 0.05; decimals: 2
-            value: Config.appearance.blurContrast
-            onMoved: function(v) { Config.appearance.blurContrast = v }
-        }
-
-        SliderRow {
-            configKey: "appearance.borderSize"
-            label: "Border size"
-            from: 0; to: 6; stepSize: 1; suffix: " px"
-            value: Config.appearance.borderSize
-            onMoved: function(v) { Config.appearance.borderSize = v }
-        }
+    ChoiceRow {
+        configKey: "audio.volumeCurve"
+        label: "Volume scale"
+        description: "What the percentage means. System matches wpctl,"
+            + " pactl and pavucontrol exactly; perceptual remaps it so"
+            + " half way along sounds half as loud."
+        current: Config.audio.volumeCurve
+        options: [
+            { value: "system",     label: "System" },
+            { value: "perceptual", label: "Perceptual" }
+        ]
+        onSelected: function(v) { Config.audio.volumeCurve = v }
     }
 
     Item {
         width: parent.width
-        height: 44
+        height: curveNote.implicitHeight + 16
 
         Text {
+            id: curveNote
             anchors.left: parent.left
+            anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - 100
-            text: "Applied to Hyprland as you move a slider, and not"
-                + " written to look.lua — that stays the checked-in"
-                + " default."
+
+            // The numbers, because the difference is not a matter of
+            // taste and a sentence about loudness curves is not
+            // something anyone should have to take on trust.
+            text: Audio.perceptual
+                ? "The slider now reads " + Audio.volume + "% where every"
+                  + " other tool reads " + Audio.systemVolume + "%. Nothing"
+                  + " about the sound changed when you switched — only the"
+                  + " number, and where the middle of the slider sits."
+                : "PipeWire applies the cube of this number, so 50% is"
+                  + " −18 dB and the ear reads it as well under a"
+                  + " third. That is the drop that seems to arrive early."
+
             color: Theme.outline
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
             wrapMode: Text.WordWrap
             renderType: Text.NativeRendering
-        }
-
-        Button {
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: "Reapply"
-            onClicked: Compositor.apply()
         }
     }
 

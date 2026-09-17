@@ -19,8 +19,59 @@ Singleton {
     readonly property PwNode sink: Pipewire.defaultAudioSink
     readonly property PwNode source: Pipewire.defaultAudioSource
 
+    // ── The two scales ───────────────────────────────────────
+    //
+    // PipeWire stores a linear gain: the number in channelVolumes is
+    // what the samples are multiplied by. What wpctl, pactl and
+    // pavucontrol show is its cube root — the scale PulseAudio
+    // defined — and sink.audio.volume is on that same scale. So the
+    // percentage below is exactly what every other tool on the
+    // machine reports, in both directions: 50 here is `wpctl 0.50`
+    // is `pactl 50%`.
+    //
+    // It is also why half way along the slider does not sound half as
+    // loud. A displayed p means p^3 of gain, loudness goes roughly as
+    // gain^0.6, so loudness goes as p^1.8: 50% is -18 dB, which the
+    // ear reads as under a third of full. Most of the bottom half of
+    // the bar is spent in the last few decibels before silence, which
+    // is the drop that seems to arrive early.
+    //
+    // "perceptual" asks instead for the gain that makes loudness
+    // track the number — gain = p^(5/3), so p^1.8 becomes p^1. In
+    // terms of the system scale s, where gain = s^3, that is
+    // s = p^(5/9). Zero and one are fixed points, so silence is still
+    // silence and 100 is still unity gain; only the middle moves, and
+    // it moves the way the ear does.
+    //
+    // Off by default. Switching it on means this shell and everything
+    // else on the machine report different numbers for the same
+    // volume, and disagreeing with wpctl is worth doing on purpose
+    // rather than by inheritance.
+    readonly property bool perceptual:
+        Config.audio.volumeCurve === "perceptual"
+
+    // 5/9 in one direction, 9/5 in the other.
+    readonly property real exponent: 5 / 9
+
+    function toDisplay(s) {
+        const v = Math.max(0, Math.min(1, s));
+        return root.perceptual ? Math.pow(v, 1 / root.exponent) : v;
+    }
+
+    function toSystem(p) {
+        const v = Math.max(0, Math.min(1, p));
+        return root.perceptual ? Math.pow(v, root.exponent) : v;
+    }
+
     readonly property int volume:
+        (sink && sink.audio) ? Math.round(toDisplay(sink.audio.volume) * 100) : 0
+
+    // What PipeWire itself holds, on its own scale. Only the status
+    // handler at the bottom reads it: everything else in the shell
+    // works in the percentage above.
+    readonly property int systemVolume:
         (sink && sink.audio) ? Math.round(sink.audio.volume * 100) : 0
+
     readonly property bool muted:
         (sink && sink.audio) ? sink.audio.muted : false
     readonly property bool micMuted:
@@ -44,7 +95,7 @@ Singleton {
 
     function setVolume(v) {
         if (!sink || !sink.audio) return;
-        sink.audio.volume = Math.max(0, Math.min(100, v)) / 100;
+        sink.audio.volume = toSystem(Math.max(0, Math.min(100, v)) / 100);
     }
 
     function stepVolume(delta) {
@@ -179,7 +230,13 @@ Singleton {
         target: "audio"
 
         function status(): string {
+            // Both scales, because the whole point of the curve
+            // setting is that they can differ, and "the slider says
+            // 50 and wpctl says 0.68" is exactly the question this
+            // handler exists to answer without four screenshots.
             return "volume=" + root.volume
+                + " curve=" + Config.audio.volumeCurve
+                + " system=" + root.systemVolume
                 + " muted=" + root.muted
                 + " mic=" + (root.micMuted ? "muted" : "live")
                 + " brightness=" + root.brightness

@@ -6,6 +6,7 @@
         "blurPasses": 3,
         "blurSize": 8,
         "borderSize": 1,
+        "cornerSmoothing": 4.0,
         "cursorSize": 24,
         "cursorTheme": "Bibata-Modern-Ice",
         "fontScale": 100,
@@ -17,8 +18,15 @@
         "panelOpacity": 0.85,
         "panelRadius": 8,
         "panelScrim": 0.0,
+        "radiusLink": true,
         "shadows": true,
         "windowRounding": 8
+    },
+    "apps": {
+        "terminal": ""
+    },
+    "audio": {
+        "volumeCurve": "system"
     },
     "idle": {
         "dimLevel": 10,

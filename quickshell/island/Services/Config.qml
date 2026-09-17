@@ -13,6 +13,8 @@ Singleton {
     readonly property alias appearance: adapter.appearance
     readonly property alias input: adapter.input
     readonly property alias idle: adapter.idle
+    readonly property alias audio: adapter.audio
+    readonly property alias apps: adapter.apps
 
     // Force a write. Most changes save automatically via
     // onAdapterUpdated, but this is here for explicit saves.
@@ -72,7 +74,7 @@ Singleton {
         //
         //   if (from < 5) { adapter.island.foo = adapter.island.oldFoo }
         adapter.version = currentVersion;
-        file.writeAdapter();
+        persist();
     }
 
     // Reset needs the shipped values, but JsonAdapter holds only the
@@ -122,7 +124,8 @@ Singleton {
     }
 
     readonly property var sections:
-        ["island", "motion", "appearance", "input", "idle", "wallpaper"]
+        ["island", "motion", "appearance", "input", "idle", "wallpaper",
+         "audio", "apps"]
 
     // "island.hoverGrace" -> the shipped value, or undefined if the
     // path isn't one we declare.
@@ -134,7 +137,42 @@ Singleton {
         return section ? section[parts[1]] : undefined;
     }
 
-    function resetKey(path) {
+    // ── Corner radius ────────────────────────────────────────
+    //
+    // Three keys, because three different things read them. The pill
+    // grows its own corner from island.radius; every panel, card, row
+    // and button in the shell derives from appearance.panelRadius;
+    // and appearance.windowRounding is sent to Hyprland, which is not
+    // even in this process.
+    //
+    // Nobody who wants rounder corners wants one of those three. So
+    // appearance.radiusLink moves them together, and the settings page
+    // shows one slider while it is on and three while it is off. The
+    // keys stay separate underneath, which is what lets the link be
+    // turned off at all — and means nothing downstream had to change
+    // to gain it.
+    readonly property var radii: [
+        "island.radius", "appearance.panelRadius", "appearance.windowRounding"
+    ]
+
+    function setRadius(v) {
+        const r = Math.round(v);
+        adapter.appearance.panelRadius = r;
+        if (!adapter.appearance.radiusLink) return;
+        adapter.island.radius = r;
+        adapter.appearance.windowRounding = r;
+    }
+
+    function setRadiusLink(on) {
+        adapter.appearance.radiusLink = on;
+        // Linking has to pick a winner among three numbers that may
+        // already disagree, and it is the one the single slider was
+        // showing while unlinked — anything else changes the value
+        // under a control the user is looking at.
+        if (on) setRadius(adapter.appearance.panelRadius);
+    }
+
+    function resetOne(path) {
         const parts = path.split(".");
         if (parts.length !== 2) return;
         const live = adapter[parts[0]];
@@ -142,7 +180,18 @@ Singleton {
         if (!live || !shipped) return;
         if (shipped[parts[1]] === undefined) return;
         live[parts[1]] = shipped[parts[1]];
-        file.writeAdapter();
+    }
+
+    function resetKey(path) {
+        // Reverting one radius while the three are linked has to
+        // revert all three, or the dot silently breaks the link it is
+        // sitting next to. All three ship at 8, so this lands level.
+        if (adapter.appearance.radiusLink && radii.indexOf(path) !== -1)
+            for (const key of radii) resetOne(key);
+        else
+            resetOne(path);
+
+        persist();
     }
 
     function resetSection(name) {
@@ -151,25 +200,64 @@ Singleton {
         if (!live || !shipped) return;
 
         // Machine-specific keys are left alone: resetting Appearance
-        // should not throw away an icon theme the user picked, and
+        // should not throw away an icon theme the user picked,
         // resetting Wallpaper should not point at a directory that
-        // may not exist.
-        const keep = ["iconTheme", "cursorTheme", "gtkTheme", "directory"];
+        // may not exist, and resetting Apps should not name a
+        // terminal that is not installed here.
+        const keep = ["iconTheme", "cursorTheme", "gtkTheme", "directory",
+                      "terminal"];
 
         for (const key of Object.keys(shipped)) {
             if (keep.indexOf(key) !== -1) continue;
             if (typeof shipped[key] === "function") continue;
             live[key] = shipped[key];
         }
-        file.writeAdapter();
+        persist();
     }
 
     function resetAll() {
         for (const name of sections) resetSection(name);
     }
 
-    function save() {
+    // ── Writing ──────────────────────────────────────────────
+    //
+    // One write per burst of changes, and no reload of our own work.
+    //
+    // This used to be a write per property and a reload per file
+    // change, which is fine for a slider — one key, one write — and
+    // silently lossy for anything that sets several at once. Picking a
+    // Tempo writes eleven motion keys in one call. Each write queued a
+    // file change, each file change triggered a reload, and a reload
+    // landing between two writes put the adapter back to what was on
+    // disk before the second one. Five of the eleven did not survive,
+    // the file was left holding a mixture of two tempos, and the row
+    // read back as "Custom" — so the visible symptom was the settings
+    // app disagreeing with the setting you had just made.
+    //
+    // A zero-interval timer is not a delay: it fires on the next turn
+    // of the event loop, which is after the whole burst has been
+    // applied to the adapter and before anything can observe the file.
+    // So eleven property writes are still eleven property writes, and
+    // they are one write of the finished state.
+    function persist() {
+        file.saving = true;
         file.writeAdapter();
+    }
+
+    Timer {
+        id: flush
+        interval: 0
+        onTriggered: root.persist()
+    }
+
+    Timer {
+        id: settle
+        interval: 150
+        onTriggered: file.saving = false
+    }
+
+    function save() {
+        persist();
     }
 
     function reload() {
@@ -189,10 +277,27 @@ Singleton {
         blockLoading: true
 
         watchChanges: true
-        onFileChanged: reload()
 
-        // Persist whenever any property changes.
-        onAdapterUpdated: writeAdapter()
+        // True from the moment a write is queued until the change it
+        // makes on disk has finished coming back around to us.
+        property bool saving: false
+
+        onFileChanged: {
+            // Our own write, returning. Reloading here is what used to
+            // destroy data — see `persist` below.
+            if (file.saving) return;
+            reload();
+        }
+
+        // `saved` fires when the write lands; the watcher's notice
+        // arrives some time after that, so the flag has to outlive the
+        // write by a little. The cost of the window is that a change
+        // somebody else makes to settings.json within it is not picked
+        // up until the next one, which is a trade worth making against
+        // losing a setting the user just made.
+        onSaved: settle.restart()
+
+        onAdapterUpdated: flush.restart()
 
         onLoaded: {
             // Deliberately does NOT write the adapter back out.
@@ -217,7 +322,7 @@ Singleton {
             // Genuinely absent, so there is nothing to overwrite —
             // this is the one place writing defaults is correct.
             root.merged = true;
-            file.writeAdapter();
+            root.persist();
         }
 
         JsonAdapter {
@@ -494,6 +599,23 @@ Singleton {
                 property real panelScrim: 0.0
                 property int fontScale: 100      // percent
 
+                // Whether the three corner radii move as one. See the
+                // `radii` block above; the settings page shows one
+                // slider while this is on and three while it is off.
+                property bool radiusLink: true
+
+                // How square a corner is, as the exponent of the
+                // superellipse it is drawn from. 2 is a circular arc
+                // — what Qt's Rectangle draws — and 4 is roughly the
+                // corner macOS draws.
+                //
+                // One number for the compositor and the shell both. It
+                // goes to Hyprland as decoration:rounding_power for
+                // windows, and packages/qml-squircle draws the shell's
+                // own surfaces from it, so a window corner and a panel
+                // corner are the same curve.
+                property real cornerSmoothing: 4.0
+
                 // Applied to GTK, Qt and the shell together.
                 property string iconTheme: "Adwaita"
                 property string cursorTheme: "Bibata-Modern-Ice"
@@ -567,6 +689,33 @@ Singleton {
                 // because there is one GTK theme and one set of
                 // window borders to drive.
                 property bool perMonitor: false
+            }
+
+            // How the volume the shell shows relates to the volume
+            // PipeWire applies. See Services/Audio.qml, which is
+            // where the two scales are spelled out.
+            property JsonObject audio: JsonObject {
+                // "system"     — the scale wpctl, pactl and
+                //                pavucontrol all use, so the numbers
+                //                agree with every other tool
+                // "perceptual" — remapped so half way along the
+                //                slider sounds half as loud, at the
+                //                cost of that agreement
+                property string volumeCurve: "system"
+            }
+
+            // Default applications.
+            //
+            // Only the terminal lives here. Everything else on the
+            // Apps page is a MIME handler, and those belong to the
+            // desktop rather than to this shell — they go in
+            // mimeapps.list, where every other application can read
+            // them. A terminal emulator is the handler of no type at
+            // all, so there is nowhere else for the choice to go.
+            property JsonObject apps: JsonObject {
+                // A desktop entry id, such as "kitty.desktop". Empty
+                // means the one hypr/env.lua ships with.
+                property string terminal: ""
             }
         }
     }

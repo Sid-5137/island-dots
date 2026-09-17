@@ -53,8 +53,11 @@ matugen derives a palette from your wallpaper and feeds the shell,
 GTK3, GTK4 *and* Hyprland's own window borders. Change the wallpaper,
 the desktop follows. One wallpaper per monitor, if you want.
 
-**A launcher in the pill**
-Empty until you type, the way Spotlight is. Then fuzzy matching over
+**A launcher, and its answer**
+Empty until you type, the way Spotlight is — and while it is empty it
+is a bar and nothing else. The matches arrive on a second surface
+below, a gap down, so the field stays a field instead of becoming the
+top edge of a box. Then fuzzy matching over
 names, keywords, initials and a subsequence fallback — `fx` finds
 Firefox, `ed` finds Text Editor, `dua` finds Disk Usage Analyzer,
 `music` finds whatever your entries call themselves. Keyboard-first,
@@ -115,10 +118,34 @@ Dates carry a dot when something is scheduled, and today's events list
 under the month. Reads `.ics` files directly — GNOME Calendar's store,
 vdirsyncer, khal — so nothing extra needs installing.
 
+**One corner, everywhere**
+The pill, the shell's panels and Hyprland's own windows are three
+different numbers read by three different things — one of which is not
+even in the shell's process. A single slider moves all three, and a
+toggle hands them back if you want the pill rounder than a window. A
+second slider sets how the corner is *drawn*: a superellipse rather
+than a circular arc, which is the corner macOS has and Qt does not
+ship. See `packages/qml-squircle`.
+
+**Every shortcut, on one surface**
+`Super+Shift+S`, or `Super+/`. Sixty-odd binds grouped and drawn as
+key caps — read from `hyprctl binds`, not written out a second time, so
+a bind added to `hypr/binds.lua` appears there and one removed
+disappears. A cheat sheet kept beside the config is wrong by the second
+week.
+
+**Default applications**
+Browser, email, file manager, terminal, and what opens a PDF or a
+video. Dropdowns of what is actually installed and claims the type,
+written to `mimeapps.list` — so it is the desktop's answer, not the
+shell's private one. The three with keybinds move `Super+X`, `Super+E`
+and `Super+B` with them.
+
 **Settings that show their work**
-Six pages. The palette is shown as colour, the pill as a live
-preview, and the control centre as itself — you drag the real cards
-around. The wheel scrolls the page; **Ctrl+wheel** over a slider steps
+Seven pages, and as little text as the job allows. The palette is
+shown as colour, the pill as a live preview, the control centre as
+itself — you drag the real cards around — and corners, gaps and blur
+as the shapes they produce, redrawn as you move the slider. The wheel scrolls the page; **Ctrl+wheel** over a slider steps
 it by one. Anything you have changed grows a revert control beside it;
 sections and the whole config can be reset too.
 
@@ -147,9 +174,10 @@ grid rather than opening a window somewhere else
 
 ![launcher](docs/launcher.png)
 
-**The launcher** — the same shape, stretched. At rest it is just the
-field; the list is what you typed for. Row corners are cut from the
-panel's, so the list looks carved out of it rather than laid on it
+**The launcher** — two surfaces, not one. The pill is the field and
+never changes height while you type; the results are a shelf below it,
+at the same gap the pods keep beside it. Row corners are cut from the
+shelf's, so the list looks carved out of it rather than laid on it
 
 ![settings](docs/settings.png)
 
@@ -447,11 +475,32 @@ One consequence of the merge worth knowing: it preserves values you
 already have. If a release changes a *default*, your existing file
 keeps the old value. Delete `settings.json` to take the new defaults.
 
+Not every key has a control. The window shows the settings people
+reach for; a glyph nudge, a font weight, an Alt+Tab delay and nine of
+the eleven motion durations are still keys, still listed in
+`settings.example.json`, and still read on every start — they just
+stopped charging every reader of the Island page for the privilege.
+`settings.example.json` is the complete list either way.
+
+Two things the settings app changes are deliberately *not* in that
+file, because they are not island's to own:
+
+| Page | Writes | Why |
+|:--|:--|:--|
+| Apps | `~/.config/mimeapps.list` | The desktop's own file. A browser picked here is the browser every other application opens a link with. |
+| Apps | `~/.local/state/island/apps.lua` | What `Super+X`, `Super+E` and `Super+B` spawn. `hypr/env.lua` ships the defaults and overlays this on top, so the page never edits a file in the checkout. |
+
+The one exception on that page is the terminal, which is the handler of
+no MIME type and so has nowhere to go but `settings.json`.
+
 ```
+packages/             extracted, reusable on their own
+                      qml-squircle        continuous corners for QML
 bin/                  linked into ~/.local/bin by install.sh
                       island-gestures     libinput gesture daemon
                       island-gtk-apply    GTK/Qt appearance
                       island-calendar     .ics reader
+                      island-mime         default applications
                       island-gen-example  regenerates the example config
 hypr/                 Hyprland config, one module per concern
 pam/                  PAM template for the lock screen
@@ -595,6 +644,98 @@ Things that cost real time to work out:
   on screen to put focus back onto. So it worked across workspaces
   and failed within one, which reads like anything except a focus
   race.
+
+- **One shape is not always one shape.** The launcher and the
+  clipboard were a field and a list inside a single pill, and the pill
+  took its height from how many rows there were. That makes the field
+  stop reading as a field the moment it has results — it becomes the
+  top edge of a box — and it moves the shape under the cursor on every
+  keystroke.
+
+  They are two surfaces now: the pill holds the field and keeps one
+  height, and a shelf below it holds the rows, at `island.podGap` —
+  the number that already governs the space between the pill and the
+  pods, rather than a second one invented for this. `Island.qml` owns
+  the shelf; `SearchList.qml` and `ClipList.qml` are what sit on it.
+
+  The empty launcher is now literally empty: no rows, no shelf, just
+  the bar. The clipboard keeps its shelf either way, because it was
+  opened deliberately and "No matches" is an answer to that.
+
+- **A `Shape` makes its window opaque under a blur rule.** Qt's
+  `Rectangle` draws circular corners and has no corner smoothing, so a
+  macOS-style superellipse corner has to come from somewhere else. The
+  obvious somewhere is `QtQuick.Shapes`, and it cannot be used here: a
+  `Shape` anywhere in the island's window turns that window's whole
+  bounding rectangle opaque in the Wayland buffer, and `hypr/rules.lua`
+  blurs that layer — so Hyprland dimmed a dark square behind every
+  rounded surface in the shell, hiding the corner the `Shape` was drawn
+  to improve.
+
+  Four fixes do not work, and each was measured rather than assumed:
+  `Shape.GeometryRenderer` instead of `CurveRenderer`; `layer.enabled`
+  on the Shape; raising the layer's `ignore_alpha` from 0.03 to 0.5;
+  and keeping the Shape offscreen as a `visible: false` layer source
+  composited by a `MultiEffect`. Swapping the same geometry back to a
+  plain `Rectangle` clears it every time, which is what makes it the
+  Shape rather than the path. That it survives an `ignore_alpha` of 0.5
+  is the useful half: the alpha being written is not faint, so no
+  threshold saves you.
+
+  `Canvas` does work. It rasterises with `QPainter` into a texture of
+  its own and adds no `Shape` node to the scene, so the surface's alpha
+  is whatever the texture says. That is `packages/qml-squircle`, which
+  is a single drop-in QML file with no build step — the shell uses it
+  for the pill, the shelf, the pods and both windows, and Hyprland
+  draws the matching curve for windows from the same
+  `appearance.cornerSmoothing` via `decoration:rounding_power`.
+
+- **A file watcher can eat the setting you just made.** `Config.qml`
+  wrote `settings.json` on every property change and reloaded it on
+  every file change. For a slider — one key, one write — that is fine.
+  For anything setting several keys in one call it is lossy: each
+  write queues a file change, each file change triggers a reload, and
+  a reload landing between two writes puts the adapter back to what
+  was on disk before the second one.
+
+  Picking a Tempo writes eleven motion keys. Five of them did not
+  survive, the file was left holding a mixture of two tempos, and the
+  row read back as **Custom** — so the symptom was the settings app
+  disagreeing with the setting you had just made, with nothing
+  anywhere reporting an error. Reproducible in about fifteen lines:
+
+  ```qml
+  Motion.setTempo("calm");
+  // then, a tick later, compare Config.motion against Motion.tempos.calm
+  ```
+
+  The fix is a zero-interval timer, which is not a delay — it fires on
+  the next turn of the event loop, after the whole burst has landed on
+  the adapter and before anything can observe the file. Plus a flag so
+  the watcher ignores the shell's own writes coming back around.
+
+- **PipeWire's volume is not the volume anyone shows you.** The number
+  in `channelVolumes` is a linear gain — what the samples get
+  multiplied by — and what `wpctl`, `pactl` and `pavucontrol` all
+  print is its cube root. Setting 0.5 with `wpctl` writes 0.125.
+  Quickshell's `sink.audio.volume` is on the *displayed* scale, so the
+  percentage the shell shows agrees with every other tool exactly, in
+  both directions.
+
+  That agreement is also why half way along the slider does not sound
+  half as loud, and it is not a bug in anything: a displayed `p` means
+  `p³` of gain, loudness goes roughly as `gain^0.6`, so loudness goes
+  as `p^1.8`. 50% is −18 dB, which the ear reads as under a third.
+  `Settings → System → Sound` can swap the scale for one where the
+  number tracks loudness instead — `gain = p^(5/3)`, so island's 50%
+  is `wpctl 0.68` and −10 dB. It is off by default, because a shell
+  whose numbers disagree with `wpctl` is worth choosing on purpose.
+
+  Check both scales at once with:
+
+  ```bash
+  qs -c island ipc call audio status
+  ```
 
 - **A `Repeater` needs a visual parent.** In a singleton it has none,
   so its delegates are never created and whatever they were supposed

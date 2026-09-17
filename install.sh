@@ -153,12 +153,19 @@ fi
 
 
 echo
+# python3 is at the end because it is the odd one out: nothing in the
+# shell calls it directly. Two of the scripts in bin/ are written in it
+# — island-calendar, which reads .ics files, and island-mime, which
+# reads and writes the desktop's default applications — and without it
+# the calendar comes up empty and the Apps page comes up with an error
+# where its dropdowns should be.
 echo "Checking dependencies:"
 missing=()
 for cmd in \
     hyprland quickshell matugen kitty nautilus firefox \
     wpctl brightnessctl playerctl nmcli bluetoothctl \
-    cliphist wl-paste hyprshot slurp gsettings hypridle libinput
+    cliphist wl-paste hyprshot slurp gsettings hypridle libinput \
+    python3
 do
     if command -v "$cmd" >/dev/null 2>&1; then
         printf '  ok   %s\n' "$cmd"
@@ -259,7 +266,8 @@ if [ ${#missing[@]} -gt 0 ]; then
     echo "      wireplumber brightnessctl playerctl NetworkManager bluez \\"
     echo "      cliphist wl-clipboard hyprshot slurp adw-gtk3-theme qt6ct hypridle \\"
     echo "      mate-polkit xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \\"
-    echo "      adwaita-icon-theme hicolor-icon-theme jetbrains-mono-nerd-fonts"
+    echo "      adwaita-icon-theme hicolor-icon-theme jetbrains-mono-nerd-fonts \\"
+    echo "      python3"
     if [ "${font_is_v2:-0}" -ne 0 ]; then
         echo
         echo "The Nerd Font you have is a v2 patch: it carries the right"

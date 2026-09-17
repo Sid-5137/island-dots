@@ -51,4 +51,14 @@ Singleton {
     // every machine the shell might run on.
     readonly property string colors:    stateDir + "/colors.json"
     readonly property string wallpaper: stateDir + "/wallpaper"
+
+    // The terminal, file manager and browser the Super+X/E/B binds
+    // spawn, as a Lua table for hypr/env.lua to overlay onto its own.
+    //
+    // Generated rather than edited in place, and here rather than in
+    // the repo, for the reason at the top of this file plus one more:
+    // install.sh symlinks ~/.config/hypr to the checkout, so a
+    // settings window that wrote to env.lua would put a diff in
+    // `git status` every time somebody changed their browser.
+    readonly property string apps: stateDir + "/apps.lua"
 }

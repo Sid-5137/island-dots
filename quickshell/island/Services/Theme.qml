@@ -122,6 +122,17 @@ Singleton {
     // they should not have to change together.
     readonly property int gapBadge: 10
 
+    // The icon column in a list row, and the box the field's caret
+    // sits in above it.
+    //
+    // It lived in SearchMode as a local, "read by the row delegate and
+    // by the field's glyph box so the two cannot drift" — which held
+    // only while both were in one file. The field and the list are two
+    // surfaces now, in two files, so the one number that keeps their
+    // left edges on the same column has to be somewhere they both
+    // already look.
+    readonly property int iconRow: 22
+
     // The corner a shape of this height should have.
     //
     // One number cannot serve both ends of a shape that morphs from a

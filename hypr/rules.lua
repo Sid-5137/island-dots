@@ -140,7 +140,7 @@ hl.layer_rule({
 -- ignore_alpha is low so nothing gets skipped for being too
 -- transparent. The panels set their own opacity; blur only shows
 -- through if they are actually translucent.
-for _, ns in ipairs({ "island-launcher", "island-settings" }) do
+for _, ns in ipairs({ "island-launcher", "island-settings", "island-shortcuts" }) do
     hl.layer_rule({
         name         = ns,
         match        = { namespace = "^" .. ns .. "$" },

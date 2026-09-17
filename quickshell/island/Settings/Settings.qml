@@ -93,17 +93,23 @@ PanelWindow {
         // Swallow clicks so they don't reach the dismiss area behind.
         MouseArea { anchors.fill: parent }
 
-        Rectangle {
+        Item {
             id: sidebar
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             width: 216
-            radius: Theme.radiusNormal
-            color: root.tint(Theme.surfaceLowest, Config.appearance.panelOpacity)
-            border.width: 1
-            border.color: root.tint(Theme.outline, 0.30)
+            readonly property real radius: Theme.radiusNormal
             clip: true
+
+            Squircle {
+                smoothing: Config.appearance.cornerSmoothing
+                anchors.fill: parent
+                radius: sidebar.radius
+                color: root.tint(Theme.surfaceLowest, Config.appearance.panelOpacity)
+                borderWidth: 1
+                borderColor: root.tint(Theme.outline, 0.30)
+            }
 
             // The island's second line — see Widgets/Bezel.qml. The
             // settings window is the largest rounded thing the shell
@@ -130,11 +136,11 @@ PanelWindow {
                 }
 
                 Repeater {
-                    // Five, not seven. Wallpaper and the theming half
-                    // of Appearance are one subject and are now one
-                    // page; Motion was five sliders about the island
-                    // and lives under it; Session and the compositor
-                    // half of Appearance are both "the system".
+                    // Wallpaper and the theming half of Appearance
+                    // are one subject and are now one page; Motion was
+                    // five sliders about the island and lives under
+                    // it; Session and the compositor half of
+                    // Appearance are both "the system".
                     model: root.pages
 
                     Rectangle {
@@ -205,18 +211,24 @@ PanelWindow {
             }
         }
 
-        Rectangle {
+        Item {
             id: pane
             anchors.left: sidebar.right
             anchors.leftMargin: 14
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            radius: Theme.radiusNormal
-            color: root.tint(Theme.surface, Config.appearance.panelOpacity)
-            border.width: 1
-            border.color: root.tint(Theme.outline, 0.30)
+            readonly property real radius: Theme.radiusNormal
             clip: true
+
+            Squircle {
+                smoothing: Config.appearance.cornerSmoothing
+                anchors.fill: parent
+                radius: pane.radius
+                color: root.tint(Theme.surface, Config.appearance.panelOpacity)
+                borderWidth: 1
+                borderColor: root.tint(Theme.outline, 0.30)
+            }
 
             // Inside the pane rather than over the Flickable beside
             // it: the page content is inset by 26 and the edge by 2,
@@ -240,10 +252,11 @@ PanelWindow {
                 sourceComponent: {
                     switch (root.page) {
                         case "control": return controlPage;
-                        case "theme":   return themePage;
+                        case "appearance": return appearancePage;
                         case "input":   return inputPage;
                         case "system":  return systemPage;
                         case "network": return networkPage;
+                        case "apps":    return appsPage;
                         default:        return islandPage;
                     }
                 }
@@ -260,10 +273,11 @@ PanelWindow {
     readonly property var pages: [
         { id: "island",  label: "Island",  glyph: Icons.tabIsland },
         { id: "control", label: "Control", glyph: Icons.tabControl },
-        { id: "theme",   label: "Theme",   glyph: Icons.tabTheme },
+        { id: "appearance", label: "Appearance", glyph: Icons.tabAppearance },
         { id: "input",   label: "Input",   glyph: Icons.tabInput },
         { id: "system",  label: "System",  glyph: Icons.tabSystem },
-        { id: "network", label: "Network", glyph: Icons.tabNetwork }
+        { id: "network", label: "Network", glyph: Icons.tabNetwork },
+        { id: "apps",    label: "Apps",    glyph: Icons.tabApps }
     ]
 
     property string page: "island"
@@ -271,14 +285,23 @@ PanelWindow {
     // Old names still work: they are in muscle memory, in binds, and
     // in anything that scripted `settings page`.
     readonly property var aliases: ({
-        appearance: "theme",
-        wallpaper:  "theme",
+        theme:      "appearance",
+        wallpaper:  "appearance",
+        // Windows, gaps, shadows and blur moved off System when the
+        // corner radius became one control; anyone who learned either
+        // name for them still lands on the page that has them.
+        windows:    "appearance",
+        blur:       "appearance",
         motion:     "island",
         session:    "system",
         // What the control centre's own settings tile opens, and the
         // name anyone would guess for it.
         centre:     "control",
-        tiles:      "control"
+        tiles:      "control",
+        // The page is about defaults, and "default" is what anyone
+        // who has met another settings app would type.
+        defaults:   "apps",
+        handlers:   "apps"
     })
 
     onPageChanged: {
@@ -299,10 +322,11 @@ PanelWindow {
 
     Component { id: islandPage;  IslandPage  { width: scroll.width } }
     Component { id: controlPage; ControlPage { width: scroll.width } }
-    Component { id: themePage;   ThemePage   { width: scroll.width } }
+    Component { id: appearancePage; AppearancePage { width: scroll.width } }
     Component { id: inputPage;   InputPage   { width: scroll.width } }
     Component { id: systemPage;  SystemPage  { width: scroll.width } }
     Component { id: networkPage; NetworkPage { width: scroll.width } }
+    Component { id: appsPage;    AppsPage    { width: scroll.width } }
 
     IpcHandler {
         target: "settings"

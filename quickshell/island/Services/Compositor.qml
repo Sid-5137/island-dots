@@ -32,6 +32,11 @@ Singleton {
             + "  },"
             + "  decoration = {"
             + "    rounding = "         + a.windowRounding + ","
+            // The same superellipse exponent the shell draws its own
+            // shapes from, so a window corner and a panel corner are
+            // the same curve. Hyprland floors it at 2.0 itself; this
+            // is here so the number sent is the number meant.
+            + "    rounding_power = "   + Math.max(2, a.cornerSmoothing) + ","
             + "    inactive_opacity = " + a.inactiveOpacity + ","
             + "    shadow = { enabled = " + (a.shadows ? "true" : "false") + " },"
             + "    blur = {"

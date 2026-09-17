@@ -1,0 +1,1 @@
+../../../packages/qml-squircle/Squircle.qml

@@ -659,27 +659,6 @@ Column {
         onMoved: function(v) { Config.island.controlPad = v }
     }
 
-    SliderRow {
-        configKey: "island.artTint"
-        label: "Album art tint"
-        description: "How much of the accent is washed over artwork, so"
-            + " a media card belongs to the theme whatever the record"
-            + " label chose. 0 leaves the artwork alone."
-        from: 0.0; to: 0.6; stepSize: 0.02; decimals: 2
-        value: Config.island.artTint
-        onMoved: function(v) { Config.island.artTint = v }
-    }
-
-    SliderRow {
-        configKey: "island.tileIconOffset"
-        label: "Glyph nudge"
-        description: "Shifts the glyphs in badges, for icon fonts whose"
-            + " metrics sit off-centre."
-        from: -12; to: 12; stepSize: 1; suffix: " px"
-        value: Config.island.tileIconOffset
-        onMoved: function(v) { Config.island.tileIconOffset = v }
-    }
-
     // Theme colours are hex strings with no alpha; this re-emits one
     // with the island's, so the canvas is the same surface the panel
     // is rather than a flat approximation of it.

@@ -26,8 +26,15 @@ import "root:/Services"
 // Inert by construction: no fill, no input, nothing under it changes.
 // Declare it last among a surface's children so the edge draws over
 // whatever gets pushed against it.
+//
+// A Squircle rather than a Rectangle, because the surfaces it lines
+// are Squircles now. A circular line inside a superellipse edge is the
+// exact fault this widget exists to make visible — the gap between the
+// two is even down the straights and wrong through the corners, which
+// reads as a dark box behind a properly rounded outline rather than as
+// what it is.
 
-Rectangle {
+Squircle {
     id: root
 
     // The radius of the shape this lines.
@@ -65,10 +72,9 @@ Rectangle {
     // wider through the corners, which is the exact fault the pair is
     // there to make visible.
     radius: Theme.inner(outer, inset)
+    smoothing: Config.appearance.cornerSmoothing
 
     color: "transparent"
-    antialiasing: true
-
-    border.width: 1
-    border.color: Theme.bezel
+    borderWidth: 1
+    borderColor: Theme.bezel
 }

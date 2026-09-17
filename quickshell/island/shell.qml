@@ -16,11 +16,13 @@ import "root:/Background"
 import "root:/Island"
 import "root:/Lock"
 import "root:/Settings"
+import "root:/Shortcuts"
 
 ShellRoot {
     WallpaperLayer {}
     Island {}
     Settings {}
+    ShortcutsWindow {}
     LockScreen {}
 
     // QML creates singletons lazily, on first reference. These have no
@@ -51,5 +53,12 @@ ShellRoot {
         Tray.count;
         Calendar.refresh();
         Biometric.refresh();
+        // Touched rather than refreshed. Reading the association
+        // database means opening every .desktop file on the machine,
+        // which is work for the Apps page to ask for when it opens —
+        // but the singleton has to exist before then, or `ipc call
+        // apps status` answers "target not found" until somebody
+        // happens to have opened that page.
+        DefaultApps.ready;
     }
 }

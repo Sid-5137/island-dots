@@ -4,10 +4,21 @@ import "root:/Widgets"
 
 // The pill: when it shows, what it shows, and what shape it is.
 //
-// Everything below the preview used to be one flat list of eighteen
-// rows, of which three are settings anyone changes twice and the rest
-// are pixel sizes that exist so the shape can be tuned once. The
-// tuning is still all here, one fold down.
+// Everything below the preview used to be one flat list, of which
+// three are settings anyone changes twice and the rest are pixel
+// sizes that exist so the shape can be tuned once. Those are a fold
+// down now.
+//
+// The ones nobody had a reason to reach for are not in the window at
+// all: a glyph nudge, a font weight, an Alt+Tab delay, and nine of
+// the eleven motion durations that Tempo already writes as a set.
+// They are still keys, still in settings.example.json, still editable
+// by hand — they just stopped charging every reader of this page for
+// the privilege.
+//
+// The control centre's width lived here as well as on the Control
+// page, under two names, with no hint that they were one setting.
+// It is on the page that draws the thing, and only there.
 
 Column {
     id: page
@@ -138,7 +149,7 @@ Column {
     Disclosure {
         width: parent.width
         text: "Geometry"
-        hint: "sizes for each mode"
+        hint: "widths and margins"
 
         SliderRow {
             configKey: "island.topMargin"
@@ -146,14 +157,6 @@ Column {
             from: 0; to: 40; stepSize: 1; suffix: " px"
             value: Config.island.topMargin
             onMoved: function(v) { Config.island.topMargin = v }
-        }
-
-        SliderRow {
-            configKey: "island.fontWeight"
-            label: "Font weight"
-            from: 300; to: 900; stepSize: 100
-            value: Config.island.fontWeight
-            onMoved: function(v) { Config.island.fontWeight = v }
         }
 
         SliderRow {
@@ -168,28 +171,12 @@ Column {
         }
 
         SliderRow {
-            configKey: "island.podPeekDuration"
-            label: "Peek time"
-            from: 600; to: 4000; stepSize: 100; suffix: " ms"
-            value: Config.island.podPeekDuration
-            onMoved: function(v) { Config.island.podPeekDuration = v }
-        }
-
-        SliderRow {
             configKey: "island.idleWidth"
             label: "Minimum width"
             description: "The pill never narrows past this."
             from: 100; to: 320; stepSize: 4; suffix: " px"
             value: Config.island.idleWidth
             onMoved: function(v) { Config.island.idleWidth = v }
-        }
-
-        SliderRow {
-            configKey: "island.controlWidth"
-            label: "Control centre width"
-            from: 420; to: 720; stepSize: 4; suffix: " px"
-            value: Config.island.controlWidth
-            onMoved: function(v) { Config.island.controlWidth = v }
         }
 
         SliderRow {
@@ -217,15 +204,6 @@ Column {
             onMoved: function(v) { Config.island.clipMaxRows = v }
         }
 
-        SliderRow {
-            configKey: "island.tileIconOffset"
-            label: "Tile icon nudge"
-            description: "Shifts control-centre glyphs, for icon fonts"
-                + " whose metrics sit off-centre."
-            from: -12; to: 12; stepSize: 1; suffix: " px"
-            value: Config.island.tileIconOffset
-            onMoved: function(v) { Config.island.tileIconOffset = v }
-        }
     }
 
     Disclosure {
@@ -272,28 +250,12 @@ Column {
             onMoved: function(v) { Config.island.notifyDuration = v }
         }
 
-        SliderRow {
-            configKey: "island.notifyCriticalDuration"
-            label: "Critical time"
-            from: 2000; to: 30000; stepSize: 1000; suffix: " ms"
-            value: Config.island.notifyCriticalDuration
-            onMoved: function(v) { Config.island.notifyCriticalDuration = v }
-        }
-
-        SliderRow {
-            configKey: "island.switcherCommitDelay"
-            label: "Alt+Tab commit"
-            description: "How long after the last Tab the switcher acts."
-            from: 200; to: 1500; stepSize: 50; suffix: " ms"
-            value: Config.island.switcherCommitDelay
-            onMoved: function(v) { Config.island.switcherCommitDelay = v }
-        }
     }
 
     Disclosure {
         width: parent.width
         text: "Media"
-        hint: "2 settings"
+        hint: "3 settings"
 
         ToggleRow {
             configKey: "island.pillTitle"
@@ -327,9 +289,11 @@ Column {
 
     ChoiceRow {
         label: "Tempo"
-        // Eleven numbers, three answers. The sliders below still set
-        // each one; this is for the question people actually have,
-        // which is whether the thing should feel quicker.
+        // Eleven numbers, three answers. Tempo writes all eleven; the
+        // two rows below are the ones you can feel without a
+        // stopwatch, and the other nine are settings.json only.
+        // Moving any of them puts this row on "Custom", which is how
+        // you can tell from here that one has been moved.
         description: "Fluid is the tempo measured off Dynamite V3 — the"
             + " same spring, about two and a half times faster. Calm is"
             + " what shipped before. Springy keeps the speed and spends"
@@ -357,113 +321,23 @@ Column {
         onToggled: function(v) { Config.motion.reduceMotion = v }
     }
 
-    Disclosure {
-        width: parent.width
-        text: "By hand"
-        hint: "each number on its own"
+    SliderRow {
+        configKey: "motion.expandDuration"
+        label: "Open"
+        description: "How long the shape takes to reach a panel."
+        from: 160; to: 900; stepSize: 10; suffix: " ms"
+        value: Config.motion.expandDuration
+        onMoved: function(v) { Config.motion.expandDuration = v }
+    }
 
-        SliderRow {
-            configKey: "motion.arriveDamping"
-            label: "Overshoot"
-            description: "The damping fraction of the spring the shape"
-                + " opens on. 1.00 never overshoots; 0.80 goes about a"
-                + " percent and a half past and settles; below 0.60 it"
-                + " is a toy. The preview above uses the same curve."
-            from: 0.5; to: 1.0; stepSize: 0.02; decimals: 2
-            value: Config.motion.arriveDamping
-            onMoved: function(v) { Config.motion.arriveDamping = v }
-        }
-
-        SliderRow {
-            configKey: "motion.expandDuration"
-            label: "Open"
-            description: "How long the shape takes to reach a panel."
-            from: 160; to: 900; stepSize: 10; suffix: " ms"
-            value: Config.motion.expandDuration
-            onMoved: function(v) { Config.motion.expandDuration = v }
-        }
-
-        SliderRow {
-            configKey: "motion.collapseDuration"
-            label: "Close"
-            description: "Shorter than opening, and without the spring."
-                + " A shape on its way out that springs back toward"
-                + " where it was reads as an argument."
-            from: 120; to: 600; stepSize: 10; suffix: " ms"
-            value: Config.motion.collapseDuration
-            onMoved: function(v) { Config.motion.collapseDuration = v }
-        }
-
-        SliderRow {
-            configKey: "motion.hoverDuration"
-            label: "Hover lift"
-            from: 120; to: 600; stepSize: 10; suffix: " ms"
-            value: Config.motion.hoverDuration
-            onMoved: function(v) { Config.motion.hoverDuration = v }
-        }
-
-        SliderRow {
-            configKey: "motion.contentLead"
-            label: "Content lead"
-            description: "How long the shape moves alone before its"
-                + " contents start to arrive. This is what makes a"
-                + " morph read as one movement rather than as a resize"
-                + " followed by a screen."
-            from: 0; to: 260; stepSize: 10; suffix: " ms"
-            value: Config.motion.contentLead
-            onMoved: function(v) { Config.motion.contentLead = v }
-        }
-
-        SliderRow {
-            configKey: "motion.contentInDuration"
-            label: "Content in"
-            from: 60; to: 500; stepSize: 10; suffix: " ms"
-            value: Config.motion.contentInDuration
-            onMoved: function(v) { Config.motion.contentInDuration = v }
-        }
-
-        SliderRow {
-            configKey: "motion.contentOutDuration"
-            label: "Content out"
-            description: "Quicker than the way in, and never delayed."
-            from: 40; to: 300; stepSize: 10; suffix: " ms"
-            value: Config.motion.contentOutDuration
-            onMoved: function(v) { Config.motion.contentOutDuration = v }
-        }
-
-        SliderRow {
-            configKey: "motion.popDuration"
-            label: "Pod peek"
-            description: "The bounce a pod opens itself with when what"
-                + " it shows changes."
-            from: 200; to: 900; stepSize: 10; suffix: " ms"
-            value: Config.motion.popDuration
-            onMoved: function(v) { Config.motion.popDuration = v }
-        }
-
-        SliderRow {
-            configKey: "motion.popDamping"
-            label: "Peek bounce"
-            from: 0.3; to: 1.0; stepSize: 0.02; decimals: 2
-            value: Config.motion.popDamping
-            onMoved: function(v) { Config.motion.popDamping = v }
-        }
-
-        SliderRow {
-            configKey: "motion.fadeIn"
-            label: "Cross-fade in"
-            description: "Colours and indicators, not shapes."
-            from: 40; to: 400; stepSize: 10; suffix: " ms"
-            value: Config.motion.fadeIn
-            onMoved: function(v) { Config.motion.fadeIn = v }
-        }
-
-        SliderRow {
-            configKey: "motion.fadeOut"
-            label: "Cross-fade out"
-            from: 20; to: 300; stepSize: 10; suffix: " ms"
-            value: Config.motion.fadeOut
-            onMoved: function(v) { Config.motion.fadeOut = v }
-        }
+    SliderRow {
+        configKey: "motion.collapseDuration"
+        label: "Close"
+        description: "Shorter than opening, and without the spring."
+            + " A shape on its way out that springs back toward"
+            + " where it was reads as an argument."
+        from: 120; to: 600; stepSize: 10; suffix: " ms"
+        value: Config.motion.collapseDuration
+        onMoved: function(v) { Config.motion.collapseDuration = v }
     }
 }

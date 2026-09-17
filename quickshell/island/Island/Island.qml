@@ -264,14 +264,18 @@ Variants {
             interval: 220
         }
 
-        // The mode's own filtered list isn't reachable from the
-        // geometry table, so the count is computed here too.
-        readonly property int clipRows: {
+        // The filter, here rather than in ClipboardMode. The geometry
+        // needs its length and the shelf's list needs its contents,
+        // and it used to be computed in both places — two filters over
+        // the same entries that were only ever equal by inspection.
+        readonly property var clipFiltered: {
             const q = clipQuery.trim().toLowerCase();
-            if (q === "") return Clipboard.entries.length;
+            if (q === "") return Clipboard.entries;
             return Clipboard.entries.filter(
-                e => e.preview.toLowerCase().includes(q)).length;
+                e => e.preview.toLowerCase().includes(q));
         }
+
+        readonly property int clipRows: clipFiltered.length
 
         property bool clipOpen: false
         property string clipQuery: ""
@@ -301,11 +305,11 @@ Variants {
 
         function copySelected() {
             if (!clipList) return;
-            const q = clipQuery.trim().toLowerCase();
-            const list = q === ""
-                ? Clipboard.entries
-                : Clipboard.entries.filter(e => e.preview.toLowerCase().includes(q));
-            const e = list[clipList.currentIndex];
+            // clipFiltered, not a third filter written out again here.
+            // There were three — this one, the geometry's row count and
+            // the mode's own — over the same entries, equal only by
+            // inspection and only until one of them was edited.
+            const e = clipFiltered[clipList.currentIndex];
             if (e) {
                 Clipboard.copy(e.id);
                 closeClipboard();
@@ -446,9 +450,16 @@ Variants {
                             Config.island.centreHeight,
                             Config.island.authHeight,
                             Config.island.switcherHeight,
+                            // Two surfaces and the gap between them
+                            // now, not one panel: the bar, the pod
+                            // gap, and a full shelf under it.
                             Config.island.searchFieldHeight
+                              + Config.island.podGap
+                              + Theme.spacingSmall * 2 + Theme.padCard * 2
                               + Config.island.clipMaxRows * Config.island.clipRowHeight,
                             Config.island.searchFieldHeight
+                              + Config.island.podGap
+                              + Theme.spacingSmall * 2 + Theme.padCard * 2
                               + Config.island.searchMaxRows * Config.island.searchRowHeight)
                       + Config.island.topMargin
                       + 60
@@ -767,8 +778,26 @@ Variants {
                 win: root; island: island; pill: pill
             }
 
-            Rectangle {
+            // An Item that paints itself with a child, rather than a
+            // Rectangle that paints itself.
+            //
+            // The corner is a superellipse — the one macOS draws, and
+            // the one Hyprland is told to draw for windows, so a panel
+            // corner and a window corner are the same curve. Qt's
+            // Rectangle cannot draw it and QtQuick.Shapes must not be
+            // used in a blurred layer; Widgets/Squircle.qml says why
+            // and what it does instead.
+            //
+            // `radius`, `color` and `borderColor` stay plain properties
+            // under the names the Rectangle used, because four other
+            // files read them off this id and none of them care what
+            // draws the fill.
+            Item {
                 id: pill
+
+                property color color
+                property real radius
+                property color borderColor
 
                 anchors.left: parent.left
 
@@ -844,11 +873,24 @@ Variants {
                     // field's top margin and the list's bottom one, so
                     // the arithmetic here and the anchors there cannot
                     // disagree.
+                    // The field and nothing else. The results are on
+                    // the shelf below — see the Rectangle after this
+                    // one — so this height no longer depends on how
+                    // many matches there are, and the pill does not
+                    // move under the cursor while you type.
+                    //
+                    // spacingSmall, not padCard. padCard is a card's
+                    // inset inside a panel, and it was right while
+                    // this was a panel with a field at the top of it:
+                    // twelve above the field and twelve below bought
+                    // the first row its clearance. There is no first
+                    // row here any more, so the same twelve was just a
+                    // bar 70px tall around 46px of field — a third of
+                    // it air, which is what made the launcher look
+                    // heavy.
                     search:   { w: Config.island.searchWidth,
-                                h: Theme.padCard * 2
-                                   + Config.island.searchFieldHeight
-                                   + Math.min(Search.results.length, Config.island.searchMaxRows)
-                                     * Config.island.searchRowHeight },
+                                h: Theme.spacingSmall * 2
+                                   + Config.island.searchFieldHeight },
                     session:  { w: Config.island.sessionWidth, h: Config.island.sessionHeight },
                     picker:   { w: Config.island.pickerWidth,  h: Config.island.pickerHeight },
                     notify:   { w: Config.island.notifyWidth,
@@ -873,11 +915,10 @@ Variants {
                                             Wm.workspaces.length
                                             * (Config.island.overviewCard + 12) + 24),
                                 h: Config.island.overviewCard * 0.68 + 36 },
+                    // As above: the entries are on the shelf.
                     clipboard: { w: Config.island.clipWidth,
-                                 h: Theme.padCard * 2
-                                    + Config.island.searchFieldHeight
-                                    + Math.min(root.clipRows, Config.island.clipMaxRows)
-                                      * Config.island.clipRowHeight }
+                                 h: Theme.spacingSmall * 2
+                                    + Config.island.searchFieldHeight }
                 })
 
                 width:  (geometry[island.mode] || geometry.idle).w
@@ -921,14 +962,25 @@ Variants {
                 // width mid-morph snaps a 1px outline away partway
                 // through the animation, which is the flicker around
                 // the edge on the way into the control centre.
-                border.width: 1
-                border.color: Qt.rgba(
+                borderColor: Qt.rgba(
                     Qt.color(Theme.outlineVariant).r,
                     Qt.color(Theme.outlineVariant).g,
                     Qt.color(Theme.outlineVariant).b,
                     1)
 
-                Behavior on border.color {
+                // Declared before everything else so the fill is
+                // underneath it, which is the job the Rectangle's own
+                // background used to do.
+                Squircle {
+                    smoothing: Config.appearance.cornerSmoothing
+                    anchors.fill: parent
+                    radius: pill.radius
+                    color: pill.color
+                    borderWidth: 1
+                    borderColor: pill.borderColor
+                }
+
+                Behavior on borderColor {
                     // `win` is what the Modes/ components call this
                     // window, because Island.qml passes it to them as
                     // `win: root`. Inside Island.qml itself the id is
@@ -1047,6 +1099,84 @@ Variants {
                     }
                 }
             }
+
+            // ── The shelf ────────────────────────────────────
+            //
+            // A second surface under the pill, for the two modes that
+            // are a field with a list beneath it. The pill holds the
+            // field; this holds the rows.
+            //
+            // They used to be one shape. That gave the launcher a pill
+            // that was a bar while empty and a tall panel once full,
+            // with the field marooned at the top of it — so the thing
+            // you type into stopped looking like a field the moment it
+            // had results, and the shape changed height under the
+            // cursor on every keystroke. Two surfaces with a gap says
+            // what they are: a control, and the answer to it. It is
+            // the separation the settings window makes between its
+            // sidebar and its pane, at the gap the pods already keep
+            // beside the pill — one number for the space around the
+            // pill rather than a second one invented here.
+            Rectangle {
+                id: shelf
+
+                readonly property bool isSearch: island.mode === "search"
+                readonly property bool isClip: island.mode === "clipboard"
+
+                readonly property int rows: isSearch
+                    ? Math.min(Search.results.length,
+                               Config.island.searchMaxRows)
+                    : (isClip ? Math.min(root.clipRows,
+                                         Config.island.clipMaxRows) : 0)
+
+                readonly property int rowHeight: isSearch
+                    ? Config.island.searchRowHeight
+                    : Config.island.clipRowHeight
+
+                // The launcher with nothing typed has no shelf at all
+                // — that is what "empty until you type" looks like
+                // once the list is a surface rather than a region of
+                // one. The clipboard keeps its shelf either way,
+                // because it was opened deliberately and "No matches"
+                // is an answer; see ClipList.qml.
+                readonly property bool shown: isSearch ? rows > 0 : isClip
+
+                anchors.horizontalCenter: pill.horizontalCenter
+                anchors.top: pill.bottom
+                anchors.topMargin: Config.island.podGap
+
+                width: pill.width
+                height: shown
+                    ? Math.max(rows, 1) * rowHeight + Theme.padCard * 2
+                    : 0
+
+                // Taken from the pill rather than restated, so the two
+                // surfaces cannot end up different colours in a mode
+                // nobody thought to check.
+                readonly property real radius: Theme.corner(height)
+                color: "transparent"
+                clip: true
+
+                Squircle {
+                    smoothing: Config.appearance.cornerSmoothing
+                    anchors.fill: parent
+                    radius: shelf.radius
+                    color: pill.color
+                    borderWidth: 1
+                    borderColor: pill.borderColor
+                }
+
+                opacity: shown ? 1 : 0
+                visible: opacity > 0.01
+
+                Behavior on width  { Morph { shape: island } }
+                Behavior on height { Morph { shape: island } }
+                Behavior on opacity { ContentFade { revealing: shelf.shown } }
+
+                SearchList { win: root; island: island; shelf: shelf }
+                ClipList   { win: root; island: island; shelf: shelf }
+            }
+
 
         }
 
