@@ -236,10 +236,95 @@ PanelWindow {
             Bezel { outer: pane.radius }
         }
 
+        // The switch that decides how much of a page there is.
+        //
+        // In the pane's corner rather than at the foot of every page:
+        // it is not a setting about the shell, it is how much of the
+        // settings you want to be looking at, and the answer has to be
+        // reachable without scrolling to the end of the thing it
+        // shortens.
+        Item {
+            id: paneHead
+            anchors.left: pane.left
+            anchors.right: pane.right
+            anchors.top: pane.top
+            anchors.leftMargin: 26
+            anchors.rightMargin: 26
+            anchors.topMargin: 16
+            height: 26
+
+            Rectangle {
+                id: advanced
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+
+                width: advLabel.implicitWidth + 35
+                height: parent.height
+                radius: height / 2
+
+                color: Config.ui.advanced ? Theme.primary
+                    : (advHover.containsMouse ? Theme.surfaceHigh
+                                              : "transparent")
+                border.width: 1
+                border.color: Config.ui.advanced
+                    ? Theme.primary : Theme.outlineVariant
+
+                Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                Behavior on border.color {
+                    ColorAnimation { duration: Motion.fadeIn }
+                }
+
+                Rectangle {
+                    id: advDot
+                    anchors.left: parent.left
+                    anchors.leftMargin: 9
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 6
+                    height: 6
+                    radius: width / 2
+                    color: Config.ui.advanced ? Theme.textOnPrimary
+                                              : Theme.outline
+
+                    Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                }
+
+                Text {
+                    id: advLabel
+                    anchors.left: advDot.right
+                    anchors.leftMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Advanced"
+                    color: Config.ui.advanced ? Theme.textOnPrimary
+                                              : Theme.textDim
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.4
+                    renderType: Text.NativeRendering
+
+                    Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
+                }
+
+                MouseArea {
+                    id: advHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Config.ui.advanced = !Config.ui.advanced
+                }
+            }
+        }
+
         Flickable {
             id: scroll
-            anchors.fill: pane
-            anchors.margins: 26
+            anchors.left: pane.left
+            anchors.right: pane.right
+            anchors.bottom: pane.bottom
+            anchors.top: paneHead.bottom
+            anchors.leftMargin: 26
+            anchors.rightMargin: 26
+            anchors.bottomMargin: 26
+            anchors.topMargin: 10
 
             contentWidth: width
             contentHeight: loader.item ? loader.item.implicitHeight : 0

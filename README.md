@@ -248,6 +248,12 @@ they hang off its edges and grow outwards.
 | workspaces | dashes: long for where you are, short for occupied, a stub for empty | numbered chips, clickable |
 | tray | the first four icons, quiet | every icon, at full size |
 
+The workspace pod has four ways of saying the same thing at rest, on
+the Island page: **dashes**, **dots**, **numbers**, or **icons** — the
+app you last used on each workspace, which is the only one that says
+what is over there, and the widest. Open, every style becomes the same
+numbered chips.
+
 A pod opens while you point at it, for a moment after what it shows
 changes, and until you click it again if you click it — clicking the
 capsule itself pins it open, and the outline says so. Both collapse to
@@ -475,12 +481,17 @@ One consequence of the merge worth knowing: it preserves values you
 already have. If a release changes a *default*, your existing file
 keeps the old value. Delete `settings.json` to take the new defaults.
 
-Not every key has a control. The window shows the settings people
-reach for; a glyph nudge, a font weight, an Alt+Tab delay and nine of
-the eleven motion durations are still keys, still listed in
-`settings.example.json`, and still read on every start — they just
-stopped charging every reader of the Island page for the privilege.
-`settings.example.json` is the complete list either way.
+The switch in the window's top-right corner decides how much of a page
+there is. Off — the default — the pages show what people reach for;
+on, the tuning appears: pixel sizes, timings, blur internals, pointer
+acceleration. It is `ui.advanced`, and it is remembered.
+
+Not every key has a control even then. A glyph nudge, a font weight,
+an Alt+Tab delay and nine of the eleven motion durations are still
+keys, still listed in `settings.example.json`, and still read on every
+start — they just stopped charging every reader of the Island page for
+the privilege. `settings.example.json` is the complete list either
+way.
 
 Two things the settings app changes are deliberately *not* in that
 file, because they are not island's to own:

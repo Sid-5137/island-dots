@@ -28,8 +28,9 @@ Column {
 
     ChoiceRow {
         configKey: "input.mouseAccel"
+        advanced: true
         label: "Acceleration"
-        description: "Flat is 1:1 — the pointer moves exactly as far as the mouse. Adaptive speeds up as you move faster."
+        description: "Flat is 1:1. Adaptive speeds up as you move faster."
         current: Config.input.mouseAccel
         options: [
             { value: "flat",     label: "Flat" },
@@ -68,8 +69,9 @@ Column {
 
     ChoiceRow {
         configKey: "input.touchpadAccel"
+        advanced: true
         label: "Acceleration"
-        description: "Independent of the mouse setting above."
+        description: "Independent of the mouse above."
         current: Config.input.touchpadAccel
         options: [
             { value: "flat",     label: "Flat" },
@@ -102,8 +104,9 @@ Column {
 
     ToggleRow {
         configKey: "input.dragLock"
+        advanced: true
         label: "Drag lock"
-        description: "Keeps a drag alive if your finger lifts briefly."
+        description: "Keeps a drag alive if your finger lifts."
         checked: Config.input.dragLock
         onToggled: function(v) { Config.input.dragLock = v }
     }
@@ -111,26 +114,28 @@ Column {
     ToggleRow {
         configKey: "input.disableWhileTyping"
         label: "Disable while typing"
-        description: "Ignores the touchpad for a moment after a keystroke, so your palm doesn't move the cursor."
+        description: "Ignores the touchpad just after a keystroke."
         checked: Config.input.disableWhileTyping
         onToggled: function(v) { Config.input.disableWhileTyping = v }
     }
 
     SliderRow {
         configKey: "input.scrollFactor"
+        advanced: true
         label: "Scroll speed"
-        description: "Also affects how far a two-finger scroll moves in terminals, which scroll by whole lines."
+        description: "Also how far a two-finger scroll moves."
         from: 0.1; to: 3.0; stepSize: 0.05; decimals: 2
         value: Config.input.scrollFactor
         onMoved: function(v) { Config.input.scrollFactor = v }
     }
 
-    SectionHeader { text: "Keyboard" }
+    SectionHeader { text: "Keyboard"; advanced: true }
 
     SliderRow {
         configKey: "input.repeatRate"
+        advanced: true
         label: "Repeat rate"
-        description: "Characters per second once a key starts repeating."
+        description: "Characters per second while a key repeats."
         from: 10; to: 60; stepSize: 1; suffix: "/s"
         value: Config.input.repeatRate
         onMoved: function(v) { Config.input.repeatRate = v }
@@ -138,6 +143,7 @@ Column {
 
     SliderRow {
         configKey: "input.repeatDelay"
+        advanced: true
         label: "Repeat delay"
         from: 150; to: 1000; stepSize: 25; suffix: " ms"
         value: Config.input.repeatDelay

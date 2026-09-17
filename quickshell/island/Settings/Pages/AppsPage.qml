@@ -99,13 +99,6 @@ Column {
             text: DefaultApps.problem !== "" ? DefaultApps.problem
                 : DefaultApps.loading ? "Reading the association database…"
                 : "Everything but the terminal goes in "
-                  + "~/.config/mimeapps.list, the file the whole desktop "
-                  + "reads — so these are the machine's settings rather "
-                  + "than island's, and changing one here changes it "
-                  + "everywhere. The terminal is the exception because it "
-                  + "handles no file type, so it has no entry there.\n\n"
-                  + "The first, third and fourth rows are also what "
-                  + "Super+B, Super+E and Super+X spawn."
 
             color: DefaultApps.problem !== "" ? Theme.error : Theme.outline
             font.family: Theme.fontFamily

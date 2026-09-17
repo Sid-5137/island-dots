@@ -106,7 +106,10 @@ Item {
             Row {
                 id: restDashes
                 anchors.centerIn: parent
-                spacing: 4
+                // The pod's own spacing per style — see
+                // Island/Pods/WorkspacePod.qml, which this mirrors.
+                spacing: Config.island.workspaceStyle === "dashes" ? 4
+                       : Config.island.workspaceStyle === "dots" ? 5 : 7
                 opacity: root.open ? 0 : 1
                 visible: opacity > 0.01
 
@@ -117,14 +120,67 @@ Item {
                 Repeater {
                     model: 4
 
-                    Rectangle {
+                    // Four made-up workspaces: the one you are on, two
+                    // with windows, one empty. The shapes and sizes are
+                    // the pod's, so picking a style below shows the
+                    // style rather than an impression of it.
+                    Item {
                         required property int index
+
+                        readonly property bool active: index === 0
+                        readonly property bool busy: index !== 3
+                        readonly property string style:
+                            Config.island.workspaceStyle
+                        readonly property color tint: active ? Theme.primary
+                            : (busy ? Theme.textDim : Theme.outline)
+
                         anchors.verticalCenter: parent.verticalCenter
-                        width: index === 0 ? 16 : (index === 3 ? 4 : 7)
-                        height: 3
-                        radius: height / 2
-                        color: index === 0 ? Theme.primary
-                            : (index === 3 ? Theme.outline : Theme.textDim)
+                        width: style === "numbers" ? label.implicitWidth
+                             : style === "icons" ? (busy ? 14 : 4)
+                             : bar.width
+                        height: 16
+
+                        Rectangle {
+                            id: bar
+                            anchors.centerIn: parent
+                            visible: parent.style === "dashes"
+                                     || parent.style === "dots"
+                            readonly property bool round:
+                                parent.style === "dots"
+                            width: round ? (parent.active ? 9
+                                            : parent.busy ? 6 : 4)
+                                         : (parent.active ? 16
+                                            : parent.busy ? 7 : 4)
+                            height: round ? width : 3
+                            radius: height / 2
+                            color: parent.tint
+                        }
+
+                        Text {
+                            id: label
+                            anchors.centerIn: parent
+                            visible: parent.style === "numbers"
+                            text: parent.index + 1
+                            color: parent.tint
+                            font.family: Theme.fontMono
+                            font.pixelSize: Config.island.fontSize - 2
+                            font.weight: parent.active ? Font.Bold
+                                                       : Font.DemiBold
+                            renderType: Text.NativeRendering
+                        }
+
+                        // A stand-in: the preview has no windows to
+                        // take icons from, so it shows where they
+                        // would sit and how much room they would take.
+                        Rectangle {
+                            anchors.centerIn: parent
+                            visible: parent.style === "icons"
+                            width: parent.busy ? 14 : 4
+                            height: width
+                            radius: parent.busy ? 4 : height / 2
+                            color: parent.tint
+                            opacity: parent.busy && !parent.active ? 0.5 : 1
+                        }
                     }
                 }
             }

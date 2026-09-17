@@ -24,6 +24,15 @@ Item {
 
     property bool open: false
 
+    // A fold can sit behind the Advanced switch too — see
+    // Settings/Settings.qml. Nothing inside one is ever marked: the
+    // fold is already the gate there, and a row hidden as well would
+    // mean opening a section to find it empty.
+    property bool advanced: false
+    property bool shown: true
+
+    visible: shown && (!advanced || Config.ui.advanced)
+
     default property alias content: holder.data
 
     implicitWidth: parent ? parent.width : 400

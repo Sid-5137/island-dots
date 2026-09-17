@@ -223,11 +223,18 @@ Singleton {
             && a.y < b.y + b.h && b.y < a.y + a.h;
     }
 
-    // Whether `rect` may sit at that position — inside the columns,
-    // and clear of everything except the item it replaces.
+    // Whether `rect` is on the grid at all. Separate from `fits`
+    // because a drag no longer asks whether a cell is free — it asks
+    // only whether the cell exists, and pushes whoever is in it.
+    function inBounds(rect) {
+        return rect.x >= 0 && rect.y >= 0 && rect.x + rect.w <= columns;
+    }
+
+    // Whether `rect` may sit at that position — on the grid, and clear
+    // of everything except the item it replaces. Still what `add` asks
+    // when it is looking for a gap to drop a new control into.
     function fits(list, ignore, rect) {
-        if (rect.x < 0 || rect.y < 0 || rect.x + rect.w > columns)
-            return false;
+        if (!inBounds(rect)) return false;
         for (let i = 0; i < list.length; i++) {
             if (i === ignore) continue;
             if (overlaps(list[i], rect)) return false;
@@ -235,16 +242,93 @@ Singleton {
         return true;
     }
 
+    // Where everything ends up if `index` is dropped at `rect`.
+    //
+    // Whatever the card lands on is pushed down — the least it takes
+    // to clear — and a card pushed onto the one below it pushes that
+    // one too. Nothing else moves. A layout is not repacked on a drop
+    // because a gap you left is a gap you meant, and `tidy` is still
+    // the only thing in here that closes one.
+    //
+    // Pure, and called on every step of a drag: the editor draws the
+    // result while you hold the card, and commits this same list when
+    // you let go, so what you were looking at is what you get.
+    function arrange(list, index, rect) {
+        const out = list.slice();
+        const it = out[index];
+        if (!it) return out;
+
+        const pinned = { key: it.key, x: rect.x, y: rect.y,
+                         w: rect.w, h: rect.h, text: it.text };
+        out[index] = pinned;
+
+        // The home-screen case first: drop a card squarely onto one
+        // the same shape and the two trade places, rather than one
+        // shoving the other down a row and everything below it with
+        // them. Only when the rectangles coincide exactly — a card
+        // half over its neighbour is somebody aiming at a gap, and
+        // that is a push.
+        const landed = [];
+        for (let i = 0; i < out.length; i++)
+            if (i !== index && overlaps(out[i], pinned)) landed.push(i);
+
+        if (landed.length === 1) {
+            const o = out[landed[0]];
+            if (o.x === pinned.x && o.y === pinned.y
+                && o.w === pinned.w && o.h === pinned.h) {
+                out[landed[0]] = { key: o.key, x: it.x, y: it.y,
+                                   w: o.w, h: o.h, text: o.text };
+                return out;
+            }
+        }
+
+        // Reading order, so anything that has to move has already
+        // moved by the time the card below it is considered — which
+        // is what makes a push cascade instead of landing on top of
+        // the next one down.
+        const order = [];
+        for (let i = 0; i < out.length; i++) if (i !== index) order.push(i);
+        order.sort((a, b) => out[a].y !== out[b].y ? out[a].y - out[b].y
+                                                  : out[a].x - out[b].x);
+
+        const settled = [pinned];
+        for (const i of order) {
+            const o = out[i];
+            const cand = { key: o.key, x: o.x, y: o.y, w: o.w, h: o.h,
+                           text: o.text };
+
+            // Down until it clears. The grid has no bottom, so this
+            // always ends; the bound is there because a runaway loop
+            // inside a drag handler is a settings window that has
+            // stopped answering.
+            for (let guard = 0; guard < 64; guard++) {
+                let hit = false;
+                for (const s of settled)
+                    if (overlaps(s, cand)) { hit = true; break; }
+                if (!hit) break;
+                cand.y += 1;
+            }
+
+            settled.push(cand);
+            out[i] = cand;
+        }
+        return out;
+    }
+
     // Whether a cell has something in it. The editor draws its grid
     // guides through the gaps only: a card's surface is a translucent
     // wash, so a guide drawn under one is a guide you can see through
     // it, and the panel ends up looking like graph paper.
-    function occupied(x, y) {
+    function occupiedIn(list, x, y) {
         const cell = { x: x, y: y, w: 1, h: 1 };
-        for (const it of items)
+        for (const it of list)
             if (overlaps(it, cell)) return true;
         return false;
     }
+
+    // The committed layout's version. The editor asks the other one
+    // against the layout it is previewing mid-drag.
+    function occupied(x, y) { return occupiedIn(items, x, y) }
 
     function move(index, x, y) {
         const list = items;
@@ -252,12 +336,9 @@ Singleton {
         if (!it) return false;
 
         const rect = { x: x, y: y, w: it.w, h: it.h };
-        if (!fits(list, index, rect)) return false;
+        if (!inBounds(rect)) return false;
 
-        const next = list.slice();
-        next[index] = { key: it.key, x: x, y: y, w: it.w, h: it.h,
-                        text: it.text };
-        commit(next);
+        commit(arrange(list, index, rect));
         return true;
     }
 
@@ -271,12 +352,7 @@ Singleton {
         const ch = Math.max(spec.minH, h);
 
         const rect = { x: it.x, y: it.y, w: cw, h: ch };
-        if (!fits(list, index, rect)) return false;
-
-        const next = list.slice();
-        next[index] = { key: it.key, x: it.x, y: it.y, w: cw, h: ch,
-                        text: it.text };
-        commit(next);
+        commit(arrange(list, index, rect));
         return true;
     }
 

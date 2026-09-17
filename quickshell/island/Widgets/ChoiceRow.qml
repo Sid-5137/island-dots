@@ -16,6 +16,17 @@ Item {
 
     property string configKey: ""
 
+    // Rows worth a glance, and rows worth a visit. Most of what a
+    // settings page holds is a number you set once, and thirty of
+    // them in a column is a page nobody reads — so a row can mark
+    // itself `advanced` and the window hides it until the switch in
+    // its corner is on. `shown` is the row's own condition, kept
+    // apart so that setting one does not quietly cancel the other.
+    property bool advanced: false
+    property bool shown: true
+
+    visible: shown && (!advanced || Config.ui.advanced)
+
     implicitWidth: parent ? parent.width : 400
     implicitHeight: Math.max(48, text.implicitHeight + 20)
 

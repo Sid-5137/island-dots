@@ -133,7 +133,9 @@ Item {
         id: transport
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: root.showText ? parent.bottom : undefined
-        anchors.bottomMargin: root.tall ? Theme.padCard : 8
+        anchors.bottomMargin: !root.tall ? 8
+            : progress.visible ? Theme.padRow * 2 + progress.height
+                               : Theme.padCard
         anchors.verticalCenter: root.showText ? undefined
                                               : parent.verticalCenter
         spacing: root.roomy ? 14 : 8
@@ -190,22 +192,36 @@ Item {
         }
     }
 
-    // How far through, along the bottom edge. A line rather than a
-    // scrubber: at this size a draggable track would be four pixels
-    // of target, and the strip along the panel's floor already has a
-    // real one.
+    // How far through. A line rather than a scrubber: at this size a
+    // draggable track would be four pixels of target, and the strip
+    // along the panel's floor already has a real one.
+    //
+    // Inside the card, inset to where the title starts, rather than
+    // laid along the bottom edge as it used to be. That edge is a
+    // curve, and a straight line ruled across it puts its own ends
+    // outside the card's shape — which is exactly where the eye goes,
+    // because it is the only straight thing down there.
     Rectangle {
+        id: progress
+
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 1
-        height: 2
-        color: Qt.rgba(1, 1, 1, 0.14)
-        visible: Player.available && Player.length > 0
+        anchors.leftMargin: Theme.padCard
+        anchors.rightMargin: Theme.padCard
+        anchors.bottomMargin: Theme.padRow
+        height: 3
+        radius: height / 2
+        color: Qt.rgba(1, 1, 1, 0.22)
+        visible: root.tall && Player.available && Player.length > 0
 
         Rectangle {
-            width: parent.width * Math.max(0, Math.min(1, Player.progress))
+            // Never narrower than it is tall, so the near-start of a
+            // track is a cap rather than a sliver.
+            width: Math.max(parent.height, parent.width
+                * Math.max(0, Math.min(1, Player.progress)))
             height: parent.height
+            radius: parent.radius
             color: Theme.primary
         }
     }

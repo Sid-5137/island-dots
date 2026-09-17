@@ -15,6 +15,7 @@ Singleton {
     readonly property alias idle: adapter.idle
     readonly property alias audio: adapter.audio
     readonly property alias apps: adapter.apps
+    readonly property alias ui: adapter.ui
 
     // Force a write. Most changes save automatically via
     // onAdapterUpdated, but this is here for explicit saves.
@@ -125,7 +126,7 @@ Singleton {
 
     readonly property var sections:
         ["island", "motion", "appearance", "input", "idle", "wallpaper",
-         "audio", "apps"]
+         "audio", "apps", "ui"]
 
     // "island.hoverGrace" -> the shipped value, or undefined if the
     // path isn't one we declare.
@@ -406,6 +407,23 @@ Singleton {
                 // "where am I" and "what is running" without hovering,
                 // scrolling or opening anything.
                 property bool showWorkspaces: true
+
+                // What the workspace pod draws at rest. Open it and
+                // every style becomes the same numbered chips, because
+                // that is the state you aim at — this is only the
+                // glance, and people want different things from it.
+                //
+                //   dashes   a bar for where you are, a dash for a
+                //            workspace holding windows, a stub for an
+                //            empty one
+                //   dots     the same three states, round
+                //   numbers  the addresses themselves, unboxed
+                //   icons    what is running there — the icon of the
+                //            window you last used on each workspace.
+                //            The widest of the four, and the only one
+                //            that answers a question the others cannot
+                property string workspaceStyle: "dashes"
+
                 property bool showTray: true
 
                 // Space between a pod and the pill. Small enough that
@@ -716,6 +734,19 @@ Singleton {
                 // A desktop entry id, such as "kitty.desktop". Empty
                 // means the one hypr/env.lua ships with.
                 property string terminal: ""
+            }
+
+            // How the settings window is being looked at, rather than
+            // anything about the shell. It lives in the file because
+            // the answer should survive closing the window — somebody
+            // who has turned the numbers on is not asking to be shown
+            // the short version again tomorrow.
+            property JsonObject ui: JsonObject {
+                // Most of what is in Settings is a number you set once
+                // and never think about again, and a page that opens
+                // with thirty of them is a page nobody reads. Off,
+                // every row marked `advanced` is hidden.
+                property bool advanced: false
             }
         }
     }

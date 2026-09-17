@@ -57,6 +57,17 @@ Singleton {
         dispatch("hl.dsp.focus({ workspace = " + id + " })");
     }
 
+    // What is on a workspace, as one window class — the one you were
+    // last in there. For the pod's icon style, which answers "what is
+    // over there" rather than "is anything over there". allWindows is
+    // already in focus order, so the first hit is the right one, and
+    // "" means the workspace is empty.
+    function classFor(workspaceId) {
+        for (const w of allWindows)
+            if (w.workspaceId === workspaceId) return w.cls;
+        return "";
+    }
+
     // One workspace either way. Relative rather than arithmetic on
     // `workspaces`: `e+1` is Hyprland's own "the next one that
     // exists", so scrolling the island lands exactly where SUPER+right

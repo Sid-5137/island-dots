@@ -21,14 +21,14 @@ Column {
     id: page
     spacing: 4
 
-    SectionHeader { text: "Sound"; section: "audio" }
+    SectionHeader { text: "Sound"; section: "audio";
+                    advanced: true }
 
     ChoiceRow {
         configKey: "audio.volumeCurve"
+        advanced: true
         label: "Volume scale"
-        description: "What the percentage means. System matches wpctl,"
-            + " pactl and pavucontrol exactly; perceptual remaps it so"
-            + " half way along sounds half as loud."
+        description: "System matches wpctl; perceptual remaps the curve."
         current: Config.audio.volumeCurve
         options: [
             { value: "system",     label: "System" },
@@ -40,6 +40,7 @@ Column {
     Item {
         width: parent.width
         height: curveNote.implicitHeight + 16
+        visible: Config.ui.advanced
 
         Text {
             id: curveNote
@@ -52,12 +53,7 @@ Column {
             // something anyone should have to take on trust.
             text: Audio.perceptual
                 ? "The slider now reads " + Audio.volume + "% where every"
-                  + " other tool reads " + Audio.systemVolume + "%. Nothing"
-                  + " about the sound changed when you switched — only the"
-                  + " number, and where the middle of the slider sits."
                 : "PipeWire applies the cube of this number, so 50% is"
-                  + " −18 dB and the ear reads it as well under a"
-                  + " third. That is the drop that seems to arrive early."
 
             color: Theme.outline
             font.family: Theme.fontFamily
@@ -73,7 +69,6 @@ Column {
         configKey: "idle.enabled"
         label: "Idle actions"
         description: "Dim, lock, blank and suspend after inactivity."
-            + " Off stops hypridle entirely."
         checked: Config.idle.enabled
         onToggled: function(v) { Config.idle.enabled = v }
     }
@@ -81,7 +76,7 @@ Column {
     SliderRow {
         configKey: "idle.dimTimeout"
         label: "Dim after"
-        description: "Lowers the backlight as a warning. 0 to skip."
+        description: "A warning before the rest. 0 to skip."
         from: 0; to: 900; stepSize: 30; suffix: " s"
         value: Config.idle.dimTimeout
         onMoved: function(v) { Config.idle.dimTimeout = v }
@@ -181,12 +176,11 @@ Column {
     // missing rather than leaving a reader that does nothing.
     ChoiceRow {
         configKey: "island.pamConfig"
+        advanced: true
         label: "PAM file"
         description: Biometric.pamFile
-            ? "island adds the fingerprint reader on top of your"
-              + " password. login is password only."
-            : "Only login is installed. Re-run install.sh to add an"
-              + " island file with fingerprint support."
+            ? "island adds the fingerprint reader; login is password only."
+            : "Only login is installed. Re-run install.sh for the other."
         current: Config.island.pamConfig
         options: [
             { value: "login",  label: "login" },

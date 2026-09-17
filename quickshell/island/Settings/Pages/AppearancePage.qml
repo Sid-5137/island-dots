@@ -44,8 +44,8 @@ Column {
     // there is nothing to choose between.
     ChoiceRow {
         label: "Applies to"
-        description: "Which screen the wallpaper below is set on."
-        visible: Screens.multi && Config.wallpaper.perMonitor
+        description: "Which screen this wallpaper is for."
+        shown: Screens.multi && Config.wallpaper.perMonitor
         height: visible ? implicitHeight : 0
         current: page.target
         options: [{ value: "", label: "All" }].concat(
@@ -91,11 +91,9 @@ Column {
         ToggleRow {
             configKey: "wallpaper.perMonitor"
             label: "One per monitor"
-            description: "Give each screen its own wallpaper. The"
-                + " palette still comes from the focused screen's —"
-                + " there is one GTK theme and one set of window"
-                + " borders to drive."
-            visible: Screens.multi
+            description: "Each screen its own. The palette follows the focused"
+                + " one."
+            shown: Screens.multi
             height: visible ? implicitHeight : 0
             checked: Config.wallpaper.perMonitor
             onToggled: function(v) { Config.wallpaper.perMonitor = v }
@@ -112,7 +110,7 @@ Column {
         SliderRow {
             configKey: "wallpaper.rotateMinutes"
             label: "Rotate every"
-            description: "0 disables automatic rotation."
+            description: "0 turns rotation off."
             from: 0; to: 120; stepSize: 5; suffix: " min"
             value: Config.wallpaper.rotateMinutes
             onMoved: function(v) { Config.wallpaper.rotateMinutes = v }
@@ -156,9 +154,7 @@ Column {
     ChoiceRow {
         configKey: "wallpaper.scheme"
         label: "Derived as"
-        description: "How far the palette is allowed to stray from the"
-            + " wallpaper's own colours. The swatches below update as"
-            + " soon as matugen has run."
+        description: "How far the palette may stray from the wallpaper."
         current: Config.wallpaper.scheme
         options: [
             { value: "scheme-monochrome", label: "Mono" },
@@ -191,7 +187,6 @@ Column {
             text: Wallpaper.busy
                 ? "Deriving the palette…"
                 : "These colours drive the shell, GTK3, GTK4 and"
-                  + " Hyprland's window borders together."
             color: Wallpaper.busy ? Theme.primary : Theme.textDim
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
@@ -212,8 +207,7 @@ Column {
     SelectRow {
         configKey: "appearance.gtkTheme"
         label: "GTK theme"
-        description: "The palette is layered on top of whichever theme"
-            + " you pick, so either adw-gtk3 variant works."
+        description: "The palette is layered over whichever you pick."
         options: Theming.gtkThemes
         current: Config.appearance.gtkTheme
         onSelected: function(v) { Config.appearance.gtkTheme = v }
@@ -222,7 +216,7 @@ Column {
     SelectRow {
         configKey: "appearance.iconTheme"
         label: "Icons"
-        description: "Applied to GTK, Qt and the shell together."
+        description: "GTK, Qt and the shell together."
         options: Theming.available
         current: Config.appearance.iconTheme
         onSelected: function(v) { Config.appearance.iconTheme = v }
@@ -251,8 +245,7 @@ Column {
     ToggleRow {
         configKey: "appearance.radiusLink"
         label: "Match everything"
-        description: "Round the pill, the shell's panels and Hyprland's"
-            + " windows to the same corner. Off, each keeps its own."
+        description: "One corner for the pill, the panels and your windows."
         checked: Config.appearance.radiusLink
         onToggled: function(v) { Config.setRadiusLink(v) }
     }
@@ -263,9 +256,8 @@ Column {
     SliderRow {
         configKey: "appearance.panelRadius"
         label: "Corner radius"
-        description: "The pill, every panel and card in the shell, and"
-            + " your window corners."
-        visible: Config.appearance.radiusLink
+        description: "Panels, cards and window corners."
+        shown: Config.appearance.radiusLink
         height: visible ? implicitHeight : 0
         from: 0; to: 32; stepSize: 1; suffix: " px"
         value: Config.appearance.panelRadius
@@ -275,9 +267,8 @@ Column {
     SliderRow {
         configKey: "island.radius"
         label: "Island"
-        description: "The pill's own corner, which grows with the shape"
-            + " and stops at a capsule."
-        visible: !Config.appearance.radiusLink
+        description: "The pill's own corner."
+        shown: !Config.appearance.radiusLink
         height: visible ? implicitHeight : 0
         from: 0; to: 24; stepSize: 1; suffix: " px"
         value: Config.island.radius
@@ -287,9 +278,8 @@ Column {
     SliderRow {
         configKey: "appearance.panelRadius"
         label: "Panels"
-        description: "This window, the control centre, the launcher, and"
-            + " every card, row and button in them."
-        visible: !Config.appearance.radiusLink
+        description: "This window, the control centre and the launcher."
+        shown: !Config.appearance.radiusLink
         height: visible ? implicitHeight : 0
         from: 0; to: 32; stepSize: 1; suffix: " px"
         value: Config.appearance.panelRadius
@@ -299,7 +289,7 @@ Column {
     SliderRow {
         configKey: "appearance.windowRounding"
         label: "Windows"
-        visible: !Config.appearance.radiusLink
+        shown: !Config.appearance.radiusLink
         height: visible ? implicitHeight : 0
         from: 0; to: 24; stepSize: 1; suffix: " px"
         value: Config.appearance.windowRounding
@@ -312,10 +302,9 @@ Column {
     // shell's surfaces from the same number.
     SliderRow {
         configKey: "appearance.cornerSmoothing"
+        advanced: true
         label: "Smoothing"
-        description: "2.0 is a circular corner — what Qt draws by"
-            + " default. Higher spends the same radius over a longer,"
-            + " flatter arc; 4.0 is roughly the corner macOS draws."
+        description: "2.0 is a circular corner; 4.0 is roughly macOS."
         from: 2.0; to: 8.0; stepSize: 0.5; decimals: 1
         value: Config.appearance.cornerSmoothing
         onMoved: function(v) { Config.appearance.cornerSmoothing = v }
@@ -326,8 +315,7 @@ Column {
     SliderRow {
         configKey: "appearance.panelOpacity"
         label: "Panel opacity"
-        description: "Below 1.0 the desktop shows through and the"
-            + " compositor blurs it."
+        description: "Below 1.0 the desktop shows through, blurred."
         from: 0.4; to: 1.0; stepSize: 0.02; decimals: 2
         value: Config.appearance.panelOpacity
         onMoved: function(v) { Config.appearance.panelOpacity = v }
@@ -335,8 +323,9 @@ Column {
 
     SliderRow {
         configKey: "appearance.panelScrim"
+        advanced: true
         label: "Backdrop dim"
-        description: "How far the desktop darkens behind this window."
+        description: "How far the desktop darkens behind it."
         from: 0.0; to: 0.8; stepSize: 0.05; decimals: 2
         value: Config.appearance.panelScrim
         onMoved: function(v) { Config.appearance.panelScrim = v }
@@ -358,7 +347,7 @@ Column {
     SliderRow {
         configKey: "appearance.gapsOut"
         label: "Outer gaps"
-        description: "Between the tiling area and the screen edge."
+        description: "Between the tiling area and the screen."
         from: 0; to: 48; stepSize: 1; suffix: " px"
         value: Config.appearance.gapsOut
         onMoved: function(v) { Config.appearance.gapsOut = v }
@@ -366,6 +355,7 @@ Column {
 
     SliderRow {
         configKey: "appearance.inactiveOpacity"
+        advanced: true
         label: "Inactive opacity"
         description: "How far unfocused windows fade back."
         from: 0.6; to: 1.0; stepSize: 0.02; decimals: 2
@@ -390,8 +380,7 @@ Column {
         SliderRow {
             configKey: "appearance.blurSize"
             label: "Size"
-            description: "Applies to windows and to everything the shell"
-                + " draws translucently."
+            description: "Windows, and everything drawn translucently."
             from: 1; to: 20; stepSize: 1
             value: Config.appearance.blurSize
             onMoved: function(v) { Config.appearance.blurSize = v }
@@ -409,8 +398,7 @@ Column {
         ToggleRow {
             configKey: "appearance.blurOptimize"
             label: "Cache the blur"
-            description: "Off, a blurred surface is recomputed every"
-                + " frame whether or not anything behind it moved."
+            description: "Off, it is recomputed every frame."
             checked: Config.appearance.blurOptimize
             onToggled: function(v) { Config.appearance.blurOptimize = v }
         }
@@ -434,7 +422,7 @@ Column {
         SliderRow {
             configKey: "appearance.borderSize"
             label: "Border size"
-            description: "Window borders, in the palette's own colours."
+            description: "In the palette's own colours."
             from: 0; to: 6; stepSize: 1; suffix: " px"
             value: Config.appearance.borderSize
             onMoved: function(v) { Config.appearance.borderSize = v }

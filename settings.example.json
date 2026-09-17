@@ -124,7 +124,8 @@
         "tileIconOffset": 0,
         "topMargin": 8,
         "trayRestMax": 4,
-        "visibility": "always"
+        "visibility": "always",
+        "workspaceStyle": "dashes"
     },
     "motion": {
         "arriveDamping": 0.78,
@@ -139,6 +140,9 @@
         "popDamping": 0.55,
         "popDuration": 300,
         "reduceMotion": false
+    },
+    "ui": {
+        "advanced": false
     },
     "version": 4,
     "wallpaper": {

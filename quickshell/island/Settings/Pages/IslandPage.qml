@@ -33,9 +33,7 @@ Column {
     ChoiceRow {
         configKey: "island.visibility"
         label: "On screen"
-        description: "Always keeps the strip reserved, so windows start"
-            + " below the island. Smart gives windows the whole screen"
-            + " and moves the island aside when one reaches it."
+        description: "Always reserves the strip. Smart moves aside instead."
         current: Config.island.visibility
         options: [
             { value: "always", label: "Always" },
@@ -47,7 +45,7 @@ Column {
     ToggleRow {
         configKey: "island.hideOnFullscreen"
         label: "Hide when fullscreen"
-        description: "Keeps it out of the way of video and games."
+        description: "Out of the way of video and games."
         checked: Config.island.hideOnFullscreen
         onToggled: function(v) { Config.island.hideOnFullscreen = v }
     }
@@ -57,38 +55,47 @@ Column {
     ToggleRow {
         configKey: "island.showWorkspaces"
         label: "Workspace pod"
-        description: "A capsule left of the island. Dashes at rest,"
-            + " numbered chips when you point at it; click one to"
-            + " switch."
+        description: "Left of the island. Click a chip to switch."
         checked: Config.island.showWorkspaces
         onToggled: function(v) { Config.island.showWorkspaces = v }
+    }
+
+    ChoiceRow {
+        configKey: "island.workspaceStyle"
+        label: "Workspaces at rest"
+        description: "What the pod draws when you are not pointing at it."
+        current: Config.island.workspaceStyle
+        options: [
+            { value: "dashes",  label: "Dashes" },
+            { value: "dots",    label: "Dots" },
+            { value: "numbers", label: "Numbers" },
+            { value: "icons",   label: "Icons" }
+        ]
+        onSelected: function(v) { Config.island.workspaceStyle = v }
     }
 
     ToggleRow {
         configKey: "island.showTray"
         label: "Tray pod"
-        description: "A capsule right of the island. What is running is"
-            + " on screen rather than a scroll away, and it collapses"
-            + " when the tray is empty."
+        description: "Right of the island. Collapses when the tray is empty."
         checked: Config.island.showTray
         onToggled: function(v) { Config.island.showTray = v }
     }
 
     ToggleRow {
         configKey: "island.podPeek"
+        advanced: true
         label: "Peek on change"
-        description: "A pod opens itself for a moment when what it"
-            + " shows changes — a workspace switch, a tray icon asking"
-            + " for attention — then settles back."
+        description: "A pod opens for a moment when what it shows changes."
         checked: Config.island.podPeek
         onToggled: function(v) { Config.island.podPeek = v }
     }
 
     SliderRow {
         configKey: "island.trayRestMax"
+        advanced: true
         label: "Tray icons at rest"
-        description: "Anything past this waits behind a count until the"
-            + " pod opens."
+        description: "The rest wait behind a count until it opens."
         from: 1; to: 8; stepSize: 1
         value: Config.island.trayRestMax
         onMoved: function(v) { Config.island.trayRestMax = v }
@@ -97,8 +104,7 @@ Column {
     ChoiceRow {
         configKey: "island.scrollAction"
         label: "Scroll over the island"
-        description: "While an OSD is up the gesture always adjusts that"
-            + " value instead, whatever this says."
+        description: "An OSD on screen always takes the gesture instead."
         current: Config.island.scrollAction
         options: [
             { value: "workspace", label: "Workspace" },
@@ -121,8 +127,7 @@ Column {
     SliderRow {
         configKey: "island.opacity"
         label: "Opacity"
-        description: "Below 1.0 the wallpaper shows through and the"
-            + " compositor blurs it."
+        description: "Below 1.0 the wallpaper shows through, blurred."
         from: 0.5; to: 1.0; stepSize: 0.02; decimals: 2
         value: Config.island.opacity
         onMoved: function(v) { Config.island.opacity = v }
@@ -130,9 +135,9 @@ Column {
 
     SliderRow {
         configKey: "island.padding"
+        advanced: true
         label: "Padding"
-        description: "Space inside the pill. The collapsed width is its"
-            + " contents plus this, so the pill grows to fit."
+        description: "Space inside the pill."
         from: 8; to: 40; stepSize: 1; suffix: " px"
         value: Config.island.padding
         onMoved: function(v) { Config.island.padding = v }
@@ -140,6 +145,7 @@ Column {
 
     SliderRow {
         configKey: "island.fontSize"
+        advanced: true
         label: "Font size"
         from: 9; to: 20; stepSize: 1; suffix: " px"
         value: Config.island.fontSize
@@ -148,6 +154,7 @@ Column {
 
     Disclosure {
         width: parent.width
+        advanced: true
         text: "Geometry"
         hint: "widths and margins"
 
@@ -162,9 +169,7 @@ Column {
         SliderRow {
             configKey: "island.podGap"
             label: "Pod gap"
-            description: "Space between a pod and the pill. Small enough"
-                + " that the three read as one object; wide enough that"
-                + " they are three shapes and not a broken one."
+            description: "Space between a pod and the pill."
             from: 0; to: 24; stepSize: 1; suffix: " px"
             value: Config.island.podGap
             onMoved: function(v) { Config.island.podGap = v }
@@ -190,7 +195,7 @@ Column {
         SliderRow {
             configKey: "island.searchMaxRows"
             label: "Launcher results"
-            description: "How many matches the launcher grows to show."
+            description: "How many matches it grows to show."
             from: 3; to: 14; stepSize: 1
             value: Config.island.searchMaxRows
             onMoved: function(v) { Config.island.searchMaxRows = v }
@@ -208,6 +213,7 @@ Column {
 
     Disclosure {
         width: parent.width
+        advanced: true
         text: "Timing"
         hint: "hover, collapse, notifications"
 
@@ -215,8 +221,6 @@ Column {
             configKey: "island.hoverGrace"
             label: "Hover grace"
             description: "How long it stays out after the cursor leaves."
-                + " Without this the pill moves out from under the"
-                + " cursor, loses hover, and hides."
             from: 0; to: 1200; stepSize: 50; suffix: " ms"
             value: Config.island.hoverGrace
             onMoved: function(v) { Config.island.hoverGrace = v }
@@ -225,8 +229,8 @@ Column {
         SliderRow {
             configKey: "island.collapseDelay"
             label: "Collapse delay"
-            description: "0 keeps the control centre open until you"
-                + " click again, which is the default."
+            description: "0 keeps the control centre open until you click"
+                + " again."
             from: 0; to: 2000; stepSize: 50; suffix: " ms"
             value: Config.island.collapseDelay
             onMoved: function(v) { Config.island.collapseDelay = v }
@@ -235,8 +239,7 @@ Column {
         SliderRow {
             configKey: "island.revealZone"
             label: "Reveal zone"
-            description: "Height of the strip at the top edge that"
-                + " brings a hidden island back."
+            description: "The strip at the top edge that brings it back."
             from: 4; to: 40; stepSize: 1; suffix: " px"
             value: Config.island.revealZone
             onMoved: function(v) { Config.island.revealZone = v }
@@ -260,10 +263,7 @@ Column {
         ToggleRow {
             configKey: "island.pillTitle"
             label: "Track title in the pill"
-            description: "Off, a playing track is three animated bars"
-                + " beside the date. On, the title takes the date's"
-                + " place — and takes the pill's width with it every"
-                + " time the track changes."
+            description: "Off, a playing track is three bars beside the date."
             checked: Config.island.pillTitle
             onToggled: function(v) { Config.island.pillTitle = v }
         }
@@ -294,10 +294,8 @@ Column {
         // stopwatch, and the other nine are settings.json only.
         // Moving any of them puts this row on "Custom", which is how
         // you can tell from here that one has been moved.
-        description: "Fluid is the tempo measured off Dynamite V3 — the"
-            + " same spring, about two and a half times faster. Calm is"
-            + " what shipped before. Springy keeps the speed and spends"
-            + " the damping instead."
+        description: "Fluid is Dynamite V3's spring. Springy trades damping"
+            + " for it."
         current: Motion.tempo
         options: Motion.tempo === "custom"
             ? [{ value: "fluid",   label: "Fluid" },
@@ -315,16 +313,16 @@ Column {
     ToggleRow {
         configKey: "motion.reduceMotion"
         label: "Reduce motion"
-        description: "Drops the springs and the shape morphs and keeps"
-            + " the cross-fades, which are not a vestibular trigger."
+        description: "Drops the springs and the morphs, keeps the cross-fades."
         checked: Config.motion.reduceMotion
         onToggled: function(v) { Config.motion.reduceMotion = v }
     }
 
     SliderRow {
         configKey: "motion.expandDuration"
+        advanced: true
         label: "Open"
-        description: "How long the shape takes to reach a panel."
+        description: "How long the shape takes to arrive."
         from: 160; to: 900; stepSize: 10; suffix: " ms"
         value: Config.motion.expandDuration
         onMoved: function(v) { Config.motion.expandDuration = v }
@@ -332,10 +330,9 @@ Column {
 
     SliderRow {
         configKey: "motion.collapseDuration"
+        advanced: true
         label: "Close"
         description: "Shorter than opening, and without the spring."
-            + " A shape on its way out that springs back toward"
-            + " where it was reads as an argument."
         from: 120; to: 600; stepSize: 10; suffix: " ms"
         value: Config.motion.collapseDuration
         onMoved: function(v) { Config.motion.collapseDuration = v }

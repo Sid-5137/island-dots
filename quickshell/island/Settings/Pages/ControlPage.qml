@@ -24,9 +24,12 @@ import "root:/Widgets/Control"
 // redrawn: `live` is false, so a press starts a drag instead of
 // turning your Wi-Fi off while you tidy up.
 //
-// And nothing is committed until you let go. Dragging over a cell
-// somebody else is in shows the move refused, in place, rather than
-// pushing them aside and leaving you to work out where they went.
+// And nothing is committed until you let go. Dragging onto a cell
+// somebody else is in pushes them down while you hold it, the way a
+// home screen does: you can see where they went, and letting go
+// somewhere else puts them back, because the layout underneath has
+// not changed yet. The canvas draws the arrangement you would get,
+// not the one you have.
 
 Column {
     id: page
@@ -46,11 +49,33 @@ Column {
     property int ghostY: 0
     property int ghostW: 1
     property int ghostH: 1
-    property bool ghostOk: true
     property bool resizing: false
 
+    // What the canvas is drawing: the committed layout, or — while a
+    // card is in hand — what that layout would become if you let go
+    // here. Everything on the canvas measures itself against this, so
+    // the cards being pushed aside move as you drag rather than after
+    // you drop.
+    //
+    // Same order and length as the committed list, so a card can read
+    // its own slot out of it by index without the Repeater above
+    // having to rebuild — which mid-drag would drop the mouse grab.
+    readonly property var layout: active >= 0
+        ? ControlLayout.arrange(ControlLayout.items, active,
+              { x: ghostX, y: ghostY, w: ghostW, h: ghostH })
+        : ControlLayout.items
+
+    // The grid has no fixed height: a push can grow it, and the rows
+    // it grows by have to exist before the pushed card lands in them
+    // or it is drawn outside the canvas and clipped.
+    readonly property int rows: {
+        let n = 0;
+        for (const i of layout) n = Math.max(n, i.y + i.h);
+        return Math.max(1, n);
+    }
+
     function release() {
-        if (active >= 0 && ghostOk) {
+        if (active >= 0) {
             if (resizing) ControlLayout.resize(active, ghostW, ghostH);
             else ControlLayout.move(active, ghostX, ghostY);
         }
@@ -195,7 +220,8 @@ Column {
             // few pixels narrower than the widest panel anyone can
             // configure, which is the only case that scales.
             width: Math.min(parent.width, Config.island.controlWidth)
-            height: ControlLayout.panelHeight
+            height: Config.island.controlPad * 2
+                  + ControlLayout.itemHeight(page.rows)
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
 
@@ -219,7 +245,7 @@ Column {
             // The cells, so an empty part of the panel still reads as
             // somewhere a control could go.
             Repeater {
-                model: ControlLayout.columns * ControlLayout.rows
+                model: ControlLayout.columns * page.rows
 
                 Rectangle {
                     required property int index
@@ -231,7 +257,7 @@ Column {
                     width: ControlLayout.itemWidth(canvas.width, 1)
                     height: ControlLayout.itemHeight(1)
 
-                    visible: !ControlLayout.occupied(cx, cy)
+                    visible: !ControlLayout.occupiedIn(page.layout, cx, cy)
 
                     radius: Theme.radiusSmall
                     color: "transparent"
@@ -252,13 +278,18 @@ Column {
 
                     readonly property bool dragging: page.active === index
 
-                    // While this one is being dragged it follows the
-                    // ghost, so the card itself is the preview and
-                    // there is no second rectangle chasing the cursor.
-                    readonly property int cellX: dragging ? page.ghostX : modelData.x
-                    readonly property int cellY: dragging ? page.ghostY : modelData.y
-                    readonly property int cellW: dragging ? page.ghostW : modelData.w
-                    readonly property int cellH: dragging ? page.ghostH : modelData.h
+                    // Its slot in the arrangement the canvas is
+                    // drawing — where it is, or where this drag would
+                    // put it. The card being dragged is the preview
+                    // itself, so there is no second rectangle chasing
+                    // the cursor, and the ones it displaces animate to
+                    // the slots they would end up in.
+                    readonly property var slot: page.layout[index] || modelData
+
+                    readonly property int cellX: slot.x
+                    readonly property int cellY: slot.y
+                    readonly property int cellW: slot.w
+                    readonly property int cellH: slot.h
 
                     x: ControlLayout.itemX(canvas.width, cellX)
                     y: ControlLayout.itemY(cellY)
@@ -266,6 +297,20 @@ Column {
                     height: ControlLayout.itemHeight(cellH)
 
                     z: dragging ? 10 : 1
+
+                    // The lift. A card in hand sits a little above the
+                    // ones it is being dragged over, which is most of
+                    // what makes a drag feel like picking something up
+                    // rather than like editing two numbers.
+                    scale: dragging ? 1.04 : 1
+
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: Motion.hover
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Motion.arrive
+                        }
+                    }
 
                     // Snapping between cells is the whole feedback, so
                     // it is animated. Not while dragging: a spring
@@ -295,21 +340,34 @@ Column {
                         opacity: card.dragging ? 0.85 : 1
                     }
 
-                    // Refusal, shown where the card is rather than
-                    // where it came from.
+                    // The card in hand, marked as such. It used to
+                    // go red where a move was refused; a drop is not
+                    // refused any more, because anything already there
+                    // moves out of the way.
                     Rectangle {
                         anchors.fill: parent
                         visible: card.dragging
                         radius: Theme.radiusLarge
                         color: "transparent"
                         border.width: 2
-                        border.color: page.ghostOk ? Theme.primary : Theme.error
+                        border.color: Theme.primary
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: card.dragging
                             ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+
+                        // The page is a Flickable, and a Flickable
+                        // takes the grab off whatever it contains the
+                        // moment a press turns into a drag — so
+                        // dragging a card upwards scrolled the
+                        // settings page instead of moving the card,
+                        // and the card stayed where it was. A card is
+                        // never a scroll gesture: the wheel still
+                        // scrolls, and the pointer over a card is
+                        // holding it.
+                        preventStealing: true
 
                         property real grabX: 0
                         property real grabY: 0
@@ -321,7 +379,6 @@ Column {
                             page.ghostY = card.modelData.y;
                             page.ghostW = card.modelData.w;
                             page.ghostH = card.modelData.h;
-                            page.ghostOk = true;
                             grabX = m.x;
                             grabY = m.y;
                         }
@@ -345,13 +402,18 @@ Column {
                             const py = card.y + m.y - grabY
                                      - Config.island.controlPad;
 
-                            const cx = Math.max(0, Math.round(px / stepX));
-                            const cy = Math.max(0, Math.round(py / stepY));
+                            // Held to the grid rather than refused
+                            // at the edge of it: a card dragged past
+                            // the right-hand column stops against it,
+                            // and one dragged off the bottom lands in
+                            // a new row under everything rather than
+                            // somewhere out in the void.
+                            const cx = Math.max(0, Math.min(
+                                ControlLayout.columns - page.ghostW,
+                                Math.round(px / stepX)));
+                            const cy = Math.max(0, Math.min(
+                                ControlLayout.rows, Math.round(py / stepY)));
 
-                            const rect = { x: cx, y: cy,
-                                           w: card.cellW, h: card.cellH };
-                            page.ghostOk = ControlLayout.fits(
-                                ControlLayout.items, card.index, rect);
                             page.ghostX = cx;
                             page.ghostY = cy;
                         }
@@ -474,6 +536,10 @@ Column {
                             anchors.margins: -4
                             cursorShape: Qt.SizeFDiagCursor
 
+                            // As above: a resize that runs downwards
+                            // is not the page asking to be scrolled.
+                            preventStealing: true
+
                             onPressed: {
                                 page.active = card.index;
                                 page.resizing = true;
@@ -481,7 +547,6 @@ Column {
                                 page.ghostY = card.modelData.y;
                                 page.ghostW = card.modelData.w;
                                 page.ghostH = card.modelData.h;
-                                page.ghostOk = true;
                             }
 
                             onPositionChanged: function(m) {
@@ -501,18 +566,13 @@ Column {
                                 // gap goes back on before dividing or
                                 // every card reads a fraction narrow.
                                 const spec = ControlLayout.spec(card.modelData.key);
-                                const w = Math.max(spec.minW, Math.round(
-                                    (grip.x + m.x + Config.island.controlGap) / stepX));
+                                const w = Math.max(spec.minW, Math.min(
+                                    ControlLayout.columns - card.modelData.x,
+                                    Math.round((grip.x + m.x
+                                        + Config.island.controlGap) / stepX)));
                                 const h = Math.max(spec.minH, Math.round(
                                     (grip.y + m.y + Config.island.controlGap) / stepY));
 
-                                const rect = { x: card.modelData.x,
-                                               y: card.modelData.y,
-                                               w: w, h: h };
-                                page.ghostOk = w + card.modelData.x
-                                        <= ControlLayout.columns
-                                    && ControlLayout.fits(ControlLayout.items,
-                                                          card.index, rect);
                                 page.ghostW = w;
                                 page.ghostH = h;
                             }
@@ -621,13 +681,13 @@ Column {
 
     // ── The rest ─────────────────────────────────────────────
 
-    SectionHeader { text: "Panel" }
+    SectionHeader { text: "Panel"; advanced: true }
 
     SliderRow {
         configKey: "island.controlWidth"
+        advanced: true
         label: "Width"
-        description: "The canvas above is the real thing at the real"
-            + " size, so this changes both."
+        description: "The canvas above is this size."
         from: 420; to: 720; stepSize: 4; suffix: " px"
         value: Config.island.controlWidth
         onMoved: function(v) { Config.island.controlWidth = v }
@@ -635,9 +695,9 @@ Column {
 
     SliderRow {
         configKey: "island.controlCell"
+        advanced: true
         label: "Row height"
-        description: "How tall one cell is. Everything in the panel is"
-            + " a whole number of these."
+        description: "How tall one cell is."
         from: 36; to: 72; stepSize: 2; suffix: " px"
         value: Config.island.controlCell
         onMoved: function(v) { Config.island.controlCell = v }
@@ -645,6 +705,7 @@ Column {
 
     SliderRow {
         configKey: "island.controlGap"
+        advanced: true
         label: "Gap"
         from: 0; to: 20; stepSize: 1; suffix: " px"
         value: Config.island.controlGap
@@ -653,6 +714,7 @@ Column {
 
     SliderRow {
         configKey: "island.controlPad"
+        advanced: true
         label: "Padding"
         from: 8; to: 32; stepSize: 1; suffix: " px"
         value: Config.island.controlPad
