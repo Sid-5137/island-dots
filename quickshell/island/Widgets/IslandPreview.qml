@@ -79,8 +79,13 @@ Item {
 
             readonly property bool shown: Config.island.showWorkspaces
 
-            width: shown ? (root.open ? openDashes.implicitWidth + 16
-                                      : restDashes.implicitWidth + 16)
+            // The pod's floor as well as its padding — a pod is never
+            // narrower than it is tall. Four made-up workspaces never
+            // reach it, but a preview that mirrors the pod has to
+            // mirror the whole line or it is a preview of the old one.
+            width: shown ? Math.max(root.shapeHeight,
+                                    (root.open ? openDashes.implicitWidth
+                                               : restDashes.implicitWidth) + 16)
                          : 0
             height: root.shapeHeight
             // The real pod's own line, against the same height — see

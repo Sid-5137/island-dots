@@ -48,8 +48,17 @@ Singleton {
     // register as a gap rather than as antialiasing.
     readonly property color bezel: Qt.rgba(1, 1, 1, 0.14)
 
-    readonly property string fontFamily: "JetBrainsMono Nerd Font"
-    readonly property string fontMono:   "JetBrainsMono Nerd Font Mono"
+    // Set on the Appearance page. The shipped names are the fallback
+    // rather than the default, and they are doing real work: a font
+    // that gets uninstalled after it was picked leaves the key
+    // pointing at a family fontconfig cannot resolve, and a shell
+    // silently drawing in Qt's default sans — with every icon a box,
+    // because that font has none of them — is a much harder thing to
+    // diagnose than a shell that went back to what it came with.
+    readonly property string fontFamily:
+        Config.appearance.fontFamily || "JetBrainsMono Nerd Font"
+    readonly property string fontMono:
+        Config.appearance.fontMono || "JetBrainsMono Nerd Font Mono"
 
     readonly property int fontSizeSmall:  11
     readonly property int fontSizeNormal: 13

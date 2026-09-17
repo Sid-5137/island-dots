@@ -118,7 +118,14 @@ Item {
     anchors.rightMargin: shown ? Config.island.podGap : -8
     anchors.leftMargin: shown ? Config.island.podGap : -8
 
-    width: shown ? Math.max(20, open ? openWidth : restWidth) : 0
+    // Never narrower than it is tall. One workspace dot or one tray
+    // icon measures about twenty-five pixels against a height of
+    // thirty-four, and the corner is clamped to half the shorter side
+    // — so the pod ends up a lozenge standing on end beside a pill
+    // lying down, which is the one shape the island does not own. At
+    // the floor it is square, the corner has the full half to spend,
+    // and a pod with a single thing in it comes out round.
+    width: shown ? Math.max(height, open ? openWidth : restWidth) : 0
 
     // Matches the pill rather than being a fixed height of its own:
     // hovering either one lifts all three shapes together.

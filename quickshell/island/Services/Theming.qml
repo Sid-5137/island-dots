@@ -135,6 +135,85 @@ Singleton {
         }
     }
 
+    // ── Fonts ────────────────────────────────────────────────────
+    //
+    // Two lists, because the two settings have different jobs and
+    // different ways of going wrong.
+    //
+    // `fonts` drives the interface font and is filtered by GLYPH
+    // rather than by name — ':charset=f0928', the same probe
+    // install.sh uses, md-wifi_strength_4 out of the shell's own
+    // register. Every icon the shell draws is a codepoint in the text
+    // font, not an image; Services/Icons.qml is the list. So an
+    // interface font without them turns the Wi-Fi bars, the settings
+    // tabs and the padlock on a secured network into boxes, and does
+    // it everywhere at once. A dropdown that can only offer fonts
+    // which answer that probe cannot be used to do that, which is
+    // worth more than offering all 132 and a warning underneath.
+    //
+    // `monoFonts` is the plain fontconfig question, ':spacing=100'.
+    // Nothing drawn in the mono font is an icon — clipboard entries,
+    // workspace numbers, the password field, the value beside a
+    // slider — so there is nothing to protect and no reason to narrow
+    // the list.
+    property var fonts: []
+    property var monoFonts: []
+
+    // fontconfig names every weight a font was patched into as a
+    // family of its own: "JetBrainsMono NF" arrives alongside NF
+    // Light, NF Medium, NF SemiBold and six more, and 206 families on
+    // this machine are about 132 fonts. Worse, "ExtraBold" as an
+    // interface font is a mistake the list should not be holding the
+    // door open for.
+    //
+    // So a weight word at the end goes — but only when the family it
+    // is a weight OF is installed too. Somebody whose only copy of a
+    // face is "Iosevka Light" still gets to choose it.
+    function families(text) {
+        const all = [];
+        for (const line of text.split("\n"))
+            for (const name of line.split(",")) {
+                const f = name.trim();
+                if (f !== "" && all.indexOf(f) < 0) all.push(f);
+            }
+
+        const weight = /^(Thin|ExtraLight|UltraLight|Light|Regular|Book|Medium|SemiBold|DemiBold|Bold|ExtraBold|UltraBold|Black|Heavy|Italic|Oblique)$/i;   // Adobe spells it Semibold, Nerd Fonts SemiBold
+
+        return all.filter(f => {
+            const cut = f.lastIndexOf(" ");
+            if (cut < 0 || !weight.test(f.slice(cut + 1))) return true;
+            return all.indexOf(f.slice(0, cut)) < 0;
+        }).sort((a, b) => a.localeCompare(b));
+    }
+
+    Process {
+        id: fontScan
+        running: true
+        command: ["sh", "-c", "fc-list ':charset=f0928' family 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.fonts = root.families(this.text);
+                console.log("[Theming] found", root.fonts.length,
+                            "fonts carrying the shell's icon glyphs");
+                if (root.fonts.length === 0)
+                    console.warn("[Theming] no font answers ':charset=f0928' —"
+                        + " the icons will be boxes until a Nerd Font v3 is"
+                        + " installed. See install.sh.");
+            }
+        }
+    }
+
+    Process {
+        id: monoScan
+        running: true
+        command: ["sh", "-c", "fc-list ':spacing=100' family 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.monoFonts = root.families(this.text);
+            }
+        }
+    }
+
     // Reapply whenever any of the three change.
     // Not readonly, for the same reason as Compositor: an unread
     // readonly binding is evaluated lazily and never signals.
@@ -164,10 +243,14 @@ Singleton {
         function icons(): string { return root.available.join(", ") }
         function cursors(): string { return root.cursors.join(", ") }
         function gtk(): string { return root.gtkThemes.join(", ") }
+        function fonts(): string { return root.fonts.join(", ") }
+        function mono(): string { return root.monoFonts.join(", ") }
         function rescan(): void {
             iconScan.running = true;
             cursorScan.running = true;
             gtkScan.running = true;
+            fontScan.running = true;
+            monoScan.running = true;
         }
     }
 }

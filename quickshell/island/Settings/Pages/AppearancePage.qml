@@ -238,6 +238,36 @@ Column {
         onMoved: function(v) { Config.appearance.cursorSize = v }
     }
 
+    // Fonts sit with the themes rather than in a section of their
+    // own: this is the same question the three rows above it ask —
+    // what the palette gets applied to — and a typeface is not a
+    // different kind of answer from an icon set.
+    SectionHeader { text: "Fonts" }
+
+    SelectRow {
+        configKey: "appearance.fontFamily"
+        label: "Interface"
+        // Says why the list is short before the shortness reads as a
+        // missing font. Somebody with forty families installed and
+        // twelve in the dropdown is owed the reason.
+        description: "Everything the shell draws. Only fonts carrying its"
+            + " icon glyphs are listed — they are codepoints in this font,"
+            + " not images."
+        options: Theming.fonts
+        current: Config.appearance.fontFamily
+        onSelected: function(v) { Config.appearance.fontFamily = v }
+    }
+
+    SelectRow {
+        configKey: "appearance.fontMono"
+        label: "Monospace"
+        description: "Clipboard entries, workspace numbers, the password"
+            + " field and the value beside a slider."
+        options: Theming.monoFonts
+        current: Config.appearance.fontMono
+        onSelected: function(v) { Config.appearance.fontMono = v }
+    }
+
     SectionHeader { text: "Corners" }
 
     CornerPreview { width: parent.width }

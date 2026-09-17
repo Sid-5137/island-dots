@@ -617,6 +617,17 @@ Singleton {
                 property real panelScrim: 0.0
                 property int fontScale: 100      // percent
 
+                // The two fonts the shell draws with, both on the
+                // Appearance page.
+                //
+                // fontFamily is not a free choice and the page does
+                // not offer it as one: the shell's icons are
+                // codepoints in the text font rather than images, so
+                // the list is filtered to fonts that carry them. See
+                // Theming.fonts.
+                property string fontFamily: "JetBrainsMono Nerd Font"
+                property string fontMono: "JetBrainsMono Nerd Font Mono"
+
                 // Whether the three corner radii move as one. See the
                 // `radii` block above; the settings page shows one
                 // slider while this is on and three while it is off.

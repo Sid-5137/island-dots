@@ -9,6 +9,8 @@
         "cornerSmoothing": 4.0,
         "cursorSize": 24,
         "cursorTheme": "Bibata-Modern-Ice",
+        "fontFamily": "JetBrainsMono Nerd Font",
+        "fontMono": "JetBrainsMono Nerd Font Mono",
         "fontScale": 100,
         "gapsIn": 4,
         "gapsOut": 8,
