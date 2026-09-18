@@ -4,28 +4,11 @@ import "root:/Services"
 
 // The month, and today's events under it.
 //
-// The card is portrait — three cells across and five down where the
-// shipped layout puts it — and a month is not. Seven columns by five
-// rows is a landscape shape, so a month drawn in this card has height
-// to give away, and the obvious places to put it are all wrong.
-// Dividing the card's height by the number of weeks put fourteen
-// pixels between one week and the next against four between one date
-// and the date beside it, and the grid stopped reading as a grid.
-// Square cells fixed the gaps and left seventy pixels of nothing under
-// the last week. Centring the whole block moved that hole above the
-// month's name instead.
-//
-// What absorbs it is a sixth row, and a seventh for the weekday names.
-// Every month gets the sixth whether or not it needs one: the days
-// either side of the month fill it, drawn dim the way a wall calendar
-// prints them, so the grid is the same height in February as in August
-// and no longer changes shape as you page through the year. The names
-// take a row of their own on the same pitch, which is what makes the
-// card read as one rhythm from the title down rather than as a header
-// with a table under it. Seven rows of a card this size come out
-// square, which is where the gaps between dates measure the same
-// across as they do down; a card stretched taller than that stops at a
-// quarter again and pads instead.
+// Seven rows on one pitch: six of dates plus one of weekday names.
+// The sixth date row is always drawn, filled with the days either side
+// of the month, so the grid does not change height between February
+// and August. Cells stay square — that is where the gaps measure the
+// same across as down; a taller card caps at a quarter again and pads.
 
 Item {
     id: root
@@ -111,7 +94,7 @@ Item {
             anchors.centerIn: parent
             text: Qt.formatDateTime(root.shown, "MMMM yyyy")
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall + 1
             font.weight: Font.Bold
             font.letterSpacing: 0.4
@@ -138,8 +121,9 @@ Item {
 
                 text: modelData.g
                 color: nav.containsMouse ? Theme.text : Theme.outline
-                font.family: Theme.fontFamily
+                font.family: Theme.fontIcons
                 font.pixelSize: 15
+                renderType: Text.NativeRendering
 
                 Behavior on color {
                     ColorAnimation { duration: Motion.fadeIn }
@@ -197,7 +181,7 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         text: modelData
                         color: Theme.textDim
-                        font.family: Theme.fontFamily
+                        font.family: Theme.fontIsland
                         font.pixelSize: Math.min(
                             Theme.fontSizeSmall - 1,
                             Math.round(root.cellW * 0.3))
@@ -251,7 +235,7 @@ Item {
                             color: parent.isToday ? Theme.textOnPrimary
                                  : parent.inMonth ? Theme.text
                                                   : Theme.outline
-                            font.family: Theme.fontFamily
+                            font.family: Theme.fontIsland
                             font.weight: parent.isToday ? Font.Bold : Font.DemiBold
                             font.pixelSize: Math.min(
                                 Theme.fontSizeSmall + 1,
@@ -313,7 +297,7 @@ Item {
                     width: events.width - 57
                     text: modelData.title
                     color: Theme.text
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall - 1
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight

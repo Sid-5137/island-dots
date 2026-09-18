@@ -21,22 +21,11 @@ Item {
     anchors.fill: parent
     anchors.margins: inset
 
-    // How far in the popup holds its contents.
-    //
-    // This was a flat 16, which is correct for exactly one setting of
-    // the radius slider: the one it was measured against. A popup is
-    // 104px tall, so its corner is a little over the slider's value,
-    // and at 14 the two happen to agree. Push the slider up and the
-    // corner grows past the margin — the icon tile's top-left and the
-    // reply field's bottom corners end up sitting inside the arc, each
-    // squarely in the part of the panel that is busy curving away from
-    // them. Nothing overlaps, so nothing looks broken; it just looks
-    // like the contents were laid out for a squarer popup and the
-    // corners were rounded afterwards.
-    //
-    // Tied to the slider instead, so the inset opens up with the
-    // corner it has to clear. The multiplier is what keeps today's
-    // default landing on today's 16.
+    // How far in the popup holds its contents. Tied to the radius
+    // rather than flat, so the inset opens up with the corner it has
+    // to clear — otherwise the icon tile and the reply field end up
+    // inside the arc at any radius but the one this was measured at.
+    // The multiplier keeps today's default landing on today's 16.
     readonly property int inset:
         Math.max(Theme.padCard, Math.round(Config.island.radius * 1.15))
 
@@ -91,9 +80,10 @@ Item {
             text: Icons.bell
             color: root.n && root.n.critical
                 ? Theme.textOnError : Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIcons
             font.pixelSize: 20
             font.weight: Config.island.fontWeight
+            renderType: Text.NativeRendering
         }
     }
 
@@ -108,7 +98,7 @@ Item {
             width: parent.width
             text: root.n ? root.n.summary : ""
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeNormal
             font.weight: Font.DemiBold
             elide: Text.ElideRight
@@ -120,7 +110,7 @@ Item {
             text: root.n ? root.n.body : ""
             visible: text !== ""
             color: Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.DemiBold
             // Senders send markup whether or not it's
@@ -136,7 +126,7 @@ Item {
             width: parent.width
             text: root.n ? root.n.appName : ""
             color: Theme.outline
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall - 2
             font.weight: Font.DemiBold
             elide: Text.ElideRight
@@ -179,7 +169,7 @@ Item {
             anchors.rightMargin: sendBtn.width + 16
             verticalAlignment: Text.AlignVCenter
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall
             clip: true
 
@@ -206,7 +196,7 @@ Item {
             color: replyField.text === ""
                 ? Theme.outline
                 : (sendHover.containsMouse ? Theme.primary : Theme.text)
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.DemiBold
             renderType: Text.NativeRendering

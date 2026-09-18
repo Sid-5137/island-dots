@@ -167,7 +167,7 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     text: String(modelData).replace("scheme-", "")
                     color: parent.parent.active ? Theme.primary : Theme.text
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall
                     font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap

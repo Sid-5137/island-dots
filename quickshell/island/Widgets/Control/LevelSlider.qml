@@ -4,21 +4,14 @@ import "root:/Services"
 
 // Volume and brightness, as a bar you can hit.
 //
-// The old sliders were an 8px rail with a knob that appeared on
-// hover — a shape borrowed from a settings dialog, where the pointer
-// is already still and the value is being set precisely. A control
-// centre is the opposite: it is open for two seconds and the gesture
-// is a swipe at roughly the right place. So the track is the whole
-// control, the fill is the value, and there is no knob to find. The
-// glyph rides inside the fill, which means the thing you are most
-// likely to aim at — mute — is wherever the level already is.
+// The track is the whole control and there is no knob to find — a
+// control centre is open for two seconds and the gesture is a swipe at
+// roughly the right place. The glyph rides inside the fill, so mute is
+// wherever the level already is.
 //
-// The card changes shape rather than scaling. Wide, it has room for
-// a name; squeezed, the name goes and the bar stays, because a bar
-// with no label still reads as a level while a label with no bar does
-// not. Taller than it is wide, it stands up and fills from the
-// bottom, which is the one orientation where "more" is unambiguous
-// without any label at all.
+// The card changes shape rather than scaling: squeezed, the label goes
+// and the bar stays; taller than wide, it stands up and fills from the
+// bottom.
 
 Item {
     id: root
@@ -64,7 +57,7 @@ Item {
         visible: root.showLabel
         text: root.label
         color: Theme.text
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.Bold
         font.letterSpacing: 0.4
@@ -83,8 +76,9 @@ Item {
                  && root.width >= 130
         text: "›"
         color: more.containsMouse ? Theme.text : Theme.outline
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: 15
+        renderType: Text.NativeRendering
 
         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
@@ -198,9 +192,10 @@ Item {
 
             text: root.glyph
             color: covered ? Theme.textOnPrimary : Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIcons
             font.pixelSize: Math.min(15, Math.round(
                 (root.vertical ? track.width : track.height) * 0.62))
+            renderType: Text.NativeRendering
 
             readonly property bool covered: root.vertical
                 ? fill.height > height + 12

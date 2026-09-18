@@ -118,21 +118,35 @@ Column {
                         : modelData.signal > 40 ? Icons.wifi3
                         : modelData.signal > 15 ? Icons.wifi2 : Icons.wifi1
                     color: modelData.active ? Theme.primary : Theme.textDim
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIcons
                     font.pixelSize: 15
+                    renderType: Text.NativeRendering
                 }
 
                 Text {
                     anchors.left: sig.right
                     anchors.leftMargin: 10
-                    anchors.right: netAction.left
+                    anchors.right: lock.visible ? lock.left : netAction.left
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
-                    text: modelData.ssid + (modelData.secure ? "  " + Icons.secure : "")
+                    text: modelData.ssid
                     color: modelData.active ? Theme.primary : Theme.text
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall
                     elide: Text.ElideRight
+                    renderType: Text.NativeRendering
+                }
+
+                Text {
+                    id: lock
+                    visible: modelData.secure
+                    anchors.right: netAction.left
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Icons.secure
+                    color: modelData.active ? Theme.primary : Theme.textDim
+                    font.family: Theme.fontIcons
+                    font.pixelSize: Theme.fontSizeSmall
                     renderType: Text.NativeRendering
                 }
 
@@ -309,8 +323,9 @@ Column {
                 width: 22
                 text: Icons.bluetoothDevice
                 color: modelData.connected ? Theme.primary : Theme.textDim
-                font.family: Theme.fontFamily
+                font.family: Theme.fontIcons
                 font.pixelSize: 15
+                renderType: Text.NativeRendering
             }
 
             Text {

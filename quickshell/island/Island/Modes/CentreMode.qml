@@ -28,24 +28,12 @@ Item {
 
     readonly property bool shown: island.isCentre
 
-    // ── What the panel has to be ─────────────────────────────
+    // Island.qml sizes the centre from these rather than from a stored
+    // height, which could only ever disagree with what is in the panel
+    // — a notification list is empty most of the time.
     //
-    // Island.qml sizes the centre from this rather than from a stored
-    // height, the way the control centre was changed to when its own
-    // controlHeight turned out to be a number that could only ever
-    // disagree with what was in the panel.
-    //
-    // It was disagreeing here too, and worse, because a notification
-    // list is empty most of the time. At rest the centre was 480 by
-    // 440 with a title, a rule, and one line of dim text adrift in
-    // four hundred pixels of nothing — which is a dialog box, not one
-    // of the shell's cards, and no amount of corner work was going to
-    // rescue it. One notification got the same 440. So did four, which
-    // is the only count the number was ever right for.
-    //
-    // The three metrics below are the layout's, declared here so the
-    // arithmetic and the anchors cannot drift apart: change the header
-    // and the panel that holds it changes with it.
+    // The three metrics are the layout's, declared here so the
+    // arithmetic and the anchors cannot drift apart.
     readonly property int headerHeight: 30
     readonly property int headerGap: 8
     readonly property int rowGap: 6
@@ -87,7 +75,7 @@ Item {
                     ? " notification" : " notifications")
                 : "Notifications"
             color: Theme.primary
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeNormal
             font.weight: Font.Bold
             font.letterSpacing: 1.2
@@ -120,7 +108,7 @@ Item {
         visible: Notifications.count === 0
         text: "Nothing to catch up on"
         color: Theme.outline
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.DemiBold
         renderType: Text.NativeRendering
@@ -203,9 +191,10 @@ Item {
                     visible: !rowImg.visible
                     text: Icons.bell
                     color: Theme.outline
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIcons
                     font.pixelSize: 16
                     font.weight: Font.DemiBold
+                    renderType: Text.NativeRendering
                 }
             }
 
@@ -221,7 +210,7 @@ Item {
                     width: parent.width
                     text: modelData.summary
                     color: Theme.text
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
@@ -233,7 +222,7 @@ Item {
                     text: modelData.body
                     visible: text !== ""
                     color: Theme.textDim
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall - 1
                     font.weight: Font.DemiBold
                     textFormat: Text.StyledText
@@ -247,7 +236,7 @@ Item {
                     width: parent.width
                     text: modelData.appName
                     color: Theme.outline
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall - 2
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
@@ -263,9 +252,10 @@ Item {
                 text: "\u00d7"
                 color: dismissHover.containsMouse
                     ? Theme.text : Theme.outline
-                font.family: Theme.fontFamily
+                font.family: Theme.fontIsland
                 font.pixelSize: 18
                 font.weight: Config.island.fontWeight
+                renderType: Text.NativeRendering
 
                 MouseArea {
                     id: dismissHover

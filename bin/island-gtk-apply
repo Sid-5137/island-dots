@@ -1,22 +1,13 @@
 #!/usr/bin/env sh
-# island-dots — apply the GTK/Qt appearance settings.
-# Copyright (C) 2026 Siddhartha Mallavolu
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version. See LICENSE.
+# island-dots. GPL-3.0 — see LICENSE.
 #
 # Usage: island-gtk-apply [--gtk NAME] [--icon NAME] [--cursor NAME]
 #                         [--cursor-size N] [--no-nudge]
 #
-# This used to be a string of shell assembled inside Theming.qml. It
-# is a file now because it grew past the point where quoting it into
-# QML was readable, and because a script can be run by hand when a
-# theme refuses to apply.
+# A file rather than shell quoted into Theming.qml, so it can be run
+# by hand when a theme refuses to apply.
 #
-# There are three places a GTK theme can be read from and they do not
-# agree with each other:
+# Three places a GTK theme is read from, which do not agree:
 #
 #   gsettings        GTK3 under a portal, and GTK4's cursor/icon names
 #   settings.ini     GTK3 with no portal running — the usual case here
@@ -30,7 +21,7 @@ set -eu
 CFG="${XDG_CONFIG_HOME:-$HOME/.config}"
 MARKER="island-dots: managed file"
 
-gtk=""; icon=""; cursor=""; cursor_size=""; nudge=1
+gtk=""; icon=""; cursor=""; cursor_size=""; font=""; font_mono=""; nudge=1
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -38,6 +29,8 @@ while [ $# -gt 0 ]; do
         --icon)        icon="$2";        shift 2 ;;
         --cursor)      cursor="$2";      shift 2 ;;
         --cursor-size) cursor_size="$2"; shift 2 ;;
+        --font)        font="$2";        shift 2 ;;
+        --font-mono)   font_mono="$2";   shift 2 ;;
         --no-nudge)    nudge=0;          shift ;;
         *) echo "island-gtk-apply: unknown argument: $1" >&2; exit 2 ;;
     esac
@@ -58,6 +51,13 @@ gget() {
 [ -n "$cursor" ]      || cursor=$(gget cursor-theme)
 [ -n "$cursor_size" ] || cursor_size=$(gget cursor-size)
 
+# The interface font is a family here but "Family Size" everywhere it
+# is written, so the size already configured is kept and only the
+# family is swapped. Nobody picking a typeface in the shell is asking
+# for their GTK apps to change size as well.
+font_size=$(gget font-name | sed -n 's/.* \([0-9][0-9]*\)$/\1/p')
+[ -n "$font_size" ] || font_size=10
+
 # ── gsettings ────────────────────────────────────────────────────────
 #
 # Best-effort: a machine with no glib schemas installed still gets the
@@ -72,6 +72,7 @@ if [ -n "$gtk" ];         then gset gtk-theme "$gtk";           fi
 if [ -n "$icon" ];        then gset icon-theme "$icon";          fi
 if [ -n "$cursor" ];      then gset cursor-theme "$cursor";      fi
 if [ -n "$cursor_size" ]; then gset cursor-size "$cursor_size";  fi
+if [ -n "$font" ];        then gset font-name "$font $font_size";  fi
 
 # adw-gtk3 ships light and dark as separate themes, but libadwaita
 # picks its variant from here, so it has to say dark either way.
@@ -105,6 +106,7 @@ for v in 3.0 4.0; do
     ini_set "$f" gtk-icon-theme-name   "$icon"
     ini_set "$f" gtk-cursor-theme-name "$cursor"
     ini_set "$f" gtk-cursor-theme-size "$cursor_size"
+    if [ -n "$font" ]; then ini_set "$f" gtk-font-name "$font $font_size"; fi
     ini_set "$f" gtk-application-prefer-dark-theme 1
 done
 
@@ -198,6 +200,14 @@ if [ -f "$qtct" ]; then
     fi
     if [ -n "$cursor" ]; then
         sed -i "s|^cursor_theme=.*|cursor_theme=$cursor|" "$qtct" || true
+    fi
+    # Only the family is replaced: the rest of the descriptor is size,
+    # weight and style flags that are not ours to reset.
+    if [ -n "$font" ]; then
+        sed -i "s|^general=\"[^,]*,|general=\"$font,|" "$qtct" || true
+    fi
+    if [ -n "$font_mono" ]; then
+        sed -i "s|^fixed=\"[^,]*,|fixed=\"$font_mono,|" "$qtct" || true
     fi
 fi
 

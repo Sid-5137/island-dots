@@ -38,7 +38,7 @@ Item {
         anchors.topMargin: 10
         text: "Notifications"
         color: Theme.text
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.Bold
         font.letterSpacing: 0.4
@@ -66,7 +66,7 @@ Item {
         visible: Notifications.count === 0
         text: "Nothing waiting"
         color: Theme.textDim
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.DemiBold
         renderType: Text.NativeRendering
@@ -115,7 +115,7 @@ Item {
                     width: 62
                     text: modelData.appName || ""
                     color: Theme.textDim
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall - 1
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
@@ -129,7 +129,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.summary || ""
                     color: Theme.text
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight

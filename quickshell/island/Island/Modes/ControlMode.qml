@@ -6,28 +6,14 @@ import "root:/Widgets/Control"
 
 // Control centre: a grid of controls, and the pages behind them.
 //
-// This used to be four cards at four hard-coded positions — a calendar
-// on the left, a 3x2 block of glyphs and two sliders on the right —
-// with every dimension in the file derived from three other dimensions
-// so that moving one thing moved four. It is now a grid whose contents
-// are data: Services/ControlLayout.qml holds where everything sits,
-// Widgets/Control/ControlItem.qml draws whichever control a cell names,
-// and the settings page lets you drag them around. What is left here is
-// the two things that are genuinely this file's job — turning cells
-// into rectangles, and owning the sub-pages.
+// Two jobs only — turning cells into rectangles, and owning the
+// sub-pages. Where things sit is ControlLayout; what draws them is
+// ControlItem.
 //
-// The sub-pages are the other half of the change. Clicking Wi-Fi used
-// to open the Settings window on the Network page, which is a strange
-// thing for a control centre to do: you asked which networks are
-// around and got a different window, on a different layer, covering
-// the screen. Now the panel keeps its shape and the list slides in
-// over the grid, with a chevron back. It is the same panel throughout,
-// which is the whole promise the shape is making while it morphs.
+// Sub-pages slide in over the grid rather than opening the Settings
+// window, so the panel keeps its shape throughout.
 //
-// QML ids do not resolve across files, so the surfaces this needs are
-// passed in rather than looked up. The pill is no longer one of them:
-// the grid fills whatever it is given, so there is nothing left here
-// that has to measure the shape.
+// QML ids do not resolve across files, so surfaces are passed in.
 
 Item {
     id: root
@@ -230,7 +216,7 @@ Item {
                 visible: Network.networks.length === 0
                 text: Network.wifiEnabled ? "Looking…" : "Wi-Fi is off"
                 color: Theme.outline
-                font.family: Theme.fontFamily
+                font.family: Theme.fontIsland
                 font.pixelSize: Theme.fontSizeSmall
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
@@ -288,7 +274,7 @@ Item {
                 visible: Bluetooth.devices.length === 0
                 text: Bluetooth.powered ? "No devices" : "Bluetooth is off"
                 color: Theme.outline
-                font.family: Theme.fontFamily
+                font.family: Theme.fontIsland
                 font.pixelSize: Theme.fontSizeSmall
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering

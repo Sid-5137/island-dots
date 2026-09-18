@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
-# island-dots — a Hyprland shell built around a morphing pill.
-# Copyright (C) 2026 Siddhartha Mallavolu
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version. See LICENSE.
+# island-dots. GPL-3.0 — see LICENSE.
 # Links this repo into place and reports what's missing.
 #
 # Symlinks rather than copies: editing the config in ~/.config edits
@@ -38,6 +32,12 @@ link() {
 echo "Linking:"
 link "$DOTS/hypr" "$CONFIG/hypr"
 link "$DOTS/quickshell/island" "$CONFIG/quickshell/island"
+
+# Text rendering. Qt reads fontconfig directly rather than gsettings,
+# so without this the shell rasterises differently from every GTK app
+# on the machine — grayscale where they get subpixel, and against a
+# stale 75 DPI.
+link "$DOTS/fontconfig/fonts.conf" "$CONFIG/fontconfig/fonts.conf"
 
 # hypridle reads an explicit path from autostart.lua, so it just needs
 # to exist next to the rest of the hypr config.
@@ -175,22 +175,11 @@ do
     fi
 done
 
-# ── The icon font ────────────────────────────────────────────────
-#
-# Every glyph the shell draws comes out of one patched font, named in
-# Services/Theme.qml and enumerated in Services/Icons.qml. Without it
-# the shell still runs and every icon in it is a box.
-#
-# Checked by glyph rather than by name, which is the whole point of
-# checking it here at all. Nerd Fonts v3 moved the Material Design
-# range from U+F500..U+FD46 up into U+F0000 and beyond, and the shell's
-# icons are the new ones — the four Wi-Fi bars, the settings tabs, the
-# padlock on a secured network. A v2 patch has the same family name, so
-# asking "is JetBrainsMono Nerd Font installed" gets yes and the icons
-# are blank anyway. Asking for U+F0928 cannot be answered wrongly.
-#
-# The probe is md-wifi_strength_4, picked because it is in the shell's
-# own register and so cannot quietly stop being used.
+# The icon font. Checked by GLYPH, not by name: a Nerd Fonts v2 patch
+# has the same family name but none of the v3 Material Design
+# codepoints the shell draws, so a name check says yes and every icon
+# is still a box. The probe is md-wifi_strength_4 (U+F0928), which is
+# in Services/Icons.qml and so cannot quietly stop being used.
 if fc-list ":charset=f0928" family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
     printf '  ok   %s\n' "JetBrainsMono Nerd Font (v3)"
 elif fc-list : family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then

@@ -66,7 +66,7 @@ Item {
             width: parent.width
             text: root.name
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall
             font.weight: root.lit ? Font.Bold : Font.DemiBold
             elide: Text.ElideRight
@@ -78,7 +78,7 @@ Item {
             visible: root.sub !== ""
             text: root.sub
             color: Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall - 2
             font.weight: Font.DemiBold
             elide: Text.ElideRight
@@ -108,7 +108,7 @@ Item {
             anchors.centerIn: parent
             text: root.waiting ? "…" : root.action
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall - 1
             font.weight: Font.Bold
             renderType: Text.NativeRendering

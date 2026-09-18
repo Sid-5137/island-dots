@@ -55,8 +55,9 @@ Rectangle {
 
         text: root.glyph
         color: root.active ? Theme.textOnPrimary : Theme.text
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIcons
         font.pixelSize: Math.round(root.height * 0.34)
+        renderType: Text.NativeRendering
     }
 
     MouseArea {

@@ -58,9 +58,10 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: Icons.clipboard
             color: Theme.primary
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIcons
             font.pixelSize: Theme.fontSizeNormal
             font.weight: Config.island.fontWeight
+            renderType: Text.NativeRendering
         }
 
         TextInput {
@@ -72,7 +73,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
 
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeNormal
             clip: true
 

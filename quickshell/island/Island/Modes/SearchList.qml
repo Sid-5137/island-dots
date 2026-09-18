@@ -5,18 +5,12 @@ import QtQuick
 import "root:/Services"
 import "root:/Widgets"
 
-// The launcher's results, on the shelf below the pill.
+// The launcher's results, on the shelf below the pill — a surface of
+// its own, so the field stays a field and the list is a list.
 //
-// This was the bottom two thirds of SearchMode.qml, drawn inside the
-// pill. It is a surface of its own now with a gap above it — the
-// separation the settings window makes between its sidebar and its
-// pane, and the gap the pods already keep beside the pill. The field
-// stays a field and the list is a list, and the shape of each says
-// which it is without either needing to be labelled.
-//
-// The shelf is passed in for its radius rather than the pill's: a
-// card inset from a corner is concentric with the corner it is inside,
-// and it is the shelf's corner these cards are inside now.
+// The shelf is passed in for its radius rather than the pill's: these
+// cards are inset from the shelf's corner, and concentricity is
+// measured against the corner a shape is actually inside.
 
 Item {
     id: root
@@ -47,26 +41,13 @@ Item {
         // like it is falling out of the shelf.
         anchors.topMargin: Theme.padCard
 
-        // The list ends where the cards do, rather than running to the
-        // floor of the panel.
+        // The list ends where the cards do, not at the panel floor, so
+        // a half-scrolled row leaves the clip before the corner starts
+        // curving in past it. Without the margin a square-cornered card
+        // gets sliced inside a 36px corner while scrolling.
         //
-        // It used to have no bottom margin at all, and the island
-        // added ten pixels to the panel's height to compensate, so the
-        // clip rectangle reached the very bottom edge while the last
-        // card stopped short of it. That gap is empty at rest and is
-        // exactly where a half-scrolled row sits — down in the panel's
-        // bottom corners, where a rectangular clip cuts it off square.
-        // A square-cornered card sliced inside a 36px corner is the
-        // single thing that made this panel look like it was drawn for
-        // a different shape, and it only ever appeared while scrolling,
-        // which is why it read as a rendering fault.
-        //
-        // With the margin here instead, the clip stops a card's inset
-        // above the floor: a row scrolling out goes under the edge at
-        // the point where the corner has not started to curve in past
-        // the cards yet. Island.qml adds the same padCard to the
-        // panel's height, so the arithmetic still comes out at rows x
-        // rowHeight exactly and no row is short of its own height.
+        // Island.qml adds the same padCard to the panel height, so the
+        // sum still comes out at rows x rowHeight exactly.
         anchors.bottomMargin: Theme.padCard
 
         model: ScriptModel {
@@ -82,22 +63,13 @@ Item {
         preferredHighlightEnd: height - Config.island.searchRowHeight
 
         // A selected row is a card inside the panel, not a band across
-        // it. Full-bleed was the one shape a rounded panel cannot
-        // hold: at either end of the list the highlight does not end,
-        // it gets sliced off by the clip, and a square-cornered stripe
-        // running into a 36px corner reads as a rendering fault rather
-        // than as a selection. The hard 2px rail that used to mark the
-        // current row went with it — it was a square mark in a rounded
-        // language, and an inset card has no edge for it to sit
-        // against.
+        // it: a full-bleed highlight gets sliced square by the clip at
+        // either end of the list.
         //
-        // Not Widgets/Control/Surface, which has two states and is
-        // always in one of them. A list needs a third: a row that is
-        // not the one you are on has to be nothing at all, because
-        // eight washes stacked up is a texture rather than a list. The
-        // alphas are Surface's, moved one rung down the ladder — what
-        // it calls resting is this row's hover, and what it calls
-        // hovered is this row's selection.
+        // Not Surface, which is always in one of two states. A list
+        // needs a third — an unselected row must be nothing at all, or
+        // eight stacked washes read as texture. The alphas are
+        // Surface's, moved one rung down.
         delegate: Item {
             id: row
 
@@ -175,7 +147,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.name
                     color: row.active ? Theme.primary : Theme.text
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall
                     font.weight: Config.island.fontWeight
                     elide: Text.ElideRight
@@ -193,7 +165,7 @@ Item {
                     horizontalAlignment: Text.AlignRight
                     text: row.modelData.genericName || ""
                     color: Theme.outline
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall - 1
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight

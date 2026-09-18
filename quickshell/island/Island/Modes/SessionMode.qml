@@ -82,9 +82,10 @@ Item {
                             ? Theme.textOnError
                             : (parent.parent.danger && parent.parent.selected
                                ? Theme.error : Theme.text)
-                        font.family: Theme.fontFamily
+                        font.family: Theme.fontIcons
                         font.pixelSize: 22
                         font.weight: Config.island.fontWeight
+                        renderType: Text.NativeRendering
                         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
                     }
 
@@ -92,7 +93,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: parent.parent.armed ? "Confirm" : modelData.label
                         color: parent.parent.armed ? Theme.textOnError : Theme.textDim
-                        font.family: Theme.fontFamily
+                        font.family: Theme.fontIsland
                         font.pixelSize: Theme.fontSizeSmall - 1
                         font.weight: Font.DemiBold
                         font.letterSpacing: 0.8

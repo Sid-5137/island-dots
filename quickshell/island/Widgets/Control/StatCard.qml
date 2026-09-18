@@ -55,7 +55,7 @@ Item {
             visible: root.roomy
             text: Clock.date
             color: Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.DemiBold
             font.letterSpacing: 0.8
@@ -98,7 +98,7 @@ Item {
             Text {
                 text: Battery.charging ? "Charging" : "Battery"
                 color: Theme.textDim
-                font.family: Theme.fontFamily
+                font.family: Theme.fontIsland
                 font.pixelSize: Theme.fontSizeSmall - 1
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering

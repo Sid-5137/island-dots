@@ -36,7 +36,12 @@ Singleton {
             "--gtk", a.gtkTheme || "",
             "--icon", a.iconTheme || "",
             "--cursor", a.cursorTheme || "",
-            "--cursor-size", String(a.cursorSize || 24)
+            "--cursor-size", String(a.cursorSize || 24),
+            // The typeface the shell draws with, handed to GTK and Qt
+            // apps as well — otherwise picking a font here restyles
+            // the shell and nothing else on the desktop.
+            "--font", a.fontFamily || "",
+            "--font-mono", a.fontMono || ""
         ];
         proc.running = true;
     }
@@ -135,40 +140,23 @@ Singleton {
         }
     }
 
-    // ── Fonts ────────────────────────────────────────────────────
+    // `fonts` is every family on the machine: the interface font is a
+    // free choice now that icons ask for `iconFonts` by name.
     //
-    // Two lists, because the two settings have different jobs and
-    // different ways of going wrong.
+    // `iconFonts` is the filtered one — ':charset=f0928', the same
+    // probe install.sh uses. Every icon is a codepoint (see Icons.qml)
+    // so a font without them draws boxes, and only fonts answering the
+    // probe are offered for it.
     //
-    // `fonts` drives the interface font and is filtered by GLYPH
-    // rather than by name — ':charset=f0928', the same probe
-    // install.sh uses, md-wifi_strength_4 out of the shell's own
-    // register. Every icon the shell draws is a codepoint in the text
-    // font, not an image; Services/Icons.qml is the list. So an
-    // interface font without them turns the Wi-Fi bars, the settings
-    // tabs and the padlock on a secured network into boxes, and does
-    // it everywhere at once. A dropdown that can only offer fonts
-    // which answer that probe cannot be used to do that, which is
-    // worth more than offering all 132 and a warning underneath.
-    //
-    // `monoFonts` is the plain fontconfig question, ':spacing=100'.
-    // Nothing drawn in the mono font is an icon — clipboard entries,
-    // workspace numbers, the password field, the value beside a
-    // slider — so there is nothing to protect and no reason to narrow
-    // the list.
+    // `monoFonts` is the plain ':spacing=100' question.
     property var fonts: []
     property var monoFonts: []
+    property var iconFonts: []
 
-    // fontconfig names every weight a font was patched into as a
-    // family of its own: "JetBrainsMono NF" arrives alongside NF
-    // Light, NF Medium, NF SemiBold and six more, and 206 families on
-    // this machine are about 132 fonts. Worse, "ExtraBold" as an
-    // interface font is a mistake the list should not be holding the
-    // door open for.
-    //
-    // So a weight word at the end goes — but only when the family it
-    // is a weight OF is installed too. Somebody whose only copy of a
-    // face is "Iosevka Light" still gets to choose it.
+    // fontconfig lists every patched weight as its own family, so 206
+    // families are about 132 fonts. A trailing weight word is dropped
+    // — but only when the family it is a weight OF is also installed,
+    // so "Iosevka Light" as somebody's only copy still gets offered.
     function families(text) {
         const all = [];
         for (const line of text.split("\n"))
@@ -189,13 +177,20 @@ Singleton {
     Process {
         id: fontScan
         running: true
+        command: ["sh", "-c", "fc-list : family 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: { root.fonts = root.families(this.text); }
+        }
+    }
+
+    Process {
+        id: iconFontScan
+        running: true
         command: ["sh", "-c", "fc-list ':charset=f0928' family 2>/dev/null"]
         stdout: StdioCollector {
             onStreamFinished: {
-                root.fonts = root.families(this.text);
-                console.log("[Theming] found", root.fonts.length,
-                            "fonts carrying the shell's icon glyphs");
-                if (root.fonts.length === 0)
+                root.iconFonts = root.families(this.text);
+                if (root.iconFonts.length === 0)
                     console.warn("[Theming] no font answers ':charset=f0928' —"
                         + " the icons will be boxes until a Nerd Font v3 is"
                         + " installed. See install.sh.");
@@ -214,14 +209,18 @@ Singleton {
         }
     }
 
-    // Reapply whenever any of the three change.
+    // Reapply whenever anything the script is handed changes — the
+    // fonts included, or picking one restyles the shell and leaves
+    // every GTK and Qt app on the old family.
     // Not readonly, for the same reason as Compositor: an unread
     // readonly binding is evaluated lazily and never signals.
     property string watched:
         Config.appearance.iconTheme + "|"
         + Config.appearance.cursorTheme + "|"
         + Config.appearance.cursorSize + "|"
-        + Config.appearance.gtkTheme
+        + Config.appearance.gtkTheme + "|"
+        + Config.appearance.fontFamily + "|"
+        + Config.appearance.fontMono
 
     onWatchedChanged: debounce.restart()
 

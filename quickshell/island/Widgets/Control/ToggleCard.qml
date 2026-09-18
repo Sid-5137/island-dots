@@ -95,7 +95,7 @@ Item {
             width: parent.width
             text: root.name
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall + 1
             font.weight: Font.Bold
             elide: Text.ElideRight
@@ -107,7 +107,7 @@ Item {
             visible: root.sub !== ""
             text: root.sub
             color: Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall - 1
             font.weight: Font.DemiBold
             elide: Text.ElideRight

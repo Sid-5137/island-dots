@@ -41,9 +41,10 @@ WlSessionLock {
                 text: Clock.time
                 color: "#ffffff"
                 font.family: Theme.fontFamily
-                font.pixelSize: 84
+                font.pixelSize: Theme.fontSizeClock
                 font.weight: Font.Light
                 font.letterSpacing: 4
+                renderType: Text.NativeRendering
             }
 
             Text {
@@ -53,6 +54,7 @@ WlSessionLock {
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeNormal
                 font.letterSpacing: 2
+                renderType: Text.NativeRendering
                 bottomPadding: 40
             }
 
@@ -82,6 +84,7 @@ WlSessionLock {
                     color: "#ffffff"
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeNormal
+                    renderType: Text.NativeRendering
                     enabled: !Lock.busy
                     clip: true
 
@@ -107,6 +110,7 @@ WlSessionLock {
                         text: "Password"
                         color: Qt.rgba(1, 1, 1, 0.35)
                         font: input.font
+                        renderType: Text.NativeRendering
                     }
                 }
             }
@@ -129,8 +133,9 @@ WlSessionLock {
             visible: Battery.present
             text: Battery.icon + "  " + Battery.level + "%"
             color: Qt.rgba(1, 1, 1, 0.45)
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIcons
             font.pixelSize: Theme.fontSizeSmall
+            renderType: Text.NativeRendering
         }
     }
 }

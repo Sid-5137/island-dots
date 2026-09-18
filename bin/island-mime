@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """island-dots — read and set the desktop's default applications.
 
-Copyright (C) 2026 Siddhartha Mallavolu
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version. See LICENSE.
+GPL-3.0 — see LICENSE.
 
 Usage:
     island-mime query <spec>...          JSON on stdout

@@ -113,6 +113,7 @@ Item {
             text: "\u2304"
             color: Theme.outline
             font.pixelSize: Theme.fontSizeNormal
+            renderType: Text.NativeRendering
             rotation: root.open ? 180 : 0
             Behavior on rotation {
                 NumberAnimation { duration: 160; easing.type: Easing.OutCubic }

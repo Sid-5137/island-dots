@@ -47,8 +47,9 @@ Item {
 
         text: root.glyph
         color: root.lit ? Theme.textOnPrimary : Theme.text
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIcons
         font.pixelSize: Math.round(root.height * 0.46)
+        renderType: Text.NativeRendering
 
         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
     }

@@ -33,9 +33,10 @@ Item {
         width: 26
         text: Osd.icon
         color: Osd.muted ? Theme.outline : Theme.primary
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIcons
         font.pixelSize: 18
         font.weight: Font.DemiBold
+        renderType: Text.NativeRendering
         horizontalAlignment: Text.AlignHCenter
     }
 
@@ -72,7 +73,7 @@ Item {
         visible: Osd.kind === "mic"
         text: Osd.label
         color: Theme.text
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Theme.fontSizeNormal
         font.weight: Font.DemiBold
         renderType: Text.NativeRendering

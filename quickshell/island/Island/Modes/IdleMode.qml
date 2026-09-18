@@ -3,27 +3,17 @@ import QtQuick
 import "root:/Services"
 import "root:/Widgets"
 
-// The collapsed pill.
+// The collapsed pill: the clock, and media.
 //
-// It holds the clock and nothing else it does not have to. The
-// workspaces and the tray moved out to the pods either side; what is
-// left is the one thing worth reading at every glance, and the one
-// thing worth morphing the shape for.
+// Nothing here appears or disappears — each slot's width falls as the
+// next one's rises, so the pill morphs rather than swaps. The pill's
+// width is derived from this row.
 //
-// That one thing is media. A track starting is the island's own
-// gesture — an equaliser appears beside the date and the pill grows a
-// little to fit, because its width is derived from this row. Hovering
-// adds the transport controls. Nothing here appears or disappears:
-// each slot's width falls as the next one's rises, so the pill is
-// always morphing rather than swapping.
-//
-// The title is not in the collapsed pill. It used to be, and it is the
-// one thing here that cannot be read at a glance: it is as long as
-// whoever named the track decided, it changes while you are not
-// looking, and the pill changes width with it — so the shape at rest
-// was a different shape every few minutes. Three animated bars say
-// the same thing the glance is actually asking, which is whether
-// something is playing. `island.pillTitle` puts it back.
+// The title is deliberately absent: it is as long as whoever named the
+// track decided and changes while you are not looking, so the shape at
+// rest became a different shape every few minutes. Three animated bars
+// answer what the glance actually asks. `island.pillTitle` puts it
+// back.
 
 Row {
     id: root
@@ -60,7 +50,7 @@ Row {
         anchors.verticalCenter: parent.verticalCenter
         text: Clock.time
         color: Theme.primary
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Config.island.fontSize
         font.weight: Config.island.fontWeight
         font.letterSpacing: 1.2
@@ -94,7 +84,7 @@ Row {
             anchors.verticalCenter: parent.verticalCenter
             text: Clock.date
             color: Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Config.island.fontSize - 1
             font.weight: Font.DemiBold
             font.letterSpacing: 1.2
@@ -179,7 +169,7 @@ Row {
                 visible: Config.island.pillTitle
                 text: Player.title
                 color: Theme.text
-                font.family: Theme.fontFamily
+                font.family: Theme.fontIsland
                 font.pixelSize: Config.island.fontSize
                 font.weight: Config.island.fontWeight
                 elide: Text.ElideRight
@@ -233,8 +223,10 @@ Row {
                                 : modelData.g
                             color: modelData.act === "toggle"
                                 ? Theme.primary : Theme.textDim
+                            font.family: Theme.fontIcons
                             font.pixelSize: Config.island.fontSize
                             font.weight: Config.island.fontWeight
+                            renderType: Text.NativeRendering
 
                             MouseArea {
                                 anchors.fill: parent

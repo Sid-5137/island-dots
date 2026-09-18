@@ -35,7 +35,7 @@ Item {
         visible: win.clipFiltered.length === 0
         text: Clipboard.count === 0 ? "Nothing copied yet" : "No matches"
         color: Theme.outline
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.DemiBold
         renderType: Text.NativeRendering
@@ -123,9 +123,10 @@ Item {
                     width: 20
                     text: row.modelData.isImage ? Icons.image : Icons.file
                     color: Theme.outline
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIcons
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
+                    renderType: Text.NativeRendering
                 }
 
                 Text {
@@ -136,7 +137,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.preview
                     color: row.active ? Theme.primary : Theme.text
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall
                     font.weight: Config.island.fontWeight
                     elide: Text.ElideRight
@@ -152,9 +153,10 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "\u00d7"
                     color: delHover.containsMouse ? Theme.error : Theme.outline
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: 16
                     font.weight: Font.DemiBold
+                    renderType: Text.NativeRendering
                     opacity: rowHover.containsMouse || row.active ? 1 : 0
 
                     Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }

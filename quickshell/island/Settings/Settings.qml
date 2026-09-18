@@ -183,8 +183,9 @@ PanelWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData.glyph
                             color: parent.active ? Theme.primary : Theme.textDim
-                            font.family: Theme.fontFamily
+                            font.family: Theme.fontIcons
                             font.pixelSize: 14
+                            renderType: Text.NativeRendering
                         }
 
                         Text {

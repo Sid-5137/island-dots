@@ -5,19 +5,12 @@ import "root:/Services"
 // Wi-Fi and Bluetooth: what it is, what it is attached to, and a way
 // into the list.
 //
-// A glyph on its own can say that Wi-Fi is on. It cannot say which
-// network, and "which network" is most of the reason anyone opens a
-// control centre at all. So the card carries the answer, and the two
-// things you might want to do with it are separated by where you
-// click: the badge is the power switch, the rest of the row is the
-// way in to the list. That split is why the badge is a circle and the
-// row is not — they are different targets and they should look it.
+// "Which network" is most of why anyone opens a control centre, so the
+// card carries the answer. Two targets, and they look different: the
+// badge is the power switch, the rest of the row is the way in.
 //
-// Squeezed to a single cell there is no room for any of that, so it
-// becomes the badge alone and keeps only the toggle. A control that
-// silently drops half its behaviour when it is made small would be
-// worse than one that refuses to be made small, but a power switch is
-// the half worth keeping.
+// Squeezed to one cell it becomes the badge alone and keeps only the
+// toggle — the half worth keeping.
 
 Item {
     id: root
@@ -125,7 +118,7 @@ Item {
             width: parent.width
             text: root.name
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall + 1
             font.weight: Font.Bold
             elide: Text.ElideRight
@@ -139,7 +132,7 @@ Item {
             // stale answer with no explanation.
             text: root.busy ? "Scanning…" : root.sub
             color: Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall - 1
             font.weight: Font.DemiBold
             elide: Text.ElideRight
@@ -155,8 +148,9 @@ Item {
         visible: root.roomy
         text: "›"
         color: rowHover.containsMouse ? Theme.text : Theme.outline
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: 15
+        renderType: Text.NativeRendering
 
         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
     }

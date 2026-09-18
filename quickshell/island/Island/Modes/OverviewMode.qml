@@ -85,7 +85,7 @@ Item {
                     visible: card.wins.length === 0
                     text: "empty"
                     color: Theme.outline
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIsland
                     font.pixelSize: Theme.fontSizeSmall - 1
                     font.weight: Font.DemiBold
                     renderType: Text.NativeRendering

@@ -60,6 +60,7 @@ Item {
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeNormal
             font.weight: Font.Bold
+            renderType: Text.NativeRendering
             rotation: root.open ? 90 : 0
             transformOrigin: Item.Center
 

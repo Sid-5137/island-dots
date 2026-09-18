@@ -2,22 +2,15 @@ import QtQuick
 
 import "root:/Services"
 
-// A sub-page of the control centre, over the grid.
+// A sub-page of the control centre, drawn over the grid.
 //
-// The alternative was a separate island mode for each list, which
-// means the pill morphs to a different size, the grid fades out, a
-// page fades in, and the whole panel appears to have been replaced —
-// for what is really a drill-down inside one panel. So a page is drawn
-// over the grid instead: the panel keeps its shape, the grid slides
-// out a little to the left, the page slides in from the right, and the
-// back chevron reverses it.
+// Not a separate island mode per list: that morphs the pill and reads
+// as the whole panel being replaced, for what is a drill-down inside
+// one panel. The panel keeps its shape, the grid slides left, the page
+// slides in from the right.
 //
-// The header is one row: chevron, title, switch. saneAspect spends
-// half a minute on exactly this in the Dynamite V3 video — his had the
-// three sitting at three different heights, and it looked wrong for
-// five minutes before he could say why. He is right, and it is the
-// sort of thing that is much cheaper to get right once, here, than in
-// each page.
+// The header is one row — chevron, title, switch — all on one
+// baseline, defined here rather than in each page.
 
 Item {
     id: root
@@ -50,8 +43,9 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: "‹"
             color: backHover.containsMouse ? Theme.text : Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: 19
+            renderType: Text.NativeRendering
 
             Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
@@ -71,7 +65,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: root.title
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeLarge
             font.weight: Font.Bold
             renderType: Text.NativeRendering
@@ -83,7 +77,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: root.note
             color: Theme.textDim
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall - 1
             font.weight: Font.DemiBold
             renderType: Text.NativeRendering

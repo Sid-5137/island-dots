@@ -34,6 +34,7 @@ Item {
         color: hover.containsMouse ? Theme.primary : Theme.outline
         font.family: Theme.fontFamily
         font.pixelSize: 13
+        renderType: Text.NativeRendering
 
         Behavior on color { ColorAnimation { duration: 120 } }
     }

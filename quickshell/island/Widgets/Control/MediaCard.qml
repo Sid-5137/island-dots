@@ -5,25 +5,13 @@ import "root:/Services"
 
 // Now playing, as a card made out of the artwork.
 //
-// The artwork is the background rather than a thumbnail beside the
-// text, which is the only way a media card ever looks like anything.
-// The problem with doing that is the one saneAspect spends three
-// minutes on in the Dynamite V3 video, and he is right about it: album
-// art is whatever colour the label chose, the shell is whatever colour
-// the wallpaper is, and the two have no reason to agree. Every card
-// looks out of place except by accident.
+// Album art is whatever colour the label chose and the shell is
+// whatever colour the wallpaper is, so the art gets a wash of the
+// accent to bring it into the theme. `island.artTint` is that dial.
+// The scrim under the text is a separate number, so a more colourful
+// card does not quietly become a less readable one.
 //
-//   https://www.youtube.com/watch?v=Ob98KFByTec
-//
-// The fix is a wash of the accent over the art. Enough that the card
-// belongs to the theme, not so much that the artwork stops being
-// recognisable — `island.artTint` is that dial, and the scrim under
-// the text is separate from it so that making the card more colourful
-// does not quietly make the title harder to read.
-//
-// Nothing is tinted where the background is already a themed,
-// dimmed surface: a second wash over a first one is just a darker
-// first one.
+// Nothing is tinted over an already-dimmed themed surface.
 
 Item {
     id: root
@@ -107,7 +95,7 @@ Item {
             width: parent.width
             text: Player.title !== "" ? Player.title : "Nothing playing"
             color: "#ffffff"
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall + 1
             font.weight: Font.Bold
             elide: Text.ElideRight
@@ -119,7 +107,7 @@ Item {
             visible: root.tall && Player.artist !== ""
             text: Player.artist
             color: Qt.rgba(1, 1, 1, 0.78)
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall - 1
             font.weight: Font.DemiBold
             elide: Text.ElideRight
@@ -170,8 +158,9 @@ Item {
                         ? (Player.playing ? "" : "")
                         : parent.modelData.glyph
                     color: Qt.rgba(1, 1, 1, tapped.containsMouse ? 1 : 0.85)
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIcons
                     font.pixelSize: parent.isPlay ? 12 : 11
+                    renderType: Text.NativeRendering
                 }
 
                 MouseArea {

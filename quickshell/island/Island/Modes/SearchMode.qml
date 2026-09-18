@@ -112,7 +112,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
 
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             // The query is the largest text the shell shows outside
             // the clock, because it is the only text here you wrote.
             // At the body size it sat in the middle of a 46px row with

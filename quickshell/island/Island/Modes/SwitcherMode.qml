@@ -30,7 +30,7 @@ Item {
         visible: win.switchList.length === 0
         text: "No windows"
         color: Theme.outline
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.DemiBold
         renderType: Text.NativeRendering
@@ -91,6 +91,7 @@ Item {
                         font.family: Theme.fontMono
                         font.pixelSize: Theme.fontSizeSmall - 3
                         font.weight: Font.DemiBold
+                        renderType: Text.NativeRendering
                     }
                 }
 
@@ -119,7 +120,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             text: win.switchTarget ? win.switchTarget.title : ""
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeNormal
             font.weight: Font.DemiBold
             elide: Text.ElideMiddle
@@ -133,7 +134,7 @@ Item {
                 ? win.switchTarget.cls + "  ·  workspace " + win.switchTarget.workspaceId
                 : ""
             color: Theme.outline
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.DemiBold
             elide: Text.ElideRight

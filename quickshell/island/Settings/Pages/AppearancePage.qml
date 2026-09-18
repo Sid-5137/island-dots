@@ -3,24 +3,12 @@ import Quickshell
 import "root:/Services"
 import "root:/Widgets"
 
-// Everything that decides what the desktop looks like, in the order
-// it actually happens: pick a wallpaper, pick how the palette is
-// derived from it, see the palette, then shape the surfaces it lands
-// on and say what else it gets applied to.
+// Everything that decides what the desktop looks like, in the order it
+// happens: pick a wallpaper, pick how the palette derives from it, see
+// the palette, then shape the surfaces it lands on.
 //
-// This used to be two pages — Wallpaper and Appearance — with the
-// wallpaper grid at the bottom of one and the themes it drives at the
-// top of the other, and nothing anywhere showing a colour. Choosing a
-// scheme meant picking between four words and then leaving to find out
-// what they did.
-//
-// Window rounding, gaps, shadows and blur used to be on System, one
-// page away from the panel settings they sit next to on screen — so
-// "make the corners rounder" was a question this page answered for
-// panels, that page answered for windows, and the Island page
-// answered for the pill, with three sliders that had never heard of
-// each other. They are all here now, under one control that moves
-// them together.
+// Window and panel rounding live here together rather than a page
+// apart, under one control that moves them with the pill.
 
 Column {
     id: page
@@ -247,15 +235,22 @@ Column {
     SelectRow {
         configKey: "appearance.fontFamily"
         label: "Interface"
-        // Says why the list is short before the shortness reads as a
-        // missing font. Somebody with forty families installed and
-        // twelve in the dropdown is owed the reason.
-        description: "Everything the shell draws. Only fonts carrying its"
-            + " icon glyphs are listed — they are codepoints in this font,"
-            + " not images."
+        description: "Windows and panels, and the GTK and Qt apps on the"
+            + " rest of the desktop. Any family — the icons no longer"
+            + " come out of this one."
         options: Theming.fonts
         current: Config.appearance.fontFamily
         onSelected: function(v) { Config.appearance.fontFamily = v }
+    }
+
+    SelectRow {
+        configKey: "appearance.fontIsland"
+        label: "Island"
+        description: "The pill and the control centre. Monospace keeps"
+            + " the clock from changing width as the time changes."
+        options: Theming.fonts
+        current: Config.appearance.fontIsland
+        onSelected: function(v) { Config.appearance.fontIsland = v }
     }
 
     SelectRow {
@@ -266,6 +261,19 @@ Column {
         options: Theming.monoFonts
         current: Config.appearance.fontMono
         onSelected: function(v) { Config.appearance.fontMono = v }
+    }
+
+    SelectRow {
+        configKey: "appearance.fontIcons"
+        label: "Icons"
+        // Says why this list is short before the shortness reads as a
+        // missing font.
+        description: "Only fonts carrying the shell's icon glyphs are"
+            + " listed — they are codepoints, not images. A font without"
+            + " them draws boxes."
+        options: Theming.iconFonts
+        current: Config.appearance.fontIcons
+        onSelected: function(v) { Config.appearance.fontIcons = v }
     }
 
     SectionHeader { text: "Corners" }

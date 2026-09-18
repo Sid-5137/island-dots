@@ -3,19 +3,13 @@ import QtQuick.Shapes
 
 import "root:/Services"
 
-// A ring rather than a battery outline. The arc reads as a level at
-// a glance without needing the number, and it stays legible at small
-// sizes where a segmented battery icon turns to mush.
+// A ring rather than a battery outline: the arc reads as a level
+// without the number and stays legible when small.
 //
-// Drawn with Shapes rather than a Canvas. A Canvas rasterises on the
-// CPU into a texture and re-uploads it on every repaint, and this one
-// repainted on four separate signals because a Canvas has no bindings
-// of its own — a Connections block per property it drew. A ShapePath
-// binds like anything else, renders on the GPU, and, because the sweep
-// is now a plain number rather than an argument to a paint call, it
-// can have a Behavior on it. The ring fills to a new level instead of
-// jumping to it, which is the whole reason a gauge is nicer than a
-// number in the first place.
+// Shapes, not Canvas — a ShapePath binds like anything else and
+// renders on the GPU, and the sweep being a plain number is what lets
+// it have a Behavior, so the ring fills rather than jumps. (This is
+// not in a blurred layer, where Shapes must not be used.)
 
 Item {
     id: root
@@ -107,6 +101,7 @@ Item {
         color: root.ringColor
         font.family: Theme.fontFamily
         font.pixelSize: Math.round(root.height * 0.40)
+        renderType: Text.NativeRendering
     }
 
     Text {

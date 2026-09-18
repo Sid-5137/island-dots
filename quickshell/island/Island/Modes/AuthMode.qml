@@ -44,7 +44,7 @@ Item {
             width: parent.width
             text: Polkit.message !== "" ? Polkit.message : "Authentication required"
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeNormal
             font.weight: Font.DemiBold
             wrapMode: Text.WordWrap
@@ -94,7 +94,7 @@ Item {
             echoMode: Polkit.responseVisible ? TextInput.Normal : TextInput.Password
             passwordCharacter: "\u2022"
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeNormal
             clip: true
 
@@ -164,7 +164,7 @@ Item {
         anchors.verticalCenter: buttons.verticalCenter
         text: Polkit.supplementary
         color: Polkit.supplementaryIsError ? Theme.error : Theme.outline
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIsland
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.DemiBold
         elide: Text.ElideRight
