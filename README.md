@@ -8,7 +8,7 @@ A Hyprland desktop shell built around a single morphing pill and
 two small pods beside it. No bar. No panels. The island *is* the
 interface.
 
-[![Status](https://img.shields.io/badge/status-beta-d08770?style=for-the-badge)](#contributing)
+[![Version](https://img.shields.io/badge/version-1.0.0-a3be8c?style=for-the-badge)](#contributing)
 [![License](https://img.shields.io/badge/license-GPL--3.0-4c566a?style=for-the-badge)](LICENSE)
 [![Quickshell](https://img.shields.io/badge/built%20with-Quickshell-5e81ac?style=for-the-badge)](https://quickshell.org)
 [![Hyprland](https://img.shields.io/badge/compositor-Hyprland-81a1c1?style=for-the-badge)](https://hypr.land)
@@ -33,157 +33,53 @@ timestamped rather than assumed so it plays at real speed;
 
 ## Features
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-**One surface, eleven modes**
-Clock, hover, control centre, launcher, clipboard, wallpaper picker,
-power menu, notifications, notification history, volume OSD and
-authorization prompts — all the same shape, morphing between them.
-
-**Two pods, either side**
-Workspaces on the left, the system tray on the right. Small capsules
-that share the island's shape and motion, collapse to nothing when
-they have nothing to say, and open when you point at one — or for a
-moment, by themselves, when what they show changes.
-
-**Wallpaper-driven theming**
-matugen derives a palette from your wallpaper and feeds the shell,
-GTK3, GTK4 *and* Hyprland's own window borders. Change the wallpaper,
-the desktop follows. One wallpaper per monitor, if you want.
-
-**A launcher, and its answer**
-Empty until you type, the way Spotlight is — and while it is empty it
-is a bar and nothing else. The matches arrive on a second surface
-below, a gap down, so the field stays a field instead of becoming the
-top edge of a box. Then fuzzy matching over
-names, keywords, initials and a subsequence fallback — `fx` finds
-Firefox, `ed` finds Text Editor, `dua` finds Disk Usage Analyzer,
-`music` finds whatever your entries call themselves. Keyboard-first,
-results scored not filtered, and the index is built once rather than
-per keystroke.
-
-**Notification daemon**
-Not a client of one. The shell claims
-`org.freedesktop.Notifications`: popups with working action buttons,
-inline reply for chat clients that offer it, full history, Focus mode
-that records without interrupting, and critical notifications that
-ignore it.
-
-**Session lock**
-A real `ext-session-lock` surface with PAM authentication — not a
-shell-out to hyprlock. Clock, wallpaper, battery, and a password field
-that knows when to mask itself.
-
-**Polkit agent**
-Authorization prompts appear in the island rather than a mismatched
-GTK dialog. polkitd still makes every decision; only the asking moved.
-
-</td>
-<td width="50%" valign="top">
-
-**Continuous gestures**
-Four-finger swipes that track your fingers rather than firing once on
-release. Reads libinput directly and drives PipeWire over a persistent
-socket — no process spawned per step.
-
-**Live compositor control**
-Blur, gaps, borders, rounding, pointer acceleration and key repeat,
-applied to Hyprland as you move the slider. No reload, no config edit.
-
-**Window switcher and overview**
-Alt+Tab across every workspace with app icons; `Super+W` for a
-workspace overview with live window thumbnails, captured through the
-compositor.
-
-**Smart visibility**
-Reserve the strip so windows start below it, or let windows use the
-whole screen and have the island move aside only when one actually
-reaches it.
-
-**Clipboard history**
-Filterable, keyboard-driven, backed by cliphist. `Ctrl+D` deletes an
-entry without leaving the field.
-
-**System tray**
-The right-hand pod, on screen rather than a scroll away. Left-click
-activates, right-click opens the application's own menu, and items
-asking for attention show a dot. Four icons at rest and the rest
-behind a count, so a busy tray never turns the top of the screen into
-a bar.
-
-**Calendar with events**
-Dates carry a dot when something is scheduled, and today's events list
-under the month. Reads `.ics` files directly — GNOME Calendar's store,
-vdirsyncer, khal — so nothing extra needs installing.
-
-**One corner, everywhere**
-The pill, the shell's panels and Hyprland's own windows are three
-different numbers read by three different things — one of which is not
-even in the shell's process. A single slider moves all three, and a
-toggle hands them back if you want the pill rounder than a window. A
-second slider sets how the corner is *drawn*: a superellipse rather
-than a circular arc, which is the corner macOS has and Qt does not
-ship. See `packages/qml-squircle`.
-
-**Every shortcut, on one surface**
-`Super+Shift+S`, or `Super+/`. Sixty-odd binds grouped and drawn as
-key caps — read from `hyprctl binds`, not written out a second time, so
-a bind added to `hypr/binds.lua` appears there and one removed
-disappears. A cheat sheet kept beside the config is wrong by the second
-week.
-
-**Default applications**
-Browser, email, file manager, terminal, and what opens a PDF or a
-video. Dropdowns of what is actually installed and claims the type,
-written to `mimeapps.list` — so it is the desktop's answer, not the
-shell's private one. The three with keybinds move `Super+X`, `Super+E`
-and `Super+B` with them.
-
-**Settings that show their work**
-Seven pages, and as little text as the job allows. The palette is
-shown as colour, the pill as a live preview, the control centre as
-itself — you drag the real cards around — and corners, gaps and blur
-as the shapes they produce, redrawn as you move the slider. The wheel scrolls the page; **Ctrl+wheel** over a slider steps
-it by one. Anything you have changed grows a revert control beside it;
-sections and the whole config can be reset too.
-
-</td>
-</tr>
-</table>
+| | |
+|:--|:--|
+| **One surface, eleven modes** | Clock, hover, control centre, launcher, clipboard, pickers, power menu, notifications, history, OSD and polkit prompts — the same shape, morphing. |
+| **Two pods** | Workspaces left, tray right. They share the island's shape, collapse when they have nothing to say, and open when you point at one. |
+| **Wallpaper-driven theming** | matugen feeds the shell, GTK3, GTK4 and Hyprland's window borders from one wallpaper. One per monitor if you want. |
+| **A launcher, and its answer** | Empty until you type. Fuzzy over names, keywords, initials and a subsequence fallback, on a second surface below the field. |
+| **Notification daemon** | Not a client of one — the shell owns `org.freedesktop.Notifications`. Actions, inline reply, history, Focus mode. |
+| **Session lock** | A real `ext-session-lock` surface with PAM, not a shell-out to hyprlock. |
+| **Polkit agent** | Prompts appear in the island. polkitd still decides; only the asking moved. |
+| **Continuous gestures** | Four-finger swipes that track your fingers rather than firing on release, over a persistent socket. |
+| **Live compositor control** | Blur, gaps, borders, rounding, pointer accel and key repeat, applied as you move the slider. |
+| **Switcher and overview** | Alt+Tab across every workspace; `Super+W` for live window thumbnails. |
+| **Smart visibility** | Reserve the strip, or let the island move aside only when a window actually reaches it. |
+| **Clipboard history** | Filterable and keyboard-driven, backed by cliphist. |
+| **System tray** | Four icons at rest and the rest behind a count, so a busy tray never becomes a bar. |
+| **Calendar with events** | Reads `.ics` directly — GNOME Calendar's store, vdirsyncer, khal — so nothing extra is needed. |
+| **One corner, everywhere** | One slider moves the pill, the panels and Hyprland's windows. A second sets how the corner is *drawn* — a superellipse, not an arc. See `packages/qml-squircle`. |
+| **Every shortcut, on one surface** | `Super+/`. Read from `hyprctl binds`, so a bind added to `hypr/binds.lua` appears there and one removed disappears. |
+| **Default applications** | Written to `mimeapps.list`, so it is the desktop's answer rather than the shell's private one. |
+| **Settings that show their work** | The palette as colour, the pill as a live preview, the control centre as itself — you drag the real cards around. |
 
 <div align="center">
 
 ![idle](docs/idle.png)
 
 **At rest** — the clock, the date, and a pod of workspace dashes. The
-corner is a capsule at this height and opens up as the shape grows. Two
-hairlines rather than one, a pixel apart: the pair has a width, so the
-corner has a radius you can read.
+corner is a capsule at this height and opens up as the shape grows.
 
 ![control centre](docs/control-centre.png)
 
 **The control centre** — one blurred panel on a grid you arrange
-yourself: calendar, Wi-Fi and Bluetooth, quick toggles, media, sliders
+yourself.
 
 ![bluetooth](docs/bluetooth.png)
 
 **A list, in the same panel** — the chevron pushes a page over the
-grid rather than opening a window somewhere else
+grid rather than opening a window somewhere else.
 
 ![launcher](docs/launcher.png)
 
-**The launcher** — two surfaces, not one. The pill is the field and
-never changes height while you type; the results are a shelf below it,
-at the same gap the pods keep beside it. Row corners are cut from the
-shelf's, so the list looks carved out of it rather than laid on it
+**The launcher** — the pill is the field and never changes height
+while you type; the results are a shelf below it.
 
 ![settings](docs/settings.png)
 
 **Settings → Control** — the canvas is the panel at its real size,
-drawing the real cards. Drag to move, corner to resize, `Aa` for
-words, `×` to remove.
+drawing the real cards. Drag to move, corner to resize.
 
 </div>
 
@@ -196,198 +92,19 @@ daemon, plus a lock screen, plus a wallpaper tool. Five programs that
 don't know about each other, don't match each other, and each need
 configuring separately.
 
-island is one surface that becomes whatever it needs to be. At rest
-it's a small pill showing the time and the date, with a pod of
-workspace dashes to its left and the tray to its right. Start a track
-and three animated bars appear beside the date. Click the pill and it
-grows into a control centre. Press `Super+R` and it stretches into a
-launcher. A notification arrives and it *becomes* the notification,
-then hands the shape back — and the pods fold into its edges while it
-does, because only one thing should be asking for your attention at a
-time.
+island is one surface that becomes whatever it needs to be. At rest a
+pill with the time, workspaces to its left and the tray to its right.
+Start a track and three bars appear beside the date. Click it and it
+grows into a control centre; press `Super+R` and it stretches into a
+launcher; a notification arrives and it *becomes* the notification,
+then hands the shape back.
 
-Because it's one program, the palette is shared, the animation is
-shared, and there is one settings app rather than five config files.
+Because it's one program, the palette is shared, the motion is shared,
+and there is one settings app rather than five config files.
 
----
-
-## The island
-
-| Mode | Trigger | Shows |
-|:--|:--|:--|
-| `idle` | — | time and date, or the track that is playing |
-| `compact` | hover | lifts all three shapes; the pill gains transport |
-| `expanded` | click | calendar, battery, toggles, sliders, media |
-| `search` | `Super+R` | application launcher |
-| `clipboard` | `Super+V` | clipboard history |
-| `picker` | `Super+Shift+W/T/I` | wallpapers, palettes, icon themes |
-| `session` | `Super+Shift+Q` | lock, log out, suspend, reboot, shut down |
-| `centre` | `Super+N` | notification history |
-| `notify` | on arrival | a notification, briefly |
-| `osd` | media keys | volume, brightness, mic |
-| `auth` | on request | polkit authorization |
-
-The pill's collapsed width is derived from its content plus a padding
-constant, so nothing ever runs into the edges regardless of what's in
-it. It is also what morphs: a track starting grows an equaliser out of
-nothing and the shape follows. The title is deliberately not there —
-it is as long as whoever named the track decided and it changes while
-you are not looking, so the shape at rest would be a different shape
-every few minutes. `island.pillTitle` puts it back.
-
-Scrolling the collapsed pill moves one workspace either way. It can be
-set to volume, or to nothing, in Settings → Island.
-
-### The pods
-
-Two capsules flank the pill. They never move the island's centre —
-they hang off its edges and grow outwards.
-
-| Pod | At rest | Open |
-|:--|:--|:--|
-| workspaces | dashes: long for where you are, short for occupied, a stub for empty | numbered chips, clickable |
-| tray | the first four icons, quiet | every icon, at full size |
-
-The workspace pod has four ways of saying the same thing at rest, on
-the Island page: **dashes**, **dots**, **numbers**, or **icons** — the
-app you last used on each workspace, which is the only one that says
-what is over there, and the widest. Open, every style becomes the same
-numbered chips.
-
-A pod opens while you point at it, for a moment after what it shows
-changes, and until you click it again if you click it — clicking the
-capsule itself pins it open, and the outline says so. Both collapse to
-nothing when they have nothing to show: an empty tray leaves no
-capsule behind, and either can be switched off entirely.
-
-Every other mode undocks them. The control centre, the launcher and a
-notification each own the whole shape, and satellites orbiting a
-search field are debris.
-
-### The control centre
-
-The panel is a grid, and what is on it is configuration rather than
-code. Each control holds a rectangle in cells:
-
-```
-calendar:0,0,3,5;wifi:3,0,3,1;bluetooth:3,1,3,1;media:3,2,3,2
-         │ │ │ │
-         x y w h
-```
-
-A fifth field turns a control's words off — `wifi:3,0,3,1,0` is the
-badge and nothing else, at any size. It is optional, so a layout
-written without it means what it always did.
-
-Settings → Control draws that grid at full size with the real cards
-in it — the Wi-Fi card says which network, the month says which month
-— and you drag them around. Corner to resize, `Aa` for words, `×` to
-remove, and a palette underneath for everything not currently placed.
-The column count is 4 to 8; **Tidy** repacks; **Undo** goes back. The
-panel's height is whatever the layout reaches, so there is no height
-to set and none to disagree with what is in it.
-
-Controls change shape rather than scaling. A Wi-Fi card three cells
-wide carries the network name and a chevron into the list; squeezed to
-one — or with its words turned off — it is the badge alone and keeps
-only the power toggle. A slider
-wide enough for a label has one, and taller than it is wide it stands
-up and fills from the bottom.
-
-Wi-Fi, Bluetooth and Sound have lists behind their chevrons, drawn
-over the grid inside the same panel — the shape does not change, the
-grid steps aside, the list slides in, and the chevron comes back.
-Clicking Wi-Fi used to open the Settings window on the Network page,
-which is a strange answer to "what networks are around".
-
-Album art in a media card is washed with the accent colour, so a card
-belongs to the theme whatever the record label chose. That detail, the
-lists-in-the-panel and the layout editor are all taken from
-[saneAspect's Dynamite V3](https://www.youtube.com/watch?v=Ob98KFByTec).
-
-### Motion
-
-The shape springs open and settles shut. Those are different curves,
-because they are different events: a spring on arrival feels
-responsive, and a spring on dismissal feels like the interface arguing
-with you.
-
-| | Curve | Time |
-|:--|:--|:--|
-| open | spring, damping 0.78 — about 1.5% overshoot | 240 ms |
-| close | critically damped, no overshoot | 200 ms |
-| hover | spring, damping 0.78 | 200 ms |
-| pod peek | spring, damping 0.55 | 300 ms |
-| content in | 40 ms lead, then 150 ms | 190 ms |
-| content out | immediately, and quicker | 90 ms |
-
-Those are the **fluid** tempo, and the numbers are measured rather
-than invented. Sampling [saneAspect's Dynamite
-V3](https://www.youtube.com/watch?v=Ob98KFByTec) at 60fps — the
-panel's height in one column of pixels, frame by frame — its control
-centre opens in about 180 ms and overshoots its final height by 1.4%,
-which is a damping fraction of roughly 0.8. That was already this
-spring. The only thing that differed was the clock: 460 ms against his
-180. Two and a half times slower is the whole of the difference
-between motion you feel and motion you wait for.
-
-**calm** is the old tempo, kept for anyone who wants the extra beat on
-a large screen. **springy** keeps the speed and spends the damping
-instead: 0.62 is an overshoot you watch rather than feel.
-
-The content is choreographed against the shape rather than gated on
-it. It used to wait until the pill had reached 97% of its final width
-and only then fade in, which is why opening the control centre read as
-a resize followed by a screen. Now the shape moves alone for 80ms, the
-content fades into it while it is still growing, and it is fully in
-long before the shape settles. On the way out the content leaves
-first: content still fading while the shape closes over it looks like
-a mistake.
-
-`Services/Motion.qml` holds the whole vocabulary — it samples a damped
-second-order step response and hands Qt a bezier spline, since Qt has
-no spring easing. Tempo is one control in Settings → Island; damping,
-durations and the content lead are each their own slider a fold below
-it, and **Reduce motion** drops the springs and the shape morphs while
-keeping the cross-fades.
-
-### Shape
-
-One radius is set; everything else derives from it. `Theme.radiusSmall`,
-`radiusNormal` and `radiusLarge` are 0.6x, 1x and 1.2x of the panel
-radius, so the slider in Settings → Theme moves every corner in the
-shell together rather than the two that happened to reference it.
-
-Which of the three a shape gets is a question about what kind of thing
-it is, not about how big it is — size is already in the answer, because
-Qt clamps a radius to half the shorter side, so at a large setting a
-28px button becomes a capsule while the panel behind it stays a rounded
-rectangle:
-
-| Token | What it is for |
-|:--|:--|
-| `radiusLarge` | a **card** — something that holds other things and sits on a surface: control-centre cards, a selected row in a list, overview and picker cards, an icon tile, a popup |
-| `radiusNormal` | a **panel**, or a field you type into: the settings window and its sidebar, a segmented control, a password box |
-| `radiusSmall` | a **chip** — a small control holding one word or one glyph: buttons, tabs, a thumbnail inside a card |
-
-There is a fourth case and it is deliberately not a token: a shape whose
-roundness is a fact about the shape rather than a preference. A toggle
-knob, a slider handle, a workspace dash, the cap on a 3px tick — those
-are `height / 2`, written where they are drawn. `radius: 1.5` beside
-`width: 3` is the same number with the reason taken out of it, and it
-stops being a capsule the moment somebody changes the 3.
-
-The island's own corner is a function of its height, not a constant:
-
-```
-Theme.corner(h) = min(h / 2, island.radius + h * 0.06)
-```
-
-A single number cannot serve both ends of a shape that morphs from a
-34px pill to a 374px panel — at 14 the pill is three pixels short of a
-capsule, and the panel gets that same 14 on something ten times taller.
-The height is already spring-animated, so **the corner opens up as the
-shape does**, for free.
+**Deeper:** [`docs/DESIGN.md`](docs/DESIGN.md) — the modes, the pods,
+the panel, the motion and the shape.
+[`docs/NOTES.md`](docs/NOTES.md) — what cost real time to work out.
 
 ---
 
@@ -400,8 +117,9 @@ cd island-dots && ./install.sh
 
 Clone it wherever you like — nothing assumes `~/island-dots`.
 
-The script symlinks `hypr/` and `quickshell/island/` into `~/.config`
-and `bin/` into `~/.local/bin`, creates the state directories,
+The script symlinks `hypr/`, `quickshell/island/` and
+`fontconfig/fonts.conf` into `~/.config` and `bin/` into
+`~/.local/bin`, creates the state directories,
 generates `~/.config/island/matugen.toml` with this machine's absolute
 paths, puts `~/.config/gtk-{3,4}.0/gtk.css` under the shell's control,
 and reports missing dependencies — including the icon font, which it
@@ -468,41 +186,27 @@ Everything is in the settings app — `Super+S`.
 
 The checkout is code and belongs in git.
 `~/.config/island/settings.json` is this machine's state and doesn't.
-It's written on first run from the defaults in `Services/Config.qml`,
-and merged against them on every start — so an update that adds a
-setting picks it up without the file being deleted.
+It's written on first run from the defaults in `Services/Config.qml`
+and merged against them on every start, so an update that adds a
+setting picks it up without the file being deleted. The merge keeps
+values you already have — if a release changes a *default*, delete the
+file to take the new one.
 
-`settings.example.json` shows every key and its shipped default. It is
+`settings.example.json` lists every key and its shipped default. It is
 generated from `Services/Config.qml` by `bin/island-gen-example` and is
-documentation only; the shell never reads it. `--check` says whether it
-is current, which is worth running after adding a setting.
+documentation only; the shell never reads it.
 
-One consequence of the merge worth knowing: it preserves values you
-already have. If a release changes a *default*, your existing file
-keeps the old value. Delete `settings.json` to take the new defaults.
+The switch in the window's top-right decides how much of a page there
+is: off shows what people reach for, on adds the tuning — pixel sizes,
+timings, blur internals. Not every key has a control even then; the
+example file is the complete list either way.
 
-The switch in the window's top-right corner decides how much of a page
-there is. Off — the default — the pages show what people reach for;
-on, the tuning appears: pixel sizes, timings, blur internals, pointer
-acceleration. It is `ui.advanced`, and it is remembered.
-
-Not every key has a control even then. A glyph nudge, a font weight,
-an Alt+Tab delay and nine of the eleven motion durations are still
-keys, still listed in `settings.example.json`, and still read on every
-start — they just stopped charging every reader of the Island page for
-the privilege. `settings.example.json` is the complete list either
-way.
-
-Two things the settings app changes are deliberately *not* in that
-file, because they are not island's to own:
-
-| Page | Writes | Why |
-|:--|:--|:--|
-| Apps | `~/.config/mimeapps.list` | The desktop's own file. A browser picked here is the browser every other application opens a link with. |
-| Apps | `~/.local/state/island/apps.lua` | What `Super+X`, `Super+E` and `Super+B` spawn. `hypr/env.lua` ships the defaults and overlays this on top, so the page never edits a file in the checkout. |
-
-The one exception on that page is the terminal, which is the handler of
-no MIME type and so has nowhere to go but `settings.json`.
+Two things the settings app writes are deliberately *not* in that
+file, because they are not island's to own: `~/.config/mimeapps.list`
+(a browser picked here is the one every application opens links with)
+and `~/.local/state/island/apps.lua` (what `Super+X`, `Super+E` and
+`Super+B` spawn, overlaid by `hypr/env.lua` so the page never edits the
+checkout).
 
 ```
 packages/             extracted, reusable on their own
@@ -514,6 +218,7 @@ bin/                  linked into ~/.local/bin by install.sh
                       island-mime         default applications
                       island-gen-example  regenerates the example config
 hypr/                 Hyprland config, one module per concern
+fontconfig/           text rendering, linked into ~/.config
 pam/                  PAM template for the lock screen
 matugen/              Wallpaper → palette templates
 quickshell/island/
@@ -540,23 +245,15 @@ Wallpaper → matugen → four outputs:
 | `gtk-4.0/matugen.css` | GTK4 / libadwaita, directly |
 | `hyprctl eval` | window borders, via `Services/Compositor.qml` |
 
-GTK3 and GTK4 need separate templates — GTK3 reads the `theme_*`
-family, GTK4 reads only the `adw` names.
+matugen writes `matugen.css`, never `gtk.css` — that one is contested,
+and one stray root-owned symlink used to take the whole run down with
+it. `bin/island-gtk-apply` owns `gtk.css` and imports the theme,
+`matugen.css` and your own `user.css` into it.
 
-matugen writes `matugen.css`, never `gtk.css`. `gtk.css` is contested:
-adw-gtk3's own GTK4 install step symlinks it to a root-owned file
-under `/usr/share/themes`, and matugen aborts its *entire* run on the
-first output it cannot write — so one stray symlink silently took down
-the palette and the GTK3 colours with it. `bin/island-gtk-apply` owns
-`gtk.css` and imports the theme and `matugen.css` into it:
-
-```css
-@import url("file:///usr/share/themes/<your theme>/gtk-4.0/gtk.css");
-@import url("matugen.css");
-@import url("user.css");   /* only if you create it */
-```
-
-Put your own CSS in `user.css` next to it. `gtk.css` is regenerated.
+Text rendering is `fontconfig/fonts.conf`, linked alongside the rest.
+Qt reads fontconfig directly while GTK reads gsettings, so without it
+the shell rasterises differently from every other window on the
+machine.
 
 Firefox, Chrome and Electron apps do their own theming and won't
 follow. That isn't a bug in the setup.
@@ -577,255 +274,38 @@ manager, a terminal.
 
 ---
 
-## Notes for anyone reading the source
+## Roadmap
 
-Things that cost real time to work out:
-
-- **A bezier spline easing can take the whole process down.** Qt does
-  not validate `easing.bezierCurve`, and it does not warn: a malformed
-  spline segfaults the shell the first time something animates, with a
-  stack trace pointing at whatever socket happened to be dispatching.
-  Two separate shapes do it, and a sampled spring curve hits both by
-  accident:
-  - segments of different widths in x — twelve narrow ones and one
-    wide one is enough;
-  - segment endpoints that step back down in y, which is exactly what
-    an overshoot looks like if you sample it naively.
-
-  Control points are unconstrained, so the fix is to keep the segments
-  uniform, clamp the endpoints to a non-decreasing sequence, and let
-  the control points carry the overshoot. `Services/Motion.qml` does
-  that, and the comment there says so.
-
-- **Hyprland's Lua migration breaks things silently.** Three separate
-  APIs stopped working with no error and no log line:
-  - `hyprctl keyword` — rejected outright with "keyword can't work
-    with non-legacy parsers". Use `hyprctl eval` with an
-    `hl.config({...})` block.
-  - `hyprctl dispatch workspace 2` — wrapped as
-    `hl.dispatch(workspace 2)`, which is not valid Lua. Dispatchers
-    take Lua now: `hl.dsp.focus({ workspace = 2 })`.
-  - Argument names changed with it. Focusing a window is
-    `hl.dsp.focus({ window = "address:0x..." })`. A top-level
-    `address =` used to be accepted and silently ignored; as of 0.56.2
-    it names the fields it will take instead, and unknown fields on
-    `hl.layer_rule` are rejected the same way. Check the version
-    before assuming a key is being read.
-
-  After a Hyprland update, test each of these by hand before assuming
-  the shell is at fault:
-
-  ```bash
-  hyprctl dispatch 'hl.dsp.focus({ workspace = 2 })'
-  hyprctl eval 'hl.config({ decoration = { rounding = 12 } })'
-  qs -c island ipc call wm windows      # then focus one by address
-  ```
-
-- Do not make the pill's own properties conditional per mode. Colour,
-  border width and `clip` switching mid-morph were the cause of every
-  flicker in the control centre. Content inside a mode can vary
-  freely; the surface it sits on should not.
-- A `PropertyChanges` that overrides a *bound* property replaces the
-  binding rather than animating through it. The island uses plain
-  bindings and no QML `States` for that reason.
-- A `readonly` property nothing reads is evaluated lazily, so its
-  change signal never fires.
-- `clip: true` clips to the bounding rectangle, not the rounded shape.
-  Anything opaque touching a rounded corner must round it itself.
-- `anchors.centerIn` centres a text's line box, not its glyph. Icon
-  fonts reserve descent space they never use.
-- A `Grid` takes its width from its children — deriving a child size
-  from the Grid's width is circular and collapses silently.
-- **Notifications are destroyed the moment the handler returns**
-  unless you set `tracked = true` on them. Nothing did, so
-  `trackedNotifications` was always empty and the object each history
-  entry held was already dead. The JavaScript wrapper stays *truthy*
-  after that and every property read comes back `undefined`, so it
-  fails as a `TypeError` at the call site rather than anywhere near
-  the cause — which is why action buttons silently did nothing for
-  the entire life of the project. History stores copies and looks the
-  live object up by id.
-
-- **`Qt.callLater` is not "after the surface is down".** It runs
-  before the event loop returns to Wayland. Dispatching a focus change
-  from it while a layer still holds `WlrKeyboardFocus.Exclusive` means
-  the compositor restores focus over the top of you a moment later.
-  This is the whole of the Alt+Tab bug. Use a short timer.
-
-  It hid behind a coincidence: focusing a window on *another*
-  workspace also switches workspace, which leaves the restore nothing
-  on screen to put focus back onto. So it worked across workspaces
-  and failed within one, which reads like anything except a focus
-  race.
-
-- **One shape is not always one shape.** The launcher and the
-  clipboard were a field and a list inside a single pill, and the pill
-  took its height from how many rows there were. That makes the field
-  stop reading as a field the moment it has results — it becomes the
-  top edge of a box — and it moves the shape under the cursor on every
-  keystroke.
-
-  They are two surfaces now: the pill holds the field and keeps one
-  height, and a shelf below it holds the rows, at `island.podGap` —
-  the number that already governs the space between the pill and the
-  pods, rather than a second one invented for this. `Island.qml` owns
-  the shelf; `SearchList.qml` and `ClipList.qml` are what sit on it.
-
-  The empty launcher is now literally empty: no rows, no shelf, just
-  the bar. The clipboard keeps its shelf either way, because it was
-  opened deliberately and "No matches" is an answer to that.
-
-- **A `Shape` makes its window opaque under a blur rule.** Qt's
-  `Rectangle` draws circular corners and has no corner smoothing, so a
-  macOS-style superellipse corner has to come from somewhere else. The
-  obvious somewhere is `QtQuick.Shapes`, and it cannot be used here: a
-  `Shape` anywhere in the island's window turns that window's whole
-  bounding rectangle opaque in the Wayland buffer, and `hypr/rules.lua`
-  blurs that layer — so Hyprland dimmed a dark square behind every
-  rounded surface in the shell, hiding the corner the `Shape` was drawn
-  to improve.
-
-  Four fixes do not work, and each was measured rather than assumed:
-  `Shape.GeometryRenderer` instead of `CurveRenderer`; `layer.enabled`
-  on the Shape; raising the layer's `ignore_alpha` from 0.03 to 0.5;
-  and keeping the Shape offscreen as a `visible: false` layer source
-  composited by a `MultiEffect`. Swapping the same geometry back to a
-  plain `Rectangle` clears it every time, which is what makes it the
-  Shape rather than the path. That it survives an `ignore_alpha` of 0.5
-  is the useful half: the alpha being written is not faint, so no
-  threshold saves you.
-
-  A `ShaderEffect` does work — one quad, an SDF with the `L^n` norm in
-  place of `length()`, and the alpha it writes is the alpha you get —
-  and so does `Canvas`, which rasterises with `QPainter` into its own
-  texture. Neither adds a `Shape` node. That is `packages/qml-squircle`:
-  the shader as `Squircle.qml` with its baked `.qsb` committed, and
-  the Canvas as a no-binary fallback. The shell uses it for the pill,
-  the shelf, the pods and both windows, and Hyprland draws the
-  matching curve for windows from the same `appearance.cornerSmoothing`
-  via `decoration:rounding_power`.
-
-- **A file watcher can eat the setting you just made.** `Config.qml`
-  wrote `settings.json` on every property change and reloaded it on
-  every file change. For a slider — one key, one write — that is fine.
-  For anything setting several keys in one call it is lossy: each
-  write queues a file change, each file change triggers a reload, and
-  a reload landing between two writes puts the adapter back to what
-  was on disk before the second one.
-
-  Picking a Tempo writes eleven motion keys. Five of them did not
-  survive, the file was left holding a mixture of two tempos, and the
-  row read back as **Custom** — so the symptom was the settings app
-  disagreeing with the setting you had just made, with nothing
-  anywhere reporting an error. Reproducible in about fifteen lines:
-
-  ```qml
-  Motion.setTempo("calm");
-  // then, a tick later, compare Config.motion against Motion.tempos.calm
-  ```
-
-  The fix is a zero-interval timer, which is not a delay — it fires on
-  the next turn of the event loop, after the whole burst has landed on
-  the adapter and before anything can observe the file. Plus a flag so
-  the watcher ignores the shell's own writes coming back around.
-
-- **PipeWire's volume is not the volume anyone shows you.** The number
-  in `channelVolumes` is a linear gain — what the samples get
-  multiplied by — and what `wpctl`, `pactl` and `pavucontrol` all
-  print is its cube root. Setting 0.5 with `wpctl` writes 0.125.
-  Quickshell's `sink.audio.volume` is on the *displayed* scale, so the
-  percentage the shell shows agrees with every other tool exactly, in
-  both directions.
-
-  That agreement is also why half way along the slider does not sound
-  half as loud, and it is not a bug in anything: a displayed `p` means
-  `p³` of gain, loudness goes roughly as `gain^0.6`, so loudness goes
-  as `p^1.8`. 50% is −18 dB, which the ear reads as under a third.
-  `Settings → System → Sound` can swap the scale for one where the
-  number tracks loudness instead — `gain = p^(5/3)`, so island's 50%
-  is `wpctl 0.68` and −10 dB. It is off by default, because a shell
-  whose numbers disagree with `wpctl` is worth choosing on purpose.
-
-  Check both scales at once with:
-
-  ```bash
-  qs -c island ipc call audio status
-  ```
-
-- **A `Repeater` needs a visual parent.** In a singleton it has none,
-  so its delegates are never created and whatever they were supposed
-  to do silently does not happen. `Instantiator` is the non-visual
-  one.
-
-- **Everything inside `Variants` exists once per screen**, including
-  `IpcHandler`. Two handlers claiming one target collide and the loser
-  is not registered, so on a second monitor it is load order that
-  decides which of your keybinds work. `Services/Screens.qml` names
-  one island the owner.
-
-- **`qs ipc call <target> show` cannot work.** `show` is eaten by
-  `qs ipc show` before it reaches the function name, and `--` does not
-  help. Every `show()` here also answers to `open()`.
-
-- **A declared property is not a drawn one.** `SliderRow` had a
-  `description` for years and never rendered it, so every explanation
-  written for a slider was invisible and nobody could tell from the
-  source that it should not have been.
+- [ ] **Inline reply is send-only.** The notification closes on send;
+      the spec has nowhere to put a thread, so a follow-up starts a
+      new one rather than threading.
+- [ ] **Mixed-DPI is untested.** Each island divides its geometry by
+      `Screens.baseScale`, which is exactly 1 when every monitor shares
+      a scale — so uniform setups are untouched and only genuinely
+      mixed-DPI hardware exercises it. There isn't any here.
+- [ ] **Calendar is read-only.** Writing an event back means speaking
+      CalDAV, which is a different program.
+- [ ] **Recurrence rules are partial.** `FREQ`, `INTERVAL`, `COUNT`,
+      `UNTIL`, `EXDATE` and weekly `BYDAY` cover almost everything
+      real; the rest of RFC 5545 falls back to the first occurrence.
+- [ ] **Fingerprint is untested.** The PAM file ships and the shell
+      reports which piece is missing, but no reader has ever been
+      attached. An issue either way would be useful.
+- [ ] **The layout editor has not been driven by a real pointer.** Two
+      defects were found and fixed by reading it — the grip's inset and
+      a missing height ceiling — but none of it has met an actual mouse.
+- [ ] **A `SelectRow` commits on options change.** An open dropdown
+      writes a value back when its list repopulates underneath it.
+- [ ] **Continuous gestures need a daemon.** `bin/island-gestures`
+      reads libinput because Hyprland's `gesture` action fires once on
+      release. A note rather than a task: it needs a progress callback
+      upstream.
 
 ---
 
-## Roadmap
-
-- [ ] **Inline reply is send-only.** The field delivers the reply and
-      the notification closes. Chat clients that send a follow-up in
-      the same conversation start a new notification rather than
-      threading, because the spec has nowhere to put a thread.
-
-- [ ] **Mixed-DPI scaling is untested on real hardware.** Qt scales
-      the scene by one factor for the whole application, so on a setup
-      whose monitors have different scales the island is drawn at the
-      first screen's. `Island.qml` now divides each island's geometry
-      by `Screens.baseScale`, which is exactly 1 whenever every monitor
-      shares a scale — so a uniform setup, single-monitor included, is
-      untouched. Only a genuinely mixed-DPI machine exercises it, and
-      there isn't one here. Note that `QT_AUTO_SCREEN_SCALE_FACTOR` in
-      `hypr/env.lua` is what applies the base scale in the first place.
-
-- [ ] **Calendar is read-only.** `bin/island-calendar` parses .ics
-      files directly, so events appear without khal. Writing one back
-      would mean speaking CalDAV, which is a different program.
-
-- [ ] **Recurrence rules are partial.** `FREQ`, `INTERVAL`, `COUNT`,
-      `UNTIL`, `EXDATE` and weekly `BYDAY` cover the overwhelming
-      majority of real calendar entries. `BYSETPOS`, `BYMONTHDAY` and
-      the rest of RFC 5545 fall back to the first occurrence rather
-      than being dropped.
-
-- [ ] **Fingerprint is untested.** The PAM file ships and the shell
-      reports which piece is missing, but it has never run against an
-      actual reader — there isn't one on the machine this was built
-      on. If you have one, an issue either way would be useful.
-
-- [ ] **The layout editor has still not been driven by a real
-      pointer.** Two defects in the arithmetic have been found and
-      fixed by reading it: the corner grip measured from its own
-      negative anchor margins rather than from the grip, so every
-      resize read four pixels large in both axes; and card height had
-      no ceiling, in the grip, in `resize()` and in `parse()` alike,
-      so a drag could grow a panel taller than the screen. The drag
-      path checks out — `arrange()` pins the dragged card at the ghost
-      rect, so the card-relative pointer maths closes. None of it has
-      been exercised with an actual mouse.
-
-- [ ] **Continuous gestures need a daemon.** `bin/island-gestures`
-      reads libinput directly because Hyprland's `gesture` action
-      fires once on release. This is a note rather than a task: it
-      needs a progress callback for custom gestures upstream, and
-      until that exists there is nothing to do here.
-
 ## Contributing
 
-Beta, and tested on one machine. If you try it and something breaks,
+v1.0.0, and tested on one machine. If you try it and something breaks,
 [open an issue](https://github.com/Sid-5137/island-dots/issues/new) —
 that's more useful than a star.
 
