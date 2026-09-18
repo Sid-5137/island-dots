@@ -1,22 +1,12 @@
 import QtQuick
 import "root:/Services"
 
-// The three corners, drawn at the radius each one is actually set to.
+// The three corners, drawn at the radius each is actually set to —
+// none of the three shapes is visible from the page that sets them.
 //
-// "Corner radius: 8 px" is a number about a shape you cannot see from
-// the page it is set on — the pill is behind the settings window, the
-// window corners are off at the edges of the screen, and the panel is
-// the thing you are looking through to read the slider. Three
-// rectangles is the whole of what the setting does, so here they are.
-//
-// They matter most while the link is off: three numbers that are free
-// to disagree are worth being able to compare at a glance, and the
-// shapes disagreeing is easier to read than the numbers doing it.
-//
-// Not to scale, deliberately. A window corner of 8px on a 1920px
-// screen shrunk into a 200px box would be a third of a pixel. These
-// are drawn at the real radius on a shape big enough to show it, which
-// is the comparison the page is actually about.
+// Not to scale, deliberately: an 8px window corner shrunk to fit a
+// 200px box would be a third of a pixel. Real radius, on a shape big
+// enough to show it, so the three can be compared while unlinked.
 
 Item {
     id: root

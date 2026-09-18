@@ -20,34 +20,22 @@ Singleton {
 
     property string query: ""
 
-    // What the launcher shows.
-    //
-    // Empty until you type, the way Spotlight is. It used to be every
-    // application you have, sorted alphabetically, sliced to 60 — which
-    // meant the launcher opened onto a wall of things you were not
-    // looking for, and meant a localeCompare sort over a few hundred
-    // entries ran every time the field went back to empty. A list of
-    // everything is not an answer to a question nobody has asked yet.
+    // What the launcher shows: empty until you type, the way Spotlight
+    // is. A list of everything is not an answer to a question nobody
+    // has asked yet, and sorting one cost a localeCompare pass every
+    // time the field went back to empty.
     //
     // A plain property rather than a binding, because `refresh` needs
-    // to remember what it did last time. The panel's geometry and the
-    // ListView still track it the same way.
+    // to remember what it did last time.
     property var results: []
 
-    // ── The index ────────────────────────────────────────────
+    // Everything a match is tested against, normalised once. None of
+    // it depends on the query, so none of it belongs in the query path
+    // — it was three C++ property reads, three toLowerCase calls and a
+    // regex split per entry per keystroke.
     //
-    // Everything a match can be tested against, normalised once.
-    //
-    // Per keystroke this used to be: three property reads across the
-    // C++ boundary per entry, three toLowerCase allocations, and a
-    // regex split of the name into a fresh array — times however many
-    // applications are installed, for every character typed. None of
-    // it depends on the query, so none of it belongs in the query
-    // path.
-    //
-    // `starts` holds the offset of each word in the name instead of
-    // the words themselves, so the word-boundary test below can use
-    // startsWith with a position and never allocate a substring.
+    // `starts` holds word OFFSETS rather than the words, so the
+    // word-boundary test can use startsWith(pos) and never allocate.
     readonly property var index: {
         const all = DesktopEntries.applications.values;
         if (!all) return [];
@@ -129,19 +117,11 @@ Singleton {
             return;
         }
 
-        // Typing appends, so the common case is that the new query
-        // extends the old one — and every tier in `score` is
-        // prefix-monotone: a name that contains "fir" contains "fi", a
-        // word that starts with "fir" starts with "fi", a subsequence
-        // for "fir" is one for "fi". So nothing can match the longer
-        // query without having matched the shorter one, and the pool
-        // is last time's answer rather than the whole index.
-        //
-        // Typing a word of any length therefore costs one full pass
-        // and then a handful of tiny ones, instead of a full pass per
-        // character. Backspacing breaks the prefix relation and falls
-        // back to the index, which is correct and is also the rarer
-        // direction to be moving in.
+        // Every tier in `score` is prefix-monotone, so nothing can
+        // match a longer query without having matched the shorter one
+        // — the pool is last time's answer, not the whole index.
+        // Backspacing breaks that relation and falls back to the
+        // index.
         const pool = (lastQuery !== "" && q.startsWith(lastQuery))
             ? lastMatches : index;
 
@@ -170,27 +150,10 @@ Singleton {
         results = out;
     }
 
-    // ── Scoring ──────────────────────────────────────────────
-    //
-    // Tiers, best first. The order they are written in is the order
-    // they are tested in, and that used to be wrong in a way that hid
-    // an entire tier.
-    //
-    // The word-boundary test sat below the substring test. A word
-    // starting with the query is also a substring containing it — at
-    // that offset or an earlier one — so indexOf always found it
-    // first and returned the weaker score. The branch below it was
-    // unreachable: across 258 name/query pairs built from the words of
-    // real entry names, it fired zero times. It also carried the most
-    // expensive line in the function, a regex split allocating an
-    // array per entry per keystroke, to produce a number nothing could
-    // ever read.
-    //
-    // So "text editor" typed as "ed" scored 695 — substring, five
-    // characters in — rather than the 789 the word tier meant to give
-    // it, and sorted below anything with an incidental "ed" nearer its
-    // front. Tested in the right order it wins, which is the point of
-    // having the tier.
+    // Tiers, best first. Written order IS test order, and it matters:
+    // the word-boundary test must stay ABOVE the substring test. A
+    // word starting with the query is also a substring containing it,
+    // so indexOf wins first and the word tier becomes unreachable.
     function score(rec, q) {
         const name = rec.name;
 

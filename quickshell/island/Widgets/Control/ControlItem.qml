@@ -4,16 +4,11 @@ import "root:/Services"
 
 // One control, chosen by key.
 //
-// The panel and the layout editor draw from the same file so that the
-// editor is showing the thing itself rather than a sketch of it. That
-// is the whole reason this is a component and not a switch statement
-// inside ControlMode: a preview that is separately written drifts, and
-// a preview that has drifted is worse than no preview, because it is
-// confidently wrong about what you are arranging.
+// The panel and the layout editor draw from this same file, so the
+// editor shows the thing itself rather than a sketch that can drift.
 //
-// `live` is the only difference between the two. In the editor the
-// controls are drawn but inert — clicking a card there is the start of
-// a drag, not a request to turn the Wi-Fi off.
+// `live` is the only difference: in the editor the controls are drawn
+// but inert, so a click starts a drag rather than turning Wi-Fi off.
 
 Item {
     id: root

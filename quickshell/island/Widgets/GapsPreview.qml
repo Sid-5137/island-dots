@@ -1,20 +1,13 @@
 import QtQuick
 import "root:/Services"
 
-// Three tiled windows, at the gaps and the rounding they are set to.
+// Three tiled windows, at the gaps and rounding they are set to.
 //
-// Inner gaps, outer gaps and window rounding are three numbers about
-// the space between things, and space between things is the one kind
-// of setting a number is worst at describing: 4 and 8 are obviously
-// different and give you no idea what either looks like until you have
-// closed the settings window and opened two terminals.
-//
-// Gaps are drawn at their real pixel size on a screen drawn small,
-// which is a lie about scale and the truth about the thing being set.
-// Shrink the gaps by the same factor as the screen and an inner gap of
-// 4 becomes half a pixel — a preview that cannot show the difference
-// between any two values it has. The windows are the part that is to
-// scale with each other; the gaps are to scale with your screen.
+// Gaps are drawn at their REAL pixel size on a screen drawn small.
+// Scaling them down with the screen would make an inner gap of 4 half
+// a pixel, and the preview could not show the difference between any
+// two values. The windows are to scale with each other; the gaps are
+// to scale with your screen.
 
 Item {
     id: root

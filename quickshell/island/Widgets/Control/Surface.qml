@@ -2,18 +2,14 @@ import QtQuick
 
 import "root:/Services"
 
-// The card every control in the panel is drawn on.
+// The card every control in the panel is drawn on: one shape, three
+// states — resting, pointed at, and carrying something that is on.
+// Shared, because the moment each kind of card picks its own resting
+// alpha the grid stops reading as one surface.
 //
-// One shape, three states — resting, pointed at, and carrying
-// something that is on. Shared rather than repeated because the panel
-// is now a grid of cards of different kinds, and the moment each kind
-// picks its own resting alpha the grid stops reading as one surface.
-//
-// The fills are white washes rather than palette colours on purpose.
-// The panel underneath is already a themed surface at the island's
-// opacity; a second themed colour on top of it lands somewhere between
-// the two and looks like a mistake, whereas a wash just lifts whatever
-// is behind it.
+// The fills are white washes, not palette colours: the panel is
+// already a themed surface, and a second themed colour over it lands
+// between the two and looks like a mistake.
 
 Rectangle {
     id: root

@@ -155,19 +155,12 @@ Item {
             onPositionChanged: function(m) { if (pressed) apply(m.x) }
 
             // Ctrl, because a settings page is a scrolling page first
-            // and a row of sliders second.
+            // and a row of sliders second: a bare wheel over a track
+            // would change values while you scroll past, and you would
+            // not find out until later.
             //
-            // The wheel used to adjust the value whenever the pointer
-            // happened to be over a track, which on a page that is
-            // mostly tracks means scrolling past one changes it. You
-            // do not find out until later, and by then you do not know
-            // which one moved or what it was. Every toolkit that has
-            // had this argument — GTK, Cocoa — resolves it the same
-            // way: the wheel belongs to whatever is scrolling.
-            //
-            // Not accepting the event is what hands it back up to the
-            // Flickable. Click-drag is still coarse on a long track,
-            // so the precise stepping stays, one modifier away.
+            // Not accepting the event is what hands it to the
+            // Flickable.
             onWheel: function(w) {
                 if (!(w.modifiers & Qt.ControlModifier)) {
                     w.accepted = false;

@@ -4,22 +4,10 @@ import "root:/Services"
 
 // A chip: one word, and something that happens when you press it.
 //
-// This shape was written out eleven times — Rescan, Disconnect, Join,
-// Scan, Reapply, Lock, Reset all, Regenerate, Clear, Cancel,
-// Authenticate — and each copy had its own idea of how tall a button
-// is (24, 26, 28, 30, 32), which corner it gets (6, 7, 8) and how wide
-// a word needs to be (62, 74, 84, 90, 96, 108, 118, all measured by
-// eye). None of the eleven reacted to a press.
+// Width comes from the text, so a confirm state ("Really? Click
+// again") and a translation both just work.
 //
-// Width is the interesting one. Every copy hard-coded a number that
-// fitted the label it happened to have, which is why the reset button
-// is 118px wide: not because "Reset all" needs 118, but because
-// "Really? Click again" does. Sizing to the text means the confirm
-// state just works, and means a translation does not have to be short
-// enough for somebody else's guess.
-//
-// `kind` is the one axis worth keeping, and what it names is what the
-// press costs:
+// `kind` names what the press costs:
 //
 //   plain    the default. A wash that lifts under the pointer.
 //   primary  the thing the row is for. Filled with the accent.

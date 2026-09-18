@@ -3,69 +3,17 @@ pragma Singleton
 import Quickshell
 import QtQuick
 
-// The island's motion, in one place.
-//
-// Everything used to animate with `Easing.OutBack, overshoot 0.6` over
-// 250ms, in both directions, while the content inside waited for the
-// pill to reach 97% of its final width before fading in. That is why
-// it read as a resize followed by a screen rather than as one object
-// changing shape: OutBack's overshoot is a single hard kick with an
-// abrupt settle, closing bounced exactly as much as opening did, and
-// the content never moved with the shape — it arrived after the shape
-// had stopped.
-//
-// What the real Dynamic Island does instead, and what this implements:
-//
-//   · Springs, not eases. A damped second-order step response: one
-//     small overshoot, then it settles.
-//   · Asymmetry. Opening springs; closing does not. A spring on
-//     dismissal reads as the interface arguing with you.
-//   · Choreography. The shape leads by a beat and the content follows
-//     into it; on the way out the content leaves first, and faster
-//     than it arrived.
-//
-// The numbers come from Apple's spring parameterisation, which
-// describes a spring as `response` (its natural period) and
-// `dampingFraction` (zeta, how far it overshoots), and from the motion
-// spec NotchKit publishes for its Dynamic Island reimplementation:
-//
-//   expand   spring(response 0.42, damping 0.80)
-//   collapse smooth  0.30s, no overshoot
-//   hover    spring(response 0.38, damping 0.80)
-//   peek     spring(response 0.30, damping 0.50)
-//   content  0.08s lead, 0.22s in, 0.12s out
-//
-//   https://github.com/duongductrong/NotchKit/blob/master/docs/motion.md
-//
-// Qt has no spring easing, and SpringAnimation is a toy model with a
-// "useful range 0-5" dial rather than a physical one — so the step
-// response is sampled here and handed to Qt as a bezier spline. The
-// physics stays in the source rather than becoming a wall of baked
-// control points, which means the numbers worth arguing about — zeta,
-// and how long you let it settle — are the ones you can see.
+// The island's motion, in one place. Springs rather than eases, and
+// asymmetric: opening springs, closing does not. Qt has no spring
+// easing, so the step response is sampled into a bezier spline here.
 
 Singleton {
     id: root
 
-    // ── Sampling a curve Qt will actually take ───────────────
-    //
-    // Two rules, both learned by crashing the shell rather than by
-    // reading anything. Qt does not reject a bezier spline that breaks
-    // them, and it does not warn: it takes the whole process down the
-    // first time something animates.
-    //
-    //   1. Every segment must be the same width in x. A spline of
-    //      twelve narrow segments and one wide one is fatal.
-    //   2. Segment endpoints must never step back down in y. Control
-    //      points may go anywhere they like — above 1, below the
-    //      endpoints either side of them — and that is where the whole
-    //      overshoot has to live.
-    //
-    // So: uniform segments, endpoints clamped to the target and to
-    // whatever came before them, and each segment fitted exactly
-    // through the curve at its own third points. Two interior points
-    // is precisely the freedom a cubic has once its ends are fixed,
-    // so the fit is a 2x2 solve rather than a search.
+    // Qt segfaults on a bezier spline whose segments differ in width
+    // or whose endpoints step back down in y — no warning, no
+    // validation. Uniform segments, endpoints clamped non-decreasing,
+    // overshoot carried by the control points. Do not "simplify".
     readonly property int segments: 8
 
     function sample(fn) {
@@ -95,14 +43,8 @@ Singleton {
         return out;
     }
 
-    // ── The spring ───────────────────────────────────────────
-
-    // Unit step response of a damped second-order system.
-    //
-    //   zeta < 1  underdamped: overshoots, then rings down
-    //   zeta = 1  critically damped: the fastest approach with no
-    //             overshoot at all
-    //   zeta > 1  overdamped: slower, and still no overshoot
+    // Unit step response of a damped second-order system. zeta < 1
+    // overshoots then rings down; >= 1 approaches without overshoot.
     function step(t, zeta, w0) {
         const decay = Math.exp(-zeta * w0 * t);
 
@@ -122,15 +64,12 @@ Singleton {
     // An easing curve shaped like a spring.
     //
     //   zeta  the damping fraction, as Apple defines it
-    //   span  how many natural periods the animation runs for. The
-    //         curve is normalised to its own duration, so this only
-    //         decides how much of the settle you keep — enough that
-    //         the tail is imperceptible, no more.
+    //   span  how many natural periods to run for; the curve is
+    //         normalised to its own duration, so this only decides how
+    //         much of the settle you keep
     //
-    // The clamp in sample() costs the ring-down: between the first
-    // overshoot and the target the curve returns to 1 rather than
-    // tracking the oscillation home. The peak survives, which is the
-    // part you can see, and a UI is better off without the rest.
+    // sample()'s clamp costs the ring-down — the peak survives, which
+    // is the part you can see.
     function springCurve(zeta, span) {
         const w0 = 2 * Math.PI;    // response of 1, so t is in periods
         return sample(u => step(u * span, zeta, w0));
@@ -176,30 +115,13 @@ Singleton {
     readonly property var reveal: leadCurve(Config.motion.contentLead,
                                             contentIn)
 
-    // ── Tempo ────────────────────────────────────────────────
-    //
     // Eleven sliders describe motion exactly and answer the wrong
-    // question. Nobody wants to set a content lead; they want the
-    // thing to feel quicker. So the eleven are grouped into three
-    // tempos, and the sliders stay underneath for whoever does want
-    // to set a content lead.
+    // question, so they are grouped into three tempos. The sliders
+    // stay underneath.
     //
-    // `fluid` is measured rather than invented. Sampling saneAspect's
-    // Dynamite V3 at 60fps — the panel's height in a column of pixels,
-    // frame by frame — its control centre opens in about 180ms and
-    // overshoots its final height by 1.4%, which is a damping fraction
-    // of roughly 0.8. That is the same spring this already used. The
-    // only thing that differed was the clock: 460ms against his 180.
-    // Two and a half times slower is the whole of the difference
-    // between motion you feel and motion you wait for.
-    //
-    //   https://www.youtube.com/watch?v=Ob98KFByTec
-    //
-    // `calm` is what shipped before, kept because a large panel
-    // crossing a large screen is a different proposition from a phone
-    // notch and some people will want the extra beat. `springy` keeps
-    // the tempo and spends the damping instead: 0.62 is an overshoot
-    // you watch rather than feel.
+    //   fluid   measured off Dynamite V3: ~180ms, zeta ~0.8
+    //   calm    what shipped before; a beat slower
+    //   springy same tempo, zeta 0.62 — an overshoot you watch
     readonly property var tempos: ({
         fluid: {
             expandDuration: 240, collapseDuration: 200,

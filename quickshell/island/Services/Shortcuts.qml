@@ -4,26 +4,14 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Every keybind, read from the compositor rather than written down.
+// Every keybind, read from `hyprctl binds` rather than written down,
+// so a bind added to hypr/binds.lua appears here with nothing else
+// edited.
 //
-// A cheat sheet kept beside the config is a cheat sheet that is wrong
-// by the second week: somebody rebinds a key, the list still says what
-// it used to be, and the list is the thing people trust because it is
-// the thing that claims to be the answer. `hyprctl binds` is what
-// Hyprland is actually holding, so a bind added to hypr/binds.lua
-// appears here with nothing else edited, and one that is removed
-// disappears.
-//
-// The cost of that is the label: Hyprland stores a description per
-// bind and nothing else, so anything with no description is a bind
-// nobody wrote a name for, and it is left out rather than guessed at.
-// Under the Lua config the dispatcher comes back as "__lua" and the
-// argument as an integer — there is nothing in there to infer a name
-// from even if guessing were a good idea.
-//
-// Groups come from the description, "Windows: Close", because the
-// alternative is a second table somewhere that has to be kept in step
-// with the first.
+// A bind with no description is left out rather than guessed at: under
+// the Lua config the dispatcher comes back as "__lua" and the argument
+// as an integer, so there is nothing to infer a name from. Groups come
+// from the description itself, "Windows: Close".
 
 Singleton {
     id: root

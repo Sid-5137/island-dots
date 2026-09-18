@@ -1,29 +1,19 @@
 import QtQuick
 
-// A rounded rectangle whose corners are superellipse arcs rather than
-// circular ones — the corner macOS draws, and the one Hyprland draws
-// for windows when `decoration:rounding_power` is above 2.
+// A rounded rectangle with superellipse corners, drawn by a fragment
+// shader. SquircleCanvas.qml is the same shape via QPainter for when
+// the .qsb cannot ship.
 //
-// Drawn by a fragment shader: one quad and six lines of maths per
-// pixel. SquircleCanvas.qml is the same shape rasterised by QPainter
-// and needs no shader file; use it if you cannot ship the .qsb. It
-// repaints every time the item resizes, which for a surface that
-// animates its own geometry is a repaint per frame, and its edge is
-// QPainter's polygon antialiasing rather than exact to the pixel.
+// Deliberately not QtQuick.Shapes: a Shape in a translucent Wayland
+// surface a compositor blurs turns the surface opaque.
+// SquircleCanvas.qml has the measurements.
 //
-// Neither is QtQuick.Shapes, and that is deliberate: a Shape in a
-// translucent Wayland surface a compositor blurs turns the surface's
-// bounding rectangle opaque. SquircleCanvas.qml has the measurements.
+// Three rules, as in the Canvas version and the README: `radius` is
+// how round the corner LOOKS, a capsule stays a capsule (smoothing
+// tapers to 2 at the cap), and the border is a ring outside the fill.
 //
-// The three rules the README lays out are all here, in QML, the same
-// as in the Canvas version: `radius` means how round the corner looks
-// (so the curve's extent is scaled up), a capsule stays a capsule (so
-// smoothing tapers to 2 at the cap), and the border is a ring outside
-// the fill. The shader is handed the results and draws them.
-//
-// The cost is squircle.frag.qsb, which has to sit beside this file.
-// It is committed, so copying the two files is the whole install; only
-// changing the shader itself needs qsb (see build.sh).
+// squircle.frag.qsb must sit beside this file. It is committed; only
+// editing the shader needs qsb (see build.sh).
 
 ShaderEffect {
     id: root

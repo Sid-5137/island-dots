@@ -2,20 +2,13 @@ import QtQuick
 import "root:/Services"
 import "root:/Widgets"
 
-// The machine rather than the desktop: how loud, when it goes to
-// sleep, how it unlocks, and the way back to the shipped defaults.
+// The machine rather than the desktop: how loud, when it sleeps, how
+// it unlocks, and the way back to the shipped defaults. Anything about
+// how the desktop LOOKS is on Appearance.
 //
-// Window rounding, gaps, shadows and blur used to be here too, on the
-// argument that a compositor is "the system". On screen they are the
-// same question as the panel settings — how this desktop looks — and
-// asking it meant two pages and three sliders that had never heard of
-// each other. They live on Appearance now, under one corner control.
-//
-// What is left is the machine's own behaviour. The volume scale is
-// here rather than in the control centre's settings because it is the
-// scale the OSD, the media keys and the gestures all read, so it is
-// not the control centre's to own. Idle is applied by regenerating
-// hypridle's config and restarting it.
+// The volume scale is here rather than with the control centre because
+// the OSD, media keys and gestures all read it. Idle is applied by
+// regenerating hypridle's config and restarting it.
 
 Column {
     id: page

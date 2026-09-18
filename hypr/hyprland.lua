@@ -1,10 +1,4 @@
--- island-dots — a Hyprland shell built around a morphing pill.
--- Copyright (C) 2026 Siddhartha Mallavolu
---
--- This program is free software: you can redistribute it and/or
--- modify it under the terms of the GNU General Public License as
--- published by the Free Software Foundation, either version 3 of the
--- License, or (at your option) any later version. See LICENSE.
+-- island-dots. GPL-3.0 — see LICENSE.
 
 -- Hyprland — root config
 -- https://wiki.hypr.land/Configuring/Start/

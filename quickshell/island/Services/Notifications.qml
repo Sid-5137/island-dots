@@ -30,18 +30,11 @@ Singleton {
     // The live Notification for a history entry, or null once the
     // sender has closed it.
     //
-    // History deliberately stores plain copies and looks the object up
-    // by id when it needs one. Holding the QObject directly does not
-    // work: Notification is Retainable, so the instance handed to
-    // onNotification is destroyed once that handler returns. The
-    // JavaScript wrapper stays truthy afterwards and every property
-    // read comes back undefined, so the failure surfaces as a
-    // TypeError at the call site rather than anywhere informative —
-    // which is what made inline reply and invoking an action from
-    // history look like they were not implemented.
-    //
-    // The server keeps the ones it is tracking alive for us, and that
-    // is exactly the set that can still be replied to or acted on.
+    // History stores plain copies and looks the object up by id. Do
+    // not hold the QObject: Notification is Retainable and is
+    // destroyed once onNotification returns, after which the JS
+    // wrapper stays truthy and every read comes back undefined — so it
+    // fails as a TypeError at the call site, nowhere near the cause.
     function liveFor(id) {
         const tracked = server.trackedNotifications;
         if (!tracked || !tracked.values) return null;

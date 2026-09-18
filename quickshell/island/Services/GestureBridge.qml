@@ -4,14 +4,11 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// A socket the gesture daemon writes deltas to.
+// A socket the gesture daemon writes deltas to. One socket held open
+// rather than a `qs ipc call` per step (~20ms each), so a swipe can
+// adjust on every frame the touchpad reports.
 //
-// The daemon used to call `qs ipc call` per step, which spawns a
-// process, connects, and exits — around 20ms each. Holding one socket
-// open removes that entirely, so a swipe can adjust on every frame the
-// touchpad reports.
-//
-// Protocol is one line per event:
+// One line per event:
 //
 //     v <delta>    volume, percent
 //     b <delta>    brightness, percent

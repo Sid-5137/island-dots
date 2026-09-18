@@ -1,31 +1,20 @@
 pragma Singleton
 
-// island-dots — a Hyprland shell built around a morphing pill.
-// Copyright (C) 2026 Siddhartha Mallavolu
-//
-// This program is free software: you can redistribute it and/or
-// modify it under the terms of the GNU General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version. See LICENSE.
+// island-dots. GPL-3.0 — see LICENSE.
 
 import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Whether a fingerprint reader can actually be used at the lock
-// screen, and if not, which of the three things is missing.
+// Whether a fingerprint reader can be used at the lock screen, and
+// which piece is missing if not. PAM does the authenticating; this
+// only decides whether to mention fingerprints at all.
 //
-// PAM does the authenticating; nothing here touches it. This only
-// answers the question the settings page and the lock screen need to
-// ask, which is whether to say anything about fingerprints at all.
+// Three things must line up, each failing silently on its own:
 //
-// Three things have to line up, and each fails silently on its own:
-//
-//   1. fprintd installed, and a reader the kernel can see.
-//   2. A finger enrolled for this user.
-//   3. /etc/pam.d/island present, and pamConfig pointing at it.
-//      pam_fprintd in the stack the lock screen actually uses is what
-//      makes any of the rest reachable.
+//   1. fprintd installed, and a reader the kernel can see
+//   2. a finger enrolled for this user
+//   3. /etc/pam.d/island present, with pamConfig pointing at it
 
 Singleton {
     id: root

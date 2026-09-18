@@ -7,16 +7,12 @@ import "root:/Widgets"
 
 // Workspaces, left of the island.
 //
-// At rest the pod answers one question in about forty pixels: where am
-// I, and which of the others have anything in them. There are four
-// ways to say that here because people want different things from a
-// glance — a shape per workspace (dashes, or dots), the numbers
-// themselves, or the icon of what is running over there, which answers
-// a question the other three cannot and costs the most width.
+// At rest it answers one question in about forty pixels: where am I,
+// and which others hold anything. Four styles say that differently —
+// dashes, dots, numbers, or the icon of what is running there.
 //
-// Open — hovered, pinned, or for a moment after a switch — every style
-// becomes the same numbered chips you can aim at. Same information,
-// addressable.
+// Open — hovered, pinned, or briefly after a switch — every style
+// becomes the same numbered chips you can aim at.
 
 Pod {
     id: root

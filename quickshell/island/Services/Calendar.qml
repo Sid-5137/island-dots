@@ -6,19 +6,14 @@ import QtQuick
 
 // Calendar events.
 //
-// There is no desktop-wide calendar service to ask on Linux, but there
-// is a de facto storage format: everything that keeps a calendar keeps
-// it as .ics files on disk. bin/island-calendar reads those directly —
-// Evolution's store, which is what GNOME Calendar and GNOME Online
-// Accounts write to, plus the usual vdirsyncer and khal layouts.
-//
-// This used to shell out to khal, which meant the whole feature was
-// dark unless you had installed a terminal calendar. khal is still
-// used as a fallback, for a setup whose store isn't in any of the
-// standard places.
+// No desktop-wide calendar service exists on Linux, but .ics on disk
+// is the de facto store. bin/island-calendar reads those directly —
+// Evolution's store (what GNOME Calendar writes to), plus vdirsyncer
+// and khal layouts. khal remains a fallback for anything stored
+// somewhere non-standard.
 //
 // With neither available it reports nothing and the control centre
-// omits the list entirely — no error, no empty box.
+// omits the list — no error, no empty box.
 
 Singleton {
     id: root

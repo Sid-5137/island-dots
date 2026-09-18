@@ -35,18 +35,11 @@ Singleton {
     property var list: []
     property bool busy: false
 
-    // ── What the renderer can actually decode ────────────────────
-    //
-    // The scan used to offer every .webp it found whether or not Qt
-    // could read one. Qt ships no WebP plugin of its own — it comes
-    // from qt6-qtimageformats — so on a machine without that package
-    // the picker listed wallpapers that rendered as an empty tile, and
-    // setting one gave a blank desktop and a line in the log.
-    //
-    // Rather than hardcoding an answer, a one-pixel image of each
-    // questionable format is decoded at startup and the format is
-    // offered only if that worked. Install the package and the files
-    // appear on the next scan, with nothing to configure.
+    // Which formats the renderer can actually decode. Qt ships no
+    // WebP plugin of its own (it comes from qt6-qtimageformats), so a
+    // format is probed at startup by decoding a one-pixel image of it
+    // and offered only if that worked. Install the package and the
+    // files appear on the next scan.
     readonly property var probes: ({
         webp: "data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
     })

@@ -19,34 +19,14 @@ Singleton {
     readonly property PwNode sink: Pipewire.defaultAudioSink
     readonly property PwNode source: Pipewire.defaultAudioSource
 
-    // ── The two scales ───────────────────────────────────────
+    // sink.audio.volume is on the displayed scale wpctl and pactl
+    // use (the cube root of PipeWire's linear gain), so the number
+    // here matches every other tool exactly.
     //
-    // PipeWire stores a linear gain: the number in channelVolumes is
-    // what the samples are multiplied by. What wpctl, pactl and
-    // pavucontrol show is its cube root — the scale PulseAudio
-    // defined — and sink.audio.volume is on that same scale. So the
-    // percentage below is exactly what every other tool on the
-    // machine reports, in both directions: 50 here is `wpctl 0.50`
-    // is `pactl 50%`.
-    //
-    // It is also why half way along the slider does not sound half as
-    // loud. A displayed p means p^3 of gain, loudness goes roughly as
-    // gain^0.6, so loudness goes as p^1.8: 50% is -18 dB, which the
-    // ear reads as under a third of full. Most of the bottom half of
-    // the bar is spent in the last few decibels before silence, which
-    // is the drop that seems to arrive early.
-    //
-    // "perceptual" asks instead for the gain that makes loudness
-    // track the number — gain = p^(5/3), so p^1.8 becomes p^1. In
-    // terms of the system scale s, where gain = s^3, that is
-    // s = p^(5/9). Zero and one are fixed points, so silence is still
-    // silence and 100 is still unity gain; only the middle moves, and
-    // it moves the way the ear does.
-    //
-    // Off by default. Switching it on means this shell and everything
-    // else on the machine report different numbers for the same
-    // volume, and disagreeing with wpctl is worth doing on purpose
-    // rather than by inheritance.
+    // That is also why 50% does not sound half as loud: loudness goes
+    // as p^1.8, so 50% is -18 dB. "perceptual" maps s = p^(5/9)
+    // instead, which makes loudness track the number. Off by default —
+    // disagreeing with wpctl should be a deliberate choice.
     readonly property bool perceptual:
         Config.audio.volumeCurve === "perceptual"
 

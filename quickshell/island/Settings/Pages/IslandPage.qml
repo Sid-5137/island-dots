@@ -4,21 +4,14 @@ import "root:/Widgets"
 
 // The pill: when it shows, what it shows, and what shape it is.
 //
-// Everything below the preview used to be one flat list, of which
-// three are settings anyone changes twice and the rest are pixel
-// sizes that exist so the shape can be tuned once. Those are a fold
-// down now.
+// The handful of settings anyone actually changes are up top; the
+// pixel sizes that tune the shape once are behind a fold. A few keys
+// are deliberately not in the window at all — still in settings.json
+// and still editable by hand, just not charged to every reader of
+// this page.
 //
-// The ones nobody had a reason to reach for are not in the window at
-// all: a glyph nudge, a font weight, an Alt+Tab delay, and nine of
-// the eleven motion durations that Tempo already writes as a set.
-// They are still keys, still in settings.example.json, still editable
-// by hand — they just stopped charging every reader of this page for
-// the privilege.
-//
-// The control centre's width lived here as well as on the Control
-// page, under two names, with no hint that they were one setting.
-// It is on the page that draws the thing, and only there.
+// Each setting lives on the page that draws the thing, and only
+// there.
 
 Column {
     id: page

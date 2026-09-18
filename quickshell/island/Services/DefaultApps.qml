@@ -6,36 +6,25 @@ import QtQuick
 
 // What opens what.
 //
-// Almost all of this belongs to the desktop rather than to the shell.
-// A browser choice lives in mimeapps.list, where a file manager, a
-// chat client and a PDF viewer can all read it; storing it in
-// settings.json would mean island knew a browser preference that
-// nothing else on the machine could act on. So the page edits the
-// association database, through bin/island-mime, and the only choice
-// kept here is the terminal — which is the handler of no MIME type
-// and so has nowhere else to go.
+// This belongs to the desktop, not the shell: choices go to
+// mimeapps.list through bin/island-mime, so everything else on the
+// machine can act on them. Only the terminal is kept here — it
+// handles no MIME type and has nowhere else to go.
 //
-// The three that Super+X, Super+E and Super+B spawn are the same
-// three. They were a hard-coded table in hypr/env.lua, which meant
-// picking a browser in Settings and pressing Super+B could disagree
-// with each other indefinitely. The table is still the shipped
-// default; what is chosen here is written beside it as Lua and
-// overlaid on top. See Paths.apps and hypr/env.lua.
+// The same three drive Super+X/E/B. hypr/env.lua holds the shipped
+// defaults; what is chosen here is written beside it as Lua and
+// overlaid. See Paths.apps.
 
 Singleton {
     id: root
 
-    // ── What can be chosen ───────────────────────────────────
-    //
-    // `spec` is the one type the candidate list is drawn from, and
-    // `mimes` is everything the choice is then applied to — picking an
-    // image viewer should not leave JPEGs behind with the old one.
-    // They are deliberately not the same list: every app offered has
-    // to claim the spec, but an app that claims image/png and not
-    // image/bmp is still the right answer for both.
+    // `spec` is the type the candidate list is drawn from; `mimes` is
+    // everything the choice is applied to. Deliberately different: an
+    // app that claims image/png but not image/bmp is still the right
+    // answer for both.
     //
     // `bind` names the key in hypr/env.lua's Apps table, for the three
-    // that a keybind also spawns. Empty for the rest.
+    // a keybind also spawns.
     readonly property var categories: [
         {
             key: "browser",

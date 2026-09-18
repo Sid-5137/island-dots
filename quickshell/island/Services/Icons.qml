@@ -5,44 +5,14 @@ import QtQuick
 
 // Every glyph the shell draws from the patched font, named once.
 //
-// These were 46 raw escapes spread across fifteen files, and three
-// separate things were wrong with them at the same time — which is one
-// thing, really: nobody could see them.
+// A name, a codepoint, and the font's own glyph name beside it. The
+// glyph name is the part that works: a bare escape is not reviewable,
+// U+F133E and U+F033E look identical in a diff and both render as
+// something, so a wrong one stays wrong quietly. Check names against
+// the Nerd Fonts cheat sheet.
 //
-//   The mute icon was U+F6A9 and the wired-network icon U+F6FF. Both
-//   are Nerd Fonts v2 codepoints for Material Design Icons, a range
-//   that v3 moved wholesale into U+F0000 and up. Neither is in the
-//   font any more, so both drew nothing.
-//
-//   The Wi-Fi bars and the settings tabs were transcribed by hand and
-//   a nibble slipped: U+F09A8 for U+F0928, U+F133E for U+F033E. The
-//   damage is that the wrong codepoints are also real glyphs, so
-//   instead of the boxes that would have sent somebody looking, the
-//   network list drew a shower head, a square-root box, a star face
-//   and a text icon for its four signal strengths, and the settings
-//   sidebar offered a webcam for Theme and an open padlock for
-//   Control. Wrong, quietly, for as long as anyone had been reading
-//   past them.
-//
-//   And nothing anywhere said what a glyph was meant to be. An escape
-//   is not reviewable: U+F133E and U+F033E look the same in a diff,
-//   render as something either way, and there is no line to check the
-//   claim against.
-//
-// So a name, a codepoint, and the font's own glyph name beside it.
-// That last part is the one that does the work — it is what makes
-// `md-lock` checkable against the cheat sheet, and it is how all of
-// the above was found.
-//
-// Deliberately not in here: "×", "•", "❯", "↺", "⌄". Those are
-// typography, not iconography — they come from the text font, they
-// cannot go missing when an icon font is patched differently, and
-// folding them in would mean this file no longer answers one question.
-//
-// Noctalia keeps the same register for the same reason and calls it
-// GlyphRegistry, though it draws from Tabler rather than from a Nerd
-// Font. Swapping families is a rewrite of this file and of nothing
-// else, which is the other thing a register buys.
+// Not in here: "×", "•", "❯", "↺", "⌄" — typography, from the text
+// font, and not at risk when an icon font is patched differently.
 
 Singleton {
     id: root

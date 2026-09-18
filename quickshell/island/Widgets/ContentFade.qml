@@ -6,17 +6,13 @@ import "root:/Services"
 //
 //     Behavior on opacity { ContentFade { revealing: root.shown } }
 //
-// Content used to wait for the pill to reach 97% of its final width
-// and only then fade in, which is why opening the control centre read
-// as a resize followed by a screen. Here the content starts a beat
-// after the shape does and is fully in well before the shape has
-// settled, so the two are one movement. On the way out it leaves
-// first and faster: content that is still fading while the shape
-// closes over it looks like a mistake.
+// Content starts a beat after the shape and is fully in before it
+// settles, so the two read as one movement. On the way out it leaves
+// first and faster.
 //
 // The lead is baked into the easing curve rather than spent in a
-// PauseAnimation, which keeps this a single animation — so a Behavior
-// can pick its direction by binding to one boolean.
+// PauseAnimation, so this stays a single animation and a Behavior can
+// pick its direction from one boolean.
 
 NumberAnimation {
     // True while the content is arriving.

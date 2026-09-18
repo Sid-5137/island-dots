@@ -3,28 +3,17 @@ import QtQuick
 import "root:/Services"
 import "root:/Widgets"
 
-// A satellite beside the island.
+// A satellite beside the island: a small capsule flanking the pill.
 //
-// The collapsed pill used to carry everything at once: the clock, a
-// row of workspace dashes, a playing indicator, the tray — and a
-// scroll gesture to cycle between three "faces" because it could not
-// hold them all. Scrolling to find out what is running is not a
-// glance, and the things worth a glance were exactly the ones the
-// gesture kept hidden.
+// It never moves the island's centre — a dynamic island that drifts
+// left when a tray icon appears is not an island. Two sizes, rest and
+// open, collapsing into the pill's edge when it has nothing to say.
 //
-// So they moved out. A pod is a small capsule that flanks the pill. It
-// does not push the pill aside and it never moves the island's centre,
-// because a dynamic island that drifts left when a tray icon appears
-// is not an island. It has two sizes — rest and open — and it
-// collapses into the pill's edge when it has nothing to say at all.
+// Only the pod animates between them; its content holds still in two
+// cross-fading layers, as the modes do inside the pill.
 //
-// Between those two sizes only the pod animates. Its content holds
-// still in two layers that cross-fade, which is exactly how the modes
-// behave inside the pill: one shape morphing, contents swapping.
-//
-// Content is declared as ordinary children. The pod's own input areas
-// are ordered by z rather than by declaration, so a pod can be
-// subclassed without having to be threaded through an alias.
+// Content is declared as ordinary children, and input areas are
+// ordered by z rather than declaration so a pod can be subclassed.
 
 Item {
     id: root

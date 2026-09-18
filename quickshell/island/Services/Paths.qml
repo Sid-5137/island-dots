@@ -1,26 +1,15 @@
 pragma Singleton
 
-// island-dots — a Hyprland shell built around a morphing pill.
-// Copyright (C) 2026 Siddhartha Mallavolu
-//
-// This program is free software: you can redistribute it and/or
-// modify it under the terms of the GNU General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version. See LICENSE.
+// island-dots. GPL-3.0 — see LICENSE.
 
 import Quickshell
 
 // Every path the shell reads or writes, in one place.
 //
-// This exists because those paths used to be spelled out at each use
-// site as `Quickshell.env("HOME") + "/island-dots/..."`, which hard-
-// codes both the XDG layout and the name of the directory the repo
-// was cloned into. A clone anywhere else came up with no palette, no
-// GTK colours and no gestures, and nothing said why.
-//
-// Nothing here points into the repo. Generated files live under the
-// state directory and the machine-specific matugen config is written
-// by install.sh, so the shell never needs to know where the repo is.
+// Nothing here points into the repo, and nothing hardcodes the clone
+// directory: generated files live under the state directory and the
+// machine-specific matugen config is written by install.sh, so the
+// shell never needs to know where the repo is.
 Singleton {
     id: root
 

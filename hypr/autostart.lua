@@ -1,10 +1,9 @@
 -- Autostart
 
 hl.on("hyprland.start", function()
-    -- Export the session environment to systemd and D-Bus. Without
-    -- this, systemd user units and D-Bus-activated services (the
-    -- portal above all) never see XDG_CURRENT_DESKTOP and pick the
-    -- wrong backend — or fail to start at all.
+    -- Without this, systemd user units and D-Bus-activated services
+    -- (the portal above all) never see XDG_CURRENT_DESKTOP and pick
+    -- the wrong backend, or fail to start.
     hl.exec_cmd(
         "dbus-update-activation-environment --systemd " ..
         "WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP"
@@ -18,19 +17,12 @@ hl.on("hyprland.start", function()
     -- Clipboard history daemon.
     hl.exec_cmd("wl-paste --watch cliphist store")
 
-    -- Continuous four-finger gestures. Needs membership of the input
-    -- group; it exits quietly if it cannot read the devices.
-    -- install.sh links this into ~/.local/bin, so the clone can live
-    -- anywhere. A hardcoded ~/island-dots path meant gestures simply
-    -- never started on a machine that cloned it somewhere else.
+    -- Continuous four-finger gestures. Needs the input group; exits
+    -- quietly if it cannot read the devices.
     --
-    -- PATH is set here because Hyprland does not have one worth the
-    -- name: its own environment is /usr/local/bin:/usr/bin, with no
-    -- ~/.local/bin in it. So a bare name finds quickshell and
-    -- wl-paste, which live in /usr/bin, and finds nothing at all for
-    -- anything install.sh linked — no error, no log, just a daemon
-    -- that was never running. Volume and brightness swipes did
-    -- nothing and the socket the shell was serving sat empty.
+    -- PATH is set because Hyprland's own is /usr/local/bin:/usr/bin
+    -- with no ~/.local/bin, so anything install.sh linked is not found
+    -- by a bare name — silently, with no error and no log.
     hl.exec_cmd('PATH="$HOME/.local/bin:$PATH"; exec island-gestures')
 
     -- The shell itself.

@@ -5,20 +5,13 @@ import QtQuick
 import "root:/Services"
 import "root:/Widgets"
 
-// Every keybind, on one surface.
+// Every keybind, on one surface. Super+Shift+S, and Super+/ as well,
+// because a cheat sheet is the window whose own shortcut you are least
+// likely to remember.
 //
-// The shell has sixty-odd of them and the only place they existed was
-// hypr/binds.lua, which is the right place for them to be defined and
-// the wrong place to have to read them from — you cannot look up a
-// shortcut in a Lua file while the thing you wanted the shortcut for
-// is on screen.
-//
-// Super+Shift+S, and Super+/ as well, because a cheat sheet is the one
-// window whose own shortcut you are least likely to remember.
-//
-// Same two surfaces as the settings window: a heading on its own
-// shape, the rows on another. It reads what Hyprland is holding, not a
-// list written out again here — see Services/Shortcuts.qml.
+// Two surfaces, as the settings window has. Reads what Hyprland is
+// holding rather than a list written out again — see
+// Services/Shortcuts.qml.
 
 PanelWindow {
     id: root

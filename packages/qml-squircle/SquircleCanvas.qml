@@ -1,54 +1,20 @@
 import QtQuick
 
-// Squircle.qml, rasterised by QPainter instead of a fragment shader.
-// The same shape and the same three rules; use this one if you cannot
-// put squircle.frag.qsb beside the QML. It costs a repaint on every
-// resize and a softer edge, which is why the shader is the default.
+// Squircle.qml rasterised by QPainter — the no-binary fallback for
+// when squircle.frag.qsb cannot sit beside the QML. Softer edge, and a
+// repaint per resize, which is why the shader is the default.
 //
-// A rounded rectangle whose corners are superellipse arcs rather than
-// circular ones — the corner macOS draws, and the one Hyprland draws
-// for windows when `decoration:rounding_power` is above 2.
+// Superellipse corners: smoothing 2 is a circle, 4 is about macOS,
+// 6+ reads squared off.
 //
-// A circular corner meets the straight edge where curvature jumps from
-// zero to 1/r all at once. The eye reads that discontinuity as a seam,
-// which is why a circularly rounded box looks faintly pinched at the
-// corners. Spending the same radius over a longer, flatter arc removes
-// it: the curve leaves the edge earlier and eases in.
+// NOT a QtQuick.Shape. A Shape anywhere in a translucent Wayland
+// surface turns the whole window opaque in the buffer, so a blurring
+// compositor dims a square behind it. GeometryRenderer, layer.enabled,
+// a higher ignore_alpha and an offscreen MultiEffect were all measured
+// and none help. Canvas adds no Shape node, so alpha survives.
 //
-//   smoothing = 2   a circle, exactly what Rectangle draws
-//   smoothing = 4   about what macOS uses, and the default here
-//   smoothing = 6+  visibly squared off
-//
-// ── Why this is a Canvas and not a Shape ─────────────────────
-//
-// QtQuick.Shapes is the obvious tool and it cannot be used on a
-// translucent Wayland surface that a compositor blurs. A Shape
-// anywhere in such a window turns that window's whole bounding
-// rectangle opaque in the buffer, so the compositor blurs and dims a
-// square behind the shape — hiding the very corner the Shape was
-// there to draw.
-//
-// Measured, not assumed. None of these help:
-//
-//   Shape.GeometryRenderer instead of Shape.CurveRenderer
-//   layer.enabled on the Shape
-//   raising the layer rule's ignore_alpha from 0.03 to 0.5
-//   keeping the Shape offscreen as a visible:false layer source
-//     composited by a MultiEffect
-//
-// Swapping the same geometry for a plain Rectangle clears it every
-// time, which is what makes it the Shape and not the path.
-//
-// Canvas rasterises with QPainter into a texture of its own and adds
-// no Shape node to the scene, so the surface's alpha is whatever the
-// texture says — which is the whole point. A fragment shader would be
-// faster still and has the same property; it needs `qsb` at build
-// time, which a drop-in QML file should not.
-//
-// The cost is that it repaints on resize rather than being re-rasterised
-// by the GPU, so `paintWhileResizing` exists: a surface that animates
-// its own geometry every frame can leave it off and get a corner that
-// settles a frame late rather than a repaint per frame.
+// paintWhileResizing: a surface animating its own geometry can leave
+// it off and take a corner that settles a frame late.
 
 Item {
     id: root
@@ -70,25 +36,15 @@ Item {
     // hundred milliseconds is not something the eye catches.
     property bool paintWhileResizing: true
 
-    // ── Radius means how round it looks ──────────────────────
+    // `radius` means how round it LOOKS, not the raw parameter. A
+    // superellipse reaches less deep into the corner than a circle of
+    // the same radius, so the curve's extent along each edge is scaled
+    // up to put its 45° point where a circle's would be:
     //
-    // A superellipse of the same radius as a circle does not look as
-    // round. At n = 4 the curve reaches only 54% as deep into the
-    // corner, so a 14px squircle reads as a 7px circle — very nearly a
-    // rectangle. Apple and Figma both extend the corner region along
-    // the edges to compensate, and so does this: `radius` is the
-    // roundness you would get from Rectangle, and the extent of the
-    // curve along each edge is scaled up so the corner keeps it. The
-    // factor is what makes the 45° point of the curve land where a
-    // circle's would:
+    //     n = 2  1.00x (a circle)   n = 4  1.84x
+    //     n = 3  1.42x              n = 6  2.69x
     //
-    //     n = 2   1.00x   (a circle: unchanged)
-    //     n = 3   1.42x
-    //     n = 4   1.84x
-    //     n = 6   2.69x
-    //
-    // Without it, turning smoothing up makes every shape squarer,
-    // which is the opposite of what anyone turning it up wants.
+    // Without it, raising smoothing makes every shape squarer.
     function extent(n) {
         return (1 - Math.pow(2, -0.5)) / (1 - Math.pow(2, -1 / n));
     }
@@ -96,18 +52,13 @@ Item {
     readonly property real half: Math.min(width, height) / 2
 
     // Smoothing tapers off as the corner approaches half the shorter
-    // side, and is gone by the time it gets there.
+    // side, and is gone by the time it gets there: with no straight
+    // edge left to flatten towards, the ends stop being semicircles
+    // and a capsule reads as a box with its corners taken off.
     //
-    // This is the one place the naive reading of "higher is rounder"
-    // inverts. When the curve already spans the whole half-height there
-    // is no straight edge left for it to flatten towards, so the ends
-    // stop being semicircles and the shape reads as a box with its
-    // corners taken off. A capsule has to stay a capsule; macOS does
-    // not square off a pill-shaped button either.
-    //
-    // Measured against the extended extent, not the nominal radius —
-    // a 14px corner at n = 4 wants 26px of edge, and it is that 26px
-    // that has to fit.
+    // Measured against the EXTENDED extent, not the nominal radius —
+    // a 14px corner at n = 4 wants 26px of edge, and that is what has
+    // to fit.
     readonly property real effectiveSmoothing: {
         if (half <= 0) return 2;
         const n = Math.max(2, smoothing);
@@ -158,22 +109,14 @@ Item {
             const bw = Math.max(0, root.borderWidth);
             const hasBorder = bw > 0 && root.borderColor.a > 0;
 
-            // The border is a ring and the fill sits inside it, which
-            // is how Rectangle draws its own — never a stroke laid
-            // along the fill's edge. A stroke straddles the path, so
-            // its inner half lands on top of the fill and its outer
-            // half is the only part over the background: a 30%-alpha
-            // border comes out invisible over a dark fill, and the
-            // fill's own antialiased edge then leaks a pixel of dark
-            // past it. The eye reads that as the fill bleeding out and
-            // the border no longer being the edge. A ring is drawn
-            // over the background only, so it stays the outermost
-            // thing at full strength, and the fill's edge is
-            // underneath it where the ring hides it.
+            // The border is a ring with the fill inside it, never a
+            // stroke along the fill's edge. A stroke straddles the
+            // path, so half of it lands on the fill and a low-alpha
+            // border goes invisible while the fill's antialiased edge
+            // leaks past it.
             //
             // Concentric: the inner outline is the outer one moved in
-            // by the border width, radius included, so the ring keeps
-            // one thickness the whole way round.
+            // by the border width, radius included.
             if (hasBorder) {
                 ctx.beginPath();
                 trace(ctx, 0, 0, w, h, r);

@@ -2,25 +2,14 @@ import QtQuick
 import QtQuick.Effects
 import "root:/Services"
 
-// A panel over the wallpaper, blurred at the settings below it.
+// A panel over the wallpaper, blurred at the settings below it —
+// because the settings window is drawn by the compositor and cannot
+// show you its own blur changing.
 //
-// Blur size, passes, brightness, contrast and panel opacity were five
-// numbers describing something that only exists once a panel is over
-// something busy — and the one panel in front of you while you set
-// them is the settings window, which is drawn by the compositor and
-// cannot show you its own blur changing.
-//
-// So: a strip of the current wallpaper, and a panel on it carrying the
-// real settings. IslandPreview says "there is no blur available inside
-// a settings window" — there is, through QtQuick.Effects; it just was
-// not reached for.
-//
-// An approximation, and worth saying so. Hyprland runs a dual Kawase
-// blur, where each pass samples further out than the last, and this is
-// Qt's Gaussian one. The mapping below lands close enough that moving
-// a slider moves the preview the same direction and about the same
-// distance, which is what the preview is for. It is not a render of
-// what the compositor will produce.
+// An approximation: Hyprland runs dual Kawase, this is Qt's Gaussian.
+// The mapping moves the preview the same direction and roughly the
+// same distance, which is what a preview is for. It is not a render
+// of what the compositor will produce.
 
 Item {
     id: root
