@@ -1,12 +1,6 @@
 pragma Singleton
 
-// island-dots — a Hyprland shell built around a morphing pill.
-// Copyright (C) 2026 Siddhartha Mallavolu
-//
-// This program is free software: you can redistribute it and/or
-// modify it under the terms of the GNU General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version. See LICENSE.
+// island-dots. GPL-3.0 — see LICENSE.
 
 import Quickshell
 import Quickshell.Io
@@ -15,23 +9,11 @@ import QtQuick
 
 // Which monitor the shell's single-instance surfaces belong to.
 //
-// Island.qml is a Variants over every screen, so on a two-monitor
-// machine every declaration inside it exists twice. That is right for
-// the pill — you want one per screen — and wrong for everything that
-// can only exist once:
-//
-//   - IpcHandler targets. Two handlers claiming "launcher" collide,
-//     and whichever loses is simply not registered. Every shell bind
-//     then works or doesn't depending on load order.
-//   - The notification popup, which otherwise appears on both screens.
-//   - Keyboard focus. Two surfaces asking for an exclusive grab is
-//     one more than the compositor will give out.
-//
-// Those are gated on `activeName` so exactly one island owns them at a
-// time: the one on the monitor you are actually looking at.
-//
-// Hyprland maintains the focused monitor itself and Quickshell mirrors
-// it, so this follows the compositor rather than polling it.
+// Island.qml is a Variants over every screen, so everything in it
+// exists once per monitor. Right for the pill, wrong for anything that
+// can only exist once — IpcHandler targets (two claiming one name
+// collide and the loser is silently unregistered), the notification
+// popup, and the exclusive keyboard grab. Those gate on `activeName`.
 Singleton {
     id: root
 
@@ -59,6 +41,19 @@ Singleton {
 
     readonly property int count: Quickshell.screens.length
     readonly property bool multi: count > 1
+
+    // The scale Qt has already applied to the scene.
+    // QT_AUTO_SCREEN_SCALE_FACTOR (hypr/env.lua) makes Qt scale by a
+    // screen's devicePixelRatio, but it picks one factor for the
+    // application, not one per surface — so on a mixed-DPI setup every
+    // island is drawn at the first screen's scale. Island.qml divides
+    // by this to correct the ones that differ.
+    readonly property real baseScale: {
+        const all = Quickshell.screens;
+        if (!all || all.length === 0) return 1;
+        const d = all[0].devicePixelRatio;
+        return d > 0 ? d : 1;
+    }
 
     IpcHandler {
         target: "screens"

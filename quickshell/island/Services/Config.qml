@@ -28,48 +28,14 @@ Singleton {
     property bool merged: false
 
     function migrate(from) {
-        // 1 -> 2: faces are gone.
+        // Nothing carries over in any of these: the old values have
+        // no meaning under the new keys. Dropped keys leave the file
+        // on the next write, since JsonAdapter writes only what it
+        // declares.
         //
-        // The collapsed pill used to hold one of three "faces" —
-        // clock, media or tray — and scrolling over it cycled between
-        // them. Scrolling to find out what is running is not a glance,
-        // so the tray and the workspaces moved out into pods beside
-        // the pill and media morphs the pill itself. island.face and
-        // island.faceIndicator no longer exist; they are dropped from
-        // the file by the write below, because JsonAdapter only ever
-        // writes keys it declares.
-        //
-        // Nothing carries over. The two faces that were worth keeping
-        // are both on screen at once now, and showWorkspaces — which
-        // survives — means the pod rather than the dashes inside the
-        // pill.
-        //
-        // 2 -> 3: motion is a spring now.
-        //
-        // One duration and one overshoot could not describe motion
-        // that springs open and settles shut, so motion.morphDuration
-        // and motion.morphOvershoot are gone, along with
-        // motion.contentThreshold, which nothing had read since the
-        // content gates moved out of the geometry. The replacements
-        // are declared below and written on the first save.
-        //
-        // Nothing carries over here either: an overshoot constant for
-        // Easing.OutBack has no meaning as a damping fraction, and
-        // guessing at one would be worse than shipping the value the
-        // curves were designed around.
-        //
-        // 3 -> 4: the control centre is a layout now.
-        //
-        // island.controlHeight is gone. The panel's height is what its
-        // layout reaches — pad, plus the rows the controls occupy —
-        // so a number for it could only ever disagree with what was
-        // in the panel. island.controlLayout, controlColumns,
-        // controlCell, controlGap and controlPad replace it, and are
-        // written on the first save.
-        //
-        // Nothing carries over: a height in pixels cannot say where a
-        // Wi-Fi row should sit, and the shipped layout is the one the
-        // delegates were drawn against.
+        //   1 -> 2  faces gone; tray and workspaces are pods now
+        //   2 -> 3  motion is a spring: duration/overshoot replaced
+        //   3 -> 4  controlHeight gone; the panel is a layout
         //
         // The next one goes here:
         //
@@ -100,27 +66,15 @@ Singleton {
             defaults[name] = copy;
         }
 
-        // Force settings.json in synchronously, before the first
-        // binding reads a setting.
+        // Forces settings.json in synchronously. The return value is
+        // discarded — the call is made purely for its timing, because
+        // `preload` and `blockLoading` both leave the read async until
+        // an explicit text()/data().
         //
-        // `preload` alone starts an ASYNC read, and `blockLoading` on
-        // its own does not change that — FileView only applies it on
-        // an explicit text()/data() call. So the return value is
-        // discarded here and the call is made purely for its timing.
-        //
-        // Without this, every binding evaluates against the DECLARED
-        // defaults for the first frames, and some of those first
-        // values escape where a later change cannot follow them.
-        //
-        // The visible one was smart hiding. Island.qml derives the
-        // layer-shell exclusive zone from island.visibility, so the
-        // panel committed the "always" zone — reserving the top strip
-        // — before settings.json arrived. Hyprland then tiled every
-        // window below the island, so nothing ever reached it, so it
-        // never hid. The stored "smart" never got to the compositor,
-        // and re-picking it in Settings was the only way to push it
-        // through: exactly the "have to set it again every time"
-        // symptom.
+        // Do not remove. Without it the first frames evaluate against
+        // the declared defaults, and values that escape early cannot
+        // be followed by a later change — the layer-shell exclusive
+        // zone being the one that stuck.
         file.text();
     }
 
@@ -138,20 +92,13 @@ Singleton {
         return section ? section[parts[1]] : undefined;
     }
 
-    // ── Corner radius ────────────────────────────────────────
+    // Three keys because three different things read them: the pill
+    // (island.radius), every panel and card (appearance.panelRadius),
+    // and Hyprland (appearance.windowRounding, another process).
     //
-    // Three keys, because three different things read them. The pill
-    // grows its own corner from island.radius; every panel, card, row
-    // and button in the shell derives from appearance.panelRadius;
-    // and appearance.windowRounding is sent to Hyprland, which is not
-    // even in this process.
-    //
-    // Nobody who wants rounder corners wants one of those three. So
-    // appearance.radiusLink moves them together, and the settings page
-    // shows one slider while it is on and three while it is off. The
-    // keys stay separate underneath, which is what lets the link be
-    // turned off at all — and means nothing downstream had to change
-    // to gain it.
+    // appearance.radiusLink moves them together and the settings page
+    // collapses to one slider. They stay separate underneath, which is
+    // what lets the link be turned off.
     readonly property var radii: [
         "island.radius", "appearance.panelRadius", "appearance.windowRounding"
     ]
@@ -220,26 +167,14 @@ Singleton {
         for (const name of sections) resetSection(name);
     }
 
-    // ── Writing ──────────────────────────────────────────────
-    //
     // One write per burst of changes, and no reload of our own work.
     //
-    // This used to be a write per property and a reload per file
-    // change, which is fine for a slider — one key, one write — and
-    // silently lossy for anything that sets several at once. Picking a
-    // Tempo writes eleven motion keys in one call. Each write queued a
-    // file change, each file change triggered a reload, and a reload
-    // landing between two writes put the adapter back to what was on
-    // disk before the second one. Five of the eleven did not survive,
-    // the file was left holding a mixture of two tempos, and the row
-    // read back as "Custom" — so the visible symptom was the settings
-    // app disagreeing with the setting you had just made.
-    //
-    // A zero-interval timer is not a delay: it fires on the next turn
-    // of the event loop, which is after the whole burst has been
-    // applied to the adapter and before anything can observe the file.
-    // So eleven property writes are still eleven property writes, and
-    // they are one write of the finished state.
+    // A write per property plus a reload per file change is lossy for
+    // anything setting several keys at once (a Tempo writes eleven): a
+    // reload landing mid-burst puts the adapter back to what was on
+    // disk. The zero-interval timer is not a delay — it fires on the
+    // next turn of the event loop, after the burst has landed and
+    // before anything observes the file. Keep it.
     function persist() {
         file.saving = true;
         file.writeAdapter();
@@ -380,12 +315,6 @@ Singleton {
                 property int compactWidth: 200
                 property int compactHeight: 40
 
-                // Expanded geometry, with and without media.
-                property int expandedWidth: 320
-                property int expandedHeight: 120
-                property int mediaWidth: 400
-                property int mediaHeight: 156
-
                 // Pill typography. The clock is what you read at a
                 // glance, so it gets its own size rather than
                 // inheriting the generic small one.
@@ -409,19 +338,14 @@ Singleton {
                 property bool showWorkspaces: true
 
                 // What the workspace pod draws at rest. Open it and
-                // every style becomes the same numbered chips, because
-                // that is the state you aim at — this is only the
-                // glance, and people want different things from it.
+                // every style becomes numbered chips, since that is
+                // what you aim at.
                 //
-                //   dashes   a bar for where you are, a dash for a
-                //            workspace holding windows, a stub for an
-                //            empty one
-                //   dots     the same three states, round
-                //   numbers  the addresses themselves, unboxed
-                //   icons    what is running there — the icon of the
-                //            window you last used on each workspace.
-                //            The widest of the four, and the only one
-                //            that answers a question the others cannot
+                //   dashes   bar for current, dash for occupied, stub
+                //            for empty
+                //   dots     the same three, round
+                //   numbers  the addresses, unboxed
+                //   icons    the window last used on each workspace
                 property string workspaceStyle: "dashes"
 
                 property bool showTray: true
@@ -540,9 +464,7 @@ Singleton {
                 property int switcherWidth: 900
                 property int switcherHeight: 176
                 property int switcherTile: 84
-                property int overviewWidth: 640
                 property int overviewCard: 220
-                property real backdropDim: 0.45
 
                 property int clipWidth: 620
                 property int clipRowHeight: 40
@@ -615,18 +537,26 @@ Singleton {
                 // Blur alone doesn't separate a panel from a busy
                 // wallpaper; a little scrim does.
                 property real panelScrim: 0.0
-                property int fontScale: 100      // percent
 
-                // The two fonts the shell draws with, both on the
+                // The three fonts the shell draws with, all on the
                 // Appearance page.
                 //
-                // fontFamily is not a free choice and the page does
-                // not offer it as one: the shell's icons are
-                // codepoints in the text font rather than images, so
-                // the list is filtered to fonts that carry them. See
-                // Theming.fonts.
-                property string fontFamily: "JetBrainsMono Nerd Font"
+                // fontIcons is the only one that is not a free choice:
+                // the shell's icons are codepoints rather than images,
+                // so it has to be a font that carries them. Keeping it
+                // separate is what lets fontFamily be any face at all
+                // — an interface drawn entirely in a monospace patch
+                // is the cost of tying the two together.
+                property string fontFamily: "Adwaita Sans"
                 property string fontMono: "JetBrainsMono Nerd Font Mono"
+                property string fontIcons: "JetBrainsMono Nerd Font"
+
+                // The pill draws a clock, and a clock in a
+                // proportional face changes width as the digits change
+                // — so the shape at rest would breathe every minute.
+                // Monospace keeps it still. Windows and panels have no
+                // such constraint and read better proportional.
+                property string fontIsland: "JetBrainsMono Nerd Font"
 
                 // Whether the three corner radii move as one. See the
                 // `radii` block above; the settings page shows one

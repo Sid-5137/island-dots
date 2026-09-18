@@ -6,30 +6,13 @@ import "root:/Widgets/Control"
 
 // Arranging the control centre.
 //
-// The controls in the panel used to be a list in ControlMode.qml, so
-// changing which ones were there, or where, meant editing QML and
-// reloading the shell. saneAspect's answer to the same problem in
-// Dynamite V3 is a drag-and-drop editor, and he is right that it is
-// worth building: a control centre is the one part of a shell whose
-// correct contents are different for every person using it.
+// The canvas is the panel, not a picture of one: every card is the
+// same ControlItem the island draws, with `live` false so a press
+// starts a drag rather than toggling your Wi-Fi.
 //
-//   https://www.youtube.com/watch?v=Ob98KFByTec
-//
-// Two things here are deliberately not what his does.
-//
-// The canvas is the panel, not a picture of one. Every card below is
-// the same Widgets/Control/ControlItem.qml the island draws, at the
-// same proportions, showing real state — the Wi-Fi card says which
-// network, the month says which month. It is inert rather than
-// redrawn: `live` is false, so a press starts a drag instead of
-// turning your Wi-Fi off while you tidy up.
-//
-// And nothing is committed until you let go. Dragging onto a cell
-// somebody else is in pushes them down while you hold it, the way a
-// home screen does: you can see where they went, and letting go
-// somewhere else puts them back, because the layout underneath has
-// not changed yet. The canvas draws the arrangement you would get,
-// not the one you have.
+// Nothing commits until you let go. Cards pushed aside move while you
+// hold, and letting go elsewhere puts them back — the canvas draws the
+// arrangement you would get, not the one you have.
 
 Column {
     id: page
@@ -444,6 +427,7 @@ Column {
                             color: Theme.textOnError
                             font.family: Theme.fontFamily
                             font.pixelSize: 11
+                            renderType: Text.NativeRendering
                         }
 
                         MouseArea {
@@ -490,6 +474,7 @@ Column {
                             font.family: Theme.fontFamily
                             font.pixelSize: 9
                             font.weight: Font.Bold
+                            renderType: Text.NativeRendering
                         }
 
                         MouseArea {
@@ -557,21 +542,31 @@ Column {
                                 const stepY = ControlLayout.itemHeight(1)
                                             + Config.island.controlGap;
 
-                                // Width in cells from the pointer's
-                                // distance past the card's own left
-                                // edge, so the arithmetic does not
-                                // depend on where within the grip the
-                                // press landed.
-                                // n cells span n*step - gap, so the
-                                // gap goes back on before dividing or
-                                // every card reads a fraction narrow.
+                                // Size in cells from the pointer's
+                                // distance past the card's own top-left,
+                                // so it does not depend on where within
+                                // the grip the press landed. gripDrag is
+                                // inset by negative margins, so its
+                                // origin sits outside the grip by that
+                                // much and the offset has to come back
+                                // off — read from the anchor rather than
+                                // repeated, so the two cannot drift.
+                                // n cells span n*step - gap, so the gap
+                                // goes back on before dividing or every
+                                // card reads a fraction narrow.
+                                const inset = gripDrag.anchors.margins;
+                                const px = grip.x + m.x + inset;
+                                const py = grip.y + m.y + inset;
+
                                 const spec = ControlLayout.spec(card.modelData.key);
                                 const w = Math.max(spec.minW, Math.min(
                                     ControlLayout.columns - card.modelData.x,
-                                    Math.round((grip.x + m.x
+                                    Math.round((px
                                         + Config.island.controlGap) / stepX)));
-                                const h = Math.max(spec.minH, Math.round(
-                                    (grip.y + m.y + Config.island.controlGap) / stepY));
+                                const h = Math.max(spec.minH, Math.min(
+                                    ControlLayout.maxRows,
+                                    Math.round((py
+                                        + Config.island.controlGap) / stepY)));
 
                                 page.ghostW = w;
                                 page.ghostH = h;
@@ -641,8 +636,9 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     text: parent.spec ? parent.spec.glyph : ""
                     color: Theme.textDim
-                    font.family: Theme.fontFamily
+                    font.family: Theme.fontIcons
                     font.pixelSize: 13
+                    renderType: Text.NativeRendering
                 }
 
                 Text {

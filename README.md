@@ -606,9 +606,11 @@ Things that cost real time to work out:
     `hl.dispatch(workspace 2)`, which is not valid Lua. Dispatchers
     take Lua now: `hl.dsp.focus({ workspace = 2 })`.
   - Argument names changed with it. Focusing a window is
-    `hl.dsp.focus({ window = "address:0x..." })`; a top-level
-    `address =` is accepted and silently ignored, which is worse than
-    an error.
+    `hl.dsp.focus({ window = "address:0x..." })`. A top-level
+    `address =` used to be accepted and silently ignored; as of 0.56.2
+    it names the fields it will take instead, and unknown fields on
+    `hl.layer_rule` are rejected the same way. Check the version
+    before assuming a key is being read.
 
   After a Hyprland update, test each of these by hand before assuming
   the shell is at fault:
@@ -779,9 +781,15 @@ Things that cost real time to work out:
       the same conversation start a new notification rather than
       threading, because the spec has nowhere to put a thread.
 
-- [ ] **Per-monitor scaling.** Wallpapers are per monitor now, but the
-      pill's geometry is in pixels and does not follow a screen's
-      scale factor, so it is smaller on a HiDPI second display.
+- [ ] **Mixed-DPI scaling is untested on real hardware.** Qt scales
+      the scene by one factor for the whole application, so on a setup
+      whose monitors have different scales the island is drawn at the
+      first screen's. `Island.qml` now divides each island's geometry
+      by `Screens.baseScale`, which is exactly 1 whenever every monitor
+      shares a scale — so a uniform setup, single-monitor included, is
+      untouched. Only a genuinely mixed-DPI machine exercises it, and
+      there isn't one here. Note that `QT_AUTO_SCREEN_SCALE_FACTOR` in
+      `hypr/env.lua` is what applies the base scale in the first place.
 
 - [ ] **Calendar is read-only.** `bin/island-calendar` parses .ics
       files directly, so events appear without khal. Writing one back
@@ -798,19 +806,16 @@ Things that cost real time to work out:
       actual reader — there isn't one on the machine this was built
       on. If you have one, an issue either way would be useful.
 
-- [ ] **The layout editor has not been driven by a real pointer.**
-      Settings -> Control was built and checked against the model —
-      collisions, packing, undo, the column count — but the drag and
-      the corner resize were never exercised with an actual mouse, so
-      the arithmetic that turns a pointer into a cell is the part most
-      likely to be a pixel out.
-
-- [ ] **`xray` on the island layer is unverified.** Hyprland's Lua
-      layer-rule parser ignores keys it does not recognise without
-      logging anything — a deliberately bogus field produced no output
-      at all — so the rule in `hypr/rules.lua` is taken on the
-      documentation's word. If the island's blur still changes with
-      whatever window is behind it, that line is doing nothing.
+- [ ] **The layout editor has still not been driven by a real
+      pointer.** Two defects in the arithmetic have been found and
+      fixed by reading it: the corner grip measured from its own
+      negative anchor margins rather than from the grip, so every
+      resize read four pixels large in both axes; and card height had
+      no ceiling, in the grip, in `resize()` and in `parse()` alike,
+      so a drag could grow a panel taller than the screen. The drag
+      path checks out — `arrange()` pins the dragged card at the ghost
+      rect, so the card-relative pointer maths closes. None of it has
+      been exercised with an actual mouse.
 
 - [ ] **Continuous gestures need a daemon.** `bin/island-gestures`
       reads libinput directly because Hyprland's `gesture` action

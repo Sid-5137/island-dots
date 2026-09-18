@@ -26,6 +26,18 @@ Variants {
         readonly property bool primary:
             modelData && modelData.name === Screens.activeName
 
+        // Qt scales the scene by ONE factor for the whole application
+        // (Screens.baseScale), so on a mixed-DPI setup the island on a
+        // differently-scaled monitor is drawn at the wrong size. This
+        // is the correction for that screen, and exactly 1 whenever
+        // every monitor shares a scale — so a uniform setup, including
+        // every single-monitor one, is untouched.
+        readonly property real uiScale: {
+            if (!modelData || modelData.devicePixelRatio <= 0) return 1;
+            const base = Screens.baseScale;
+            return base > 0 ? modelData.devicePixelRatio / base : 1;
+        }
+
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.namespace: "island-bar"
         // Only the collapsed height, and only in "always" mode. A zone
@@ -36,7 +48,8 @@ Variants {
         // reserving the expanded height would shove every window on
         // screen down each time the pill opens.
         exclusiveZone: Config.island.visibility === "always"
-            ? Config.island.idleHeight + Config.island.topMargin * 2
+            ? (Config.island.idleHeight + Config.island.topMargin * 2)
+              * root.uiScale
             : 0
 
         // Only grab the keyboard while searching. Holding exclusive
@@ -180,19 +193,12 @@ Variants {
         // Run something once this surface has actually released its
         // exclusive keyboard grab.
         //
-        // This used to be Qt.callLater, and that is what made Alt+Tab
-        // look broken. callLater runs before the event loop returns to
-        // Wayland, so the focus dispatch reached Hyprland while the
-        // island still held WlrKeyboardFocus.Exclusive — and when the
-        // grab was released a moment later, the compositor restored
-        // focus to whatever had it before, silently undoing ours.
-        //
-        // It appeared to work across workspaces only by accident:
-        // focusing a window elsewhere also switches workspace, which
-        // leaves the restore nothing on screen to put focus back onto.
-        //
-        // Measured against the real compositor: issued once the surface
-        // is down, the identical dispatch lands every time.
+        // NOT Qt.callLater — it runs before the event loop returns to
+        // Wayland, so the dispatch reaches Hyprland while the island
+        // still holds the grab, and the compositor restores focus over
+        // the top of it. That is the whole of the Alt+Tab bug. It
+        // appears to work across workspaces only because switching
+        // workspace leaves the restore nothing to aim at.
         property var deferred: null
 
         function afterSurfaceDown(fn) {
@@ -444,7 +450,7 @@ Variants {
         // margin, or the bottom edge gets clipped by the window.
         //
         //   control centre + media strip + top margin + slack
-        implicitHeight: Math.max(
+        implicitHeight: (Math.max(
                             ControlLayout.panelHeight,
                             Config.island.pickerHeight,
                             Config.island.centreHeight,
@@ -462,7 +468,7 @@ Variants {
                               + Theme.spacingSmall * 2 + Theme.padCard * 2
                               + Config.island.searchMaxRows * Config.island.searchRowHeight)
                       + Config.island.topMargin
-                      + 60
+                      + 60) * root.uiScale
         color: "transparent"
 
         // The modes are handed `win`, not the singleton, and reach
@@ -473,7 +479,8 @@ Variants {
         readonly property int fadeIn: Motion.fadeIn
 
         readonly property string visibilityMode: Config.island.visibility
-        readonly property int revealZone: Config.island.revealZone
+        readonly property int revealZone:
+            Config.island.revealZone * root.uiScale
         property bool demandsAttention: false
 
         // The whole object, pods included. Smart hiding asks whether a
@@ -486,10 +493,11 @@ Variants {
             rightPod.width > 0 ? rightPod.width + Config.island.podGap : 0
 
         readonly property rect islandRect: Qt.rect(
-            (screen.width - pill.width) / 2 - leftSpan,
-            Config.island.topMargin,
-            pill.width + leftSpan + rightSpan,
-            pill.height)
+            (screen.width - pill.width * root.uiScale) / 2
+                - leftSpan * root.uiScale,
+            Config.island.topMargin * root.uiScale,
+            (pill.width + leftSpan + rightSpan) * root.uiScale,
+            pill.height * root.uiScale)
 
         readonly property bool overlapped: {
             const r = islandRect;
@@ -642,7 +650,7 @@ Variants {
             id: revealStrip
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            width: 420
+            width: 420 * root.uiScale
             height: root.revealZone
 
             MouseArea {
@@ -700,11 +708,14 @@ Variants {
                 return "idle";
             }
 
-            anchors.topMargin: mode === "hidden"
+            scale: root.uiScale
+            transformOrigin: Item.Top
+
+            anchors.topMargin: (mode === "hidden"
                 ? -pill.height - 4
                 : (mode === "idle" || mode === "compact"
                    ? Config.island.topMargin
-                   : Config.island.topMargin + 2)
+                   : Config.island.topMargin + 2)) * root.uiScale
 
             opacity: mode === "hidden" ? 0 : 1
 
@@ -720,16 +731,11 @@ Variants {
                 }
             }
 
-            // ── How the shape moves ──────────────────────
-            //
             // Direction is what an easing curve cannot work out for
             // itself, so it is decided here and every Behavior on the
-            // pill reads the answer. Opening springs. Closing does
-            // not: a shape on its way out that springs back toward
-            // where it was reads as the interface arguing with you.
-            //
-            // Hover is its own tier because it is a 6px lift, and a
-            // lift given the full 460ms of an expansion feels slack.
+            // pill reads it. Opening springs; closing does not. Hover
+            // is its own tier — a 6px lift given a full expansion's
+            // duration feels slack.
             readonly property bool collapsing:
                 mode === "idle" || mode === "hidden"
 
@@ -778,20 +784,12 @@ Variants {
                 win: root; island: island; pill: pill
             }
 
-            // An Item that paints itself with a child, rather than a
-            // Rectangle that paints itself.
+            // An Item that paints itself with a child. Rectangle
+            // cannot draw a superellipse corner and Shapes must not be
+            // used in a blurred layer — see Widgets/Squircle.qml.
             //
-            // The corner is a superellipse — the one macOS draws, and
-            // the one Hyprland is told to draw for windows, so a panel
-            // corner and a window corner are the same curve. Qt's
-            // Rectangle cannot draw it and QtQuick.Shapes must not be
-            // used in a blurred layer; Widgets/Squircle.qml says why
-            // and what it does instead.
-            //
-            // `radius`, `color` and `borderColor` stay plain properties
-            // under the names the Rectangle used, because four other
-            // files read them off this id and none of them care what
-            // draws the fill.
+            // `radius`, `color` and `borderColor` keep the names
+            // Rectangle used: four other files read them off this id.
             Item {
                 id: pill
 
@@ -831,63 +829,23 @@ Variants {
                     idle:     { w: collapsedWidth, h: Config.island.idleHeight },
                     compact:  { w: Math.max(Config.island.compactWidth, collapsedWidth),
                                 h: Config.island.compactHeight },
-                    // Every term is coerced and defaulted. One
-                    // undefined value here makes the whole sum NaN,
-                    // which leaves the pill with no height at all —
-                    // and with clip off in this mode, the content then
-                    // renders outside the shape instead of vanishing.
+                    // As tall as the layout reaches — the grid knows
+                    // its own row count, so there are no optional
+                    // terms to keep in step.
                     //
-                    // The tray no longer lives in the control centre,
-                    // so its term is gone.
-                    // The panel is as tall as its layout reaches.
-                    // It used to be a stored height with a term added
-                    // for every optional thing inside it — a short
-                    // month, today's events, the media strip — which
-                    // is four places to remember when a fifth is
-                    // added. The grid knows how many rows it occupies,
-                    // and now that media is a card in that grid rather
-                    // than a strip bolted along the floor, there are
-                    // no terms left at all.
+                    // Coerce and default every term regardless: one
+                    // undefined makes the sum NaN, which leaves the
+                    // pill with no height, and with clip off the
+                    // content then renders outside the shape.
                     expanded: { w: Config.island.controlWidth,
                                 h: ControlLayout.panelHeight },
-                    // padCard twice, top and bottom, around a field
-                    // and however many rows there are.
-                    //
-                    // The bottom one is the list's floor: the rows are
-                    // sized to the pixel, and the gap below them is
-                    // what lets a scrolling row leave the list before
-                    // it reaches the panel's bottom corner. The top one
-                    // is the same inset spent on the field, which used
-                    // to sit hard against the panel's top edge — its
-                    // text centred 23 pixels down, inside a corner
-                    // that is 36 pixels round, so the one part of the
-                    // panel with nothing else in it was also the part
-                    // curving away hardest.
-                    //
-                    // Written as a pair rather than as a tail, because
-                    // that is what makes the empty launcher work: no
-                    // results and the panel is a 70px bar with the
-                    // field centred in it, instead of a field with
-                    // twelve pixels of air above and none below.
-                    // SearchMode reads the same padCard for the
-                    // field's top margin and the list's bottom one, so
-                    // the arithmetic here and the anchors there cannot
-                    // disagree.
-                    // The field and nothing else. The results are on
-                    // the shelf below — see the Rectangle after this
-                    // one — so this height no longer depends on how
-                    // many matches there are, and the pill does not
-                    // move under the cursor while you type.
-                    //
-                    // spacingSmall, not padCard. padCard is a card's
-                    // inset inside a panel, and it was right while
-                    // this was a panel with a field at the top of it:
-                    // twelve above the field and twelve below bought
-                    // the first row its clearance. There is no first
-                    // row here any more, so the same twelve was just a
-                    // bar 70px tall around 46px of field — a third of
-                    // it air, which is what made the launcher look
-                    // heavy.
+                    // The field and nothing else — results are on the
+                    // shelf below, so this height does not depend on
+                    // the match count and the pill does not move under
+                    // the cursor while you type. spacingSmall rather
+                    // than padCard: there is no first row here to buy
+                    // clearance for, and padCard left a third of the
+                    // bar as air.
                     search:   { w: Config.island.searchWidth,
                                 h: Theme.spacingSmall * 2
                                    + Config.island.searchFieldHeight },
@@ -1070,18 +1028,13 @@ Variants {
                     }
                 }
 
-                // A MouseArea rather than a HoverHandler, and declared
-                // last so it sits above every control.
+                // A MouseArea, not a HoverHandler, declared last so it
+                // sits above every control: a child MouseArea with
+                // hoverEnabled consumes hover, so a HoverHandler went
+                // unhovered over any day cell or tile and the collapse
+                // timer fired as if the cursor had left.
                 //
-                // A child MouseArea with hoverEnabled consumes hover,
-                // so a HoverHandler on the pill stopped reporting
-                // hovered whenever the cursor was over a calendar day
-                // cell or a tile — and the collapse timer started as
-                // if the cursor had left the island entirely.
-                //
-                // acceptedButtons: NoButton means this sees hover but
-                // never takes a click, so everything underneath still
-                // gets its own presses.
+                // NoButton means it sees hover but never takes a click.
                 MouseArea {
                     id: pillHover
                     anchors.fill: parent
@@ -1100,23 +1053,14 @@ Variants {
                 }
             }
 
-            // ── The shelf ────────────────────────────────────
+            // A second surface under the pill, for the modes that are
+            // a field with a list beneath it: the pill holds the
+            // field, this holds the rows. One shape for both made the
+            // field stop reading as a field once it had results, and
+            // moved the shape under the cursor on every keystroke.
             //
-            // A second surface under the pill, for the two modes that
-            // are a field with a list beneath it. The pill holds the
-            // field; this holds the rows.
-            //
-            // They used to be one shape. That gave the launcher a pill
-            // that was a bar while empty and a tall panel once full,
-            // with the field marooned at the top of it — so the thing
-            // you type into stopped looking like a field the moment it
-            // had results, and the shape changed height under the
-            // cursor on every keystroke. Two surfaces with a gap says
-            // what they are: a control, and the answer to it. It is
-            // the separation the settings window makes between its
-            // sidebar and its pane, at the gap the pods already keep
-            // beside the pill — one number for the space around the
-            // pill rather than a second one invented here.
+            // The gap is podGap — the number already governing space
+            // around the pill, not a second one invented here.
             Rectangle {
                 id: shelf
 
@@ -1401,20 +1345,14 @@ Variants {
             function show(): void { root.openSearch() }
             function hide(): void { root.closeSearch() }
 
-            // Open it with something already typed.
+            // Open it with something already typed — `open` alone
+            // gives an empty field, which only a keyboard can fill.
+            // Used by a bind that searches the selection, and by
+            // docs/RECORDING.md.
             //
-            // Here because the launcher's interesting state is not a
-            // state it can be put into: `open` gives you an empty
-            // field, and the field is the one thing in the shell that
-            // only a keyboard can reach. That is fine until something
-            // that is not a keyboard needs it — a bind that searches
-            // the selection, and docs/RECORDING.md, which drives every
-            // other mode over this socket precisely so the takes come
-            // out the same and no cursor wanders through the shot.
-            //
-            // Sets both, because the TextInput holds the text and
-            // Search holds the query, and onTextChanged only runs for
-            // a change the field itself makes.
+            // Sets both: the TextInput holds the text, Search holds
+            // the query, and onTextChanged only fires for a change the
+            // field itself makes.
             function query(text: string): void {
                 root.openSearch();
                 if (root.searchInput) root.searchInput.text = text;

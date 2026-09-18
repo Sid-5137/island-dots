@@ -5,28 +5,15 @@ import QtQuick
 
 // What the control centre is made of, and where each piece sits.
 //
-// The control centre used to be four hard-coded cards: a calendar on
-// the left, six glyphs and two sliders on the right. Changing it meant
-// editing ControlMode.qml, and every size in there was a number
-// derived from three other numbers, so moving one thing moved four.
-//
-// So the arrangement became data. A layout is a list of items on a
-// grid of `columns` columns and however many rows they reach, each
-// item holding a rectangle in cells:
+// The arrangement is data, in settings.json, on a grid of `columns`
+// columns. Cells rather than pixels so a layout survives the panel
+// being widened:
 //
 //     wifi:3,0,3,1
 //     ^    ^ ^ ^ ^
 //     key  x y w h
 //
-// which is what lives in settings.json, and what the editor on the
-// Control Centre settings page writes. Cells rather than pixels
-// because the editor has to snap to something, and because a layout
-// written on a 640px panel should survive the panel being widened.
-//
-// Everything that can go in the panel is declared once, in the
-// catalogue below: how it is drawn, how small it may be squeezed, and
-// what size it wants when it is first placed. A control is added to
-// the shell by adding an entry there and a case in
+// Add a control by adding a catalogue entry below and a case in
 // Widgets/Control/ControlItem.qml — not by editing a layout.
 
 Singleton {
@@ -104,6 +91,11 @@ Singleton {
 
     readonly property int columns: Config.island.controlColumns
 
+    // The grid grows downwards as cards are pushed, but a card's own
+    // height needs a ceiling: it feeds the island window's height, and
+    // an unbounded drag makes a panel taller than the screen.
+    readonly property int maxRows: 12
+
     // ── Reading and writing ──────────────────────────────────
     //
     // The parse is deliberately forgiving. This string is editable by
@@ -135,7 +127,7 @@ Singleton {
 
             const spec = catalogue[key];
             const w = Math.max(spec.minW, n[2]);
-            const h = Math.max(spec.minH, n[3]);
+            const h = Math.max(spec.minH, Math.min(maxRows, n[3]));
             if (n[0] < 0 || n[1] < 0 || n[0] + w > columns) continue;
 
             out.push({ key: key, x: n[0], y: n[1], w: w, h: h,
@@ -244,15 +236,12 @@ Singleton {
 
     // Where everything ends up if `index` is dropped at `rect`.
     //
-    // Whatever the card lands on is pushed down — the least it takes
-    // to clear — and a card pushed onto the one below it pushes that
-    // one too. Nothing else moves. A layout is not repacked on a drop
-    // because a gap you left is a gap you meant, and `tidy` is still
-    // the only thing in here that closes one.
+    // What the card lands on is pushed down the least it takes to
+    // clear, cascading. Nothing else moves — a gap you left is a gap
+    // you meant, and `tidy` is the only thing that closes one.
     //
-    // Pure, and called on every step of a drag: the editor draws the
-    // result while you hold the card, and commits this same list when
-    // you let go, so what you were looking at is what you get.
+    // Pure, and called on every step of a drag, so the list the editor
+    // draws is the list it commits.
     function arrange(list, index, rect) {
         const out = list.slice();
         const it = out[index];
@@ -349,7 +338,7 @@ Singleton {
 
         const spec = catalogue[it.key];
         const cw = Math.max(spec.minW, Math.min(columns - it.x, w));
-        const ch = Math.max(spec.minH, h);
+        const ch = Math.max(spec.minH, Math.min(maxRows, h));
 
         const rect = { x: it.x, y: it.y, w: cw, h: ch };
         commit(arrange(list, index, rect));
