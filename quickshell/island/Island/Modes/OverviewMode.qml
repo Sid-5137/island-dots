@@ -144,7 +144,7 @@ Item {
                             color: Qt.rgba(1, 1, 1, 0.06)
                             border.width: 1
                             border.color: thumbHover.containsMouse
-                                ? Theme.primary : "transparent"
+                                ? Theme.primary : Theme.fade(Theme.primary)
                             clip: true
 
                             Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }

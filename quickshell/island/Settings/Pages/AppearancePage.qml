@@ -140,17 +140,56 @@ Column {
     SectionHeader { text: "Palette" }
 
     ChoiceRow {
+        configKey: "appearance.colorSource"
+        label: "Colours from"
+        description: "The wallpaper, or a palette somebody else designed."
+            + " Either one feeds the shell, GTK, Qt, KDE and the window"
+            + " borders alike."
+        current: Config.appearance.colorSource
+        options: [
+            { value: "wallpaper", label: "Wallpaper" },
+            { value: "preset",    label: "Preset" }
+        ]
+        // Services/Wallpaper.qml watches this and re-renders; there is
+        // nothing to do here but write it.
+        onSelected: function(v) { Config.appearance.colorSource = v }
+    }
+
+    ChoiceRow {
+        configKey: "appearance.preset"
+        label: "Preset"
+        description: "Mocha and Macchiato are Catppuccin. Used unchanged,"
+            + " not derived — a preset is somebody's palette, not a seed."
+        shown: Config.appearance.colorSource === "preset"
+        current: Config.appearance.preset
+        // bin/island-palette is what knows these; see Services/Theming.
+        options: Theming.palettes
+        onSelected: function(v) { Config.appearance.preset = v }
+    }
+
+    ToggleRow {
+        configKey: "appearance.tintWallpaper"
+        label: "Tint the wallpaper"
+        description: "Wash it toward the preset, so a Catppuccin"
+            + " photograph under a Gruvbox shell stops looking like two"
+            + " desktops at once."
+        shown: Config.appearance.colorSource === "preset"
+        checked: Config.appearance.tintWallpaper
+        onToggled: function(v) { Config.appearance.tintWallpaper = v }
+    }
+
+    ChoiceRow {
         configKey: "wallpaper.scheme"
         label: "Derived as"
-        description: "How far the palette may stray from the wallpaper."
+        description: "Mono through Vibrant is least colour to most."
+            + " Content is the odd one out: it uses the colours that are"
+            + " in the image rather than deriving from them."
+        // Nothing is being derived under a preset, so the question has
+        // no answer rather than a default one.
+        shown: Config.appearance.colorSource === "wallpaper"
         current: Config.wallpaper.scheme
-        options: [
-            { value: "scheme-monochrome", label: "Mono" },
-            { value: "scheme-neutral",    label: "Neutral" },
-            { value: "scheme-tonal-spot", label: "Tonal" },
-            { value: "scheme-vibrant",    label: "Vibrant" },
-            { value: "scheme-expressive", label: "Expressive" }
-        ]
+        // See Services/Theming.qml, which is where the list lives.
+        options: Theming.schemes
         onSelected: function(v) {
             Config.wallpaper.scheme = v;
             // Re-derive immediately: the point of the swatches is that

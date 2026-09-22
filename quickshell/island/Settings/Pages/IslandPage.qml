@@ -26,7 +26,9 @@ Column {
     ChoiceRow {
         configKey: "island.visibility"
         label: "On screen"
-        description: "Always reserves the strip. Smart moves aside instead."
+        description: "Always reserves the strip — top margin plus island"
+            + " height, so those two sliders are what make it cost less."
+            + " Smart moves aside instead."
         current: Config.island.visibility
         options: [
             { value: "always", label: "Always" },
@@ -127,6 +129,17 @@ Column {
     }
 
     SliderRow {
+        configKey: "island.popupOpacity"
+        label: "Popup opacity"
+        description: "The OSD and notifications, which arrive over what you"
+            + " were looking at rather than because you asked. Lower than"
+            + " the island so the blur behind them actually shows."
+        from: 0.3; to: 1.0; stepSize: 0.02; decimals: 2
+        value: Config.island.popupOpacity
+        onMoved: function(v) { Config.island.popupOpacity = v }
+    }
+
+    SliderRow {
         configKey: "island.padding"
         advanced: true
         label: "Padding"
@@ -154,9 +167,22 @@ Column {
         SliderRow {
             configKey: "island.topMargin"
             label: "Top margin"
+            description: "Above the pill — and, in Always, the first half"
+                + " of what every window gives up."
             from: 0; to: 40; stepSize: 1; suffix: " px"
             value: Config.island.topMargin
             onMoved: function(v) { Config.island.topMargin = v }
+        }
+
+        SliderRow {
+            configKey: "island.idleHeight"
+            label: "Island height"
+            description: "At rest. The other half: in Always the strip"
+                + " reserved is this plus the top margin, and nothing"
+                + " else moves it."
+            from: 24; to: 56; stepSize: 1; suffix: " px"
+            value: Config.island.idleHeight
+            onMoved: function(v) { Config.island.idleHeight = v }
         }
 
         SliderRow {
@@ -282,22 +308,23 @@ Column {
 
     ChoiceRow {
         label: "Tempo"
-        // Eleven numbers, three answers. Tempo writes all eleven; the
-        // two rows below are the ones you can feel without a
-        // stopwatch, and the other nine are settings.json only.
-        // Moving any of them puts this row on "Custom", which is how
-        // you can tell from here that one has been moved.
-        description: "Fluid is Dynamite V3's spring. Springy trades damping"
-            + " for it."
+        // Twelve numbers, three answers — Apple's three, because the
+        // bounce in each is Apple's figure for it. Tempo writes all
+        // twelve; the rows below are the ones you can feel without a
+        // stopwatch, and the rest are settings.json only. Moving any
+        // of them puts this row on "Custom", which is how you can
+        // tell from here that one has been moved.
+        description: "Apple's three springs. Snappy is the shipped one;"
+            + " smooth takes the overshoot out and bouncy spends more of it."
         current: Motion.tempo
         options: Motion.tempo === "custom"
-            ? [{ value: "fluid",   label: "Fluid" },
-               { value: "calm",    label: "Calm" },
-               { value: "springy", label: "Springy" },
-               { value: "custom",  label: "Custom" }]
-            : [{ value: "fluid",   label: "Fluid" },
-               { value: "calm",    label: "Calm" },
-               { value: "springy", label: "Springy" }]
+            ? [{ value: "smooth", label: "Smooth" },
+               { value: "snappy", label: "Snappy" },
+               { value: "bouncy", label: "Bouncy" },
+               { value: "custom", label: "Custom" }]
+            : [{ value: "smooth", label: "Smooth" },
+               { value: "snappy", label: "Snappy" },
+               { value: "bouncy", label: "Bouncy" }]
         // "custom" is not a tempo you can pick, only one you can be
         // in, so setTempo ignores it rather than this having to.
         onSelected: function(v) { Motion.setTempo(v) }
@@ -312,22 +339,47 @@ Column {
     }
 
     SliderRow {
-        configKey: "motion.expandDuration"
+        configKey: "motion.expandResponse"
         advanced: true
         label: "Open"
-        description: "How long the shape takes to arrive."
-        from: 160; to: 900; stepSize: 10; suffix: " ms"
-        value: Config.motion.expandDuration
-        onMoved: function(v) { Config.motion.expandDuration = v }
+        description: "The spring's period, which reads as its speed."
+            + " Not a duration: the shape is where you are looking"
+            + " well before it stops."
+        from: 120; to: 700; stepSize: 10; suffix: " ms"
+        value: Config.motion.expandResponse
+        onMoved: function(v) { Config.motion.expandResponse = v }
     }
 
     SliderRow {
-        configKey: "motion.collapseDuration"
+        configKey: "motion.collapseResponse"
         advanced: true
         label: "Close"
-        description: "Shorter than opening, and without the spring."
-        from: 120; to: 600; stepSize: 10; suffix: " ms"
-        value: Config.motion.collapseDuration
-        onMoved: function(v) { Config.motion.collapseDuration = v }
+        description: "Shorter than opening, the way a dismissal is."
+        from: 100; to: 500; stepSize: 10; suffix: " ms"
+        value: Config.motion.collapseResponse
+        onMoved: function(v) { Config.motion.collapseResponse = v }
+    }
+
+    SliderRow {
+        configKey: "motion.arriveBounce"
+        advanced: true
+        label: "Bounce"
+        description: "One minus the damping fraction, as Apple counts it."
+            + " 0 settles without overshoot, 0.15 is a lift you feel,"
+            + " 0.3 is one you watch."
+        from: 0; to: 0.5; stepSize: 0.05; decimals: 2
+        value: Config.motion.arriveBounce
+        onMoved: function(v) { Config.motion.arriveBounce = v }
+    }
+
+    SliderRow {
+        configKey: "motion.emergeScale"
+        advanced: true
+        label: "Emerge from"
+        description: "How small a surface starts before it grows into"
+            + " place. 1.0 is a plain cross-fade."
+        from: 0.85; to: 1.0; stepSize: 0.01; decimals: 2
+        value: Config.motion.emergeScale
+        onMoved: function(v) { Config.motion.emergeScale = v }
     }
 }

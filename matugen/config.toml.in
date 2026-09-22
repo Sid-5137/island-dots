@@ -50,3 +50,39 @@ if [ -n "$t" ] && [ "$t" != "Adwaita" ]; then
     gsettings set org.gnome.desktop.interface gtk-theme "$t"
 fi
 """
+
+# ── Qt and KDE ───────────────────────────────────────────────────────
+#
+# Two audiences, not one. A Qt widget application reads whatever
+# QT_QPA_PLATFORMTHEME hands it, which here is qt6ct. A KF6
+# application does not go through the platform theme at all — it reads
+# kdeglobals directly, on any desktop — so KColorScheme is a separate
+# file in a separate format.
+#
+# Neither output is read where it lands. qt6ct.conf has to name the
+# palette and kdeglobals has to contain the colour groups, and both of
+# those files hold settings that are not ours to overwrite. So
+# bin/island-qt-apply owns those two edits, exactly as
+# bin/island-gtk-apply owns gtk.css — matugen writes the generated
+# file and nothing contested.
+#
+# The hook is on both templates rather than the last one because
+# matugen gives no ordering guarantee across templates: whichever runs
+# first has only half the pair to work with. It is idempotent, so
+# running it twice costs one extra file write, and whichever runs
+# second leaves everything wired.
+#
+# Silent, including on stderr, for that same reason — the early run
+# has a real complaint and it is not one worth putting in the shell's
+# log on every wallpaper change. Run the script by hand and it says
+# what it did.
+
+[templates.qt6ct]
+input_path = "@DOTS@/matugen/templates/qt6ct.conf"
+output_path = "@CONFIG@/qt6ct/colors/island.conf"
+post_hook = 'PATH="$HOME/.local/bin:$PATH"; island-qt-apply >/dev/null 2>&1 || true'
+
+[templates.kcolorscheme]
+input_path = "@DOTS@/matugen/templates/kcolorscheme.colors"
+output_path = "@DATA@/color-schemes/Island.colors"
+post_hook = 'PATH="$HOME/.local/bin:$PATH"; island-qt-apply >/dev/null 2>&1 || true'

@@ -15,6 +15,10 @@
 #
 # All three get written, or the theme applies to some apps and not
 # others depending on what happens to be running.
+#
+# Qt gets the icon theme, the cursor and the fonts from here as well.
+# Its colours do not come from here — they come from the wallpaper,
+# through matugen — and bin/island-qt-apply owns that half.
 
 set -eu
 
@@ -209,6 +213,23 @@ if [ -f "$qtct" ]; then
     if [ -n "$font_mono" ]; then
         sed -i "s|^fixed=\"[^,]*,|fixed=\"$font_mono,|" "$qtct" || true
     fi
+fi
+
+# ── Qt and KDE colours ───────────────────────────────────────────────
+#
+# The palette itself is a different job with a different trigger: it
+# comes from matugen and changes with the wallpaper, not with the
+# theme picked here. island-qt-apply owns it, and matugen calls it
+# too. Running it here as well is the repair path — the same reason
+# install.sh calls this script bare.
+#
+# Silent when matugen has not run yet: a fresh checkout has no palette
+# to point at, and saying so on every theme change would be noise.
+
+if have island-qt-apply; then
+    island-qt-apply >/dev/null 2>&1 || true
+elif [ -x "$HOME/.local/bin/island-qt-apply" ]; then
+    "$HOME/.local/bin/island-qt-apply" >/dev/null 2>&1 || true
 fi
 
 # ── make running apps re-read ────────────────────────────────────────

@@ -47,8 +47,19 @@ Variants {
         // island. Only the collapsed height is ever reserved —
         // reserving the expanded height would shove every window on
         // screen down each time the pill opens.
+        // The pill sits at topMargin and is idleHeight tall, so
+        // topMargin + idleHeight is exactly what it takes to clear
+        // it. This used to reserve a second margin underneath as
+        // well — 50px rather than 42 — which bought a gap nothing
+        // needed and charged every window on every workspace for it.
+        //
+        // Hovering grows the pill to compactHeight and it overhangs
+        // the reservation by those six pixels. That is deliberate:
+        // reserving the hovered height means paying for it the whole
+        // time you are not hovering, and the pill floats above the
+        // window either way.
         exclusiveZone: Config.island.visibility === "always"
-            ? (Config.island.idleHeight + Config.island.topMargin * 2)
+            ? (Config.island.topMargin + Config.island.idleHeight)
               * root.uiScale
             : 0
 
@@ -79,7 +90,7 @@ Variants {
         property bool sessionOpen: false
         property bool expanded: false
 
-        property string picker: ""          // "" | wallpaper | theme | icon
+        property string picker: ""          // "" | wallpaper | theme
 
         // True while the cursor is over either pod. The pods are
         // separate shapes but one object with the pill: hovering any
@@ -531,7 +542,7 @@ Variants {
         // Depends only on plain booleans. Referencing island.mode here
         // would be circular, since state reads `revealed`.
         readonly property bool revealed:
-            visibilityMode === "always"
+            visibilityMode !== "smart"
             || !occluded
             || demandsAttention
             || hoverLatch
@@ -708,22 +719,28 @@ Variants {
                 return "idle";
             }
 
-            scale: root.uiScale
-            transformOrigin: Item.Top
+            anchors.topMargin: dock.value
 
-            anchors.topMargin: (mode === "hidden"
-                ? -pill.height - 4
-                : (mode === "idle" || mode === "compact"
-                   ? Config.island.topMargin
-                   : Config.island.topMargin + 2)) * root.uiScale
+            // Hidden parks the pill just off the top edge, the way a
+            // menu bar leaves in fullscreen. Every open mode sits two
+            // pixels lower than the collapsed one, which is the
+            // shadow of the shape having grown.
+            Spring {
+                id: dock
+                shape: island
+                target: (island.mode === "hidden"
+                    ? -pill.height - 4
+                    : (island.mode === "idle" || island.mode === "compact"
+                       ? Config.island.topMargin
+                       : Config.island.topMargin + 2)) * root.uiScale
+            }
 
             opacity: mode === "hidden" ? 0 : 1
 
-            Behavior on anchors.topMargin { Morph { shape: island } }
-
             Behavior on opacity {
-                // A fade, not a shape: the spring's overshoot would
-                // only be clamped away at 1.0 anyway.
+                // A fade, not a shape: it has no velocity to carry and
+                // no overshoot to spend, so it stays an easing. Apple
+                // eases these too.
                 NumberAnimation {
                     duration: island.morphTime
                     easing.type: Easing.BezierSpline
@@ -731,21 +748,43 @@ Variants {
                 }
             }
 
-            // Direction is what an easing curve cannot work out for
-            // itself, so it is decided here and every Behavior on the
-            // pill reads it. Opening springs; closing does not. Hover
-            // is its own tier — a 6px lift given a full expansion's
-            // duration feels slack.
+            // Leaving is not only a slide. The shape gives up the last
+            // four percent of itself on the way out and takes it back
+            // on the way in, so it reads as receding rather than as
+            // being pushed. uiScale is the DPI correction and is a
+            // different thing multiplied through the same property.
+            scale: recede.value * root.uiScale
+            transformOrigin: Item.Top
+
+            Spring {
+                id: recede
+                shape: island
+                target: island.mode === "hidden" ? Motion.emergeScale : 1
+            }
+
+            // Direction is what a curve cannot work out for itself, so
+            // it is decided here and every spring on the pill reads
+            // it. Opening springs; closing springs with most of the
+            // bounce taken out. Hover is its own tier — a 6px lift
+            // given a full expansion's response feels slack.
             readonly property bool collapsing:
                 mode === "idle" || mode === "hidden"
 
+            readonly property int springResponse:
+                collapsing ? Motion.collapseResponse
+                           : (mode === "compact" ? Motion.hoverResponse
+                                                 : Motion.expandResponse)
+
+            readonly property real springBounce:
+                collapsing ? Motion.departBounce : Motion.arriveBounce
+
+            // What the fades above and inside the modes are given, so
+            // a cross-fade lasts about as long as the shape it rides
+            // on. Not a spring: see the note on Behavior on opacity.
             readonly property int morphTime:
                 collapsing ? Motion.collapse
                            : (mode === "compact" ? Motion.hover
                                                  : Motion.expand)
-
-            readonly property var morphCurve:
-                collapsing ? Motion.settle : Motion.arrive
 
             readonly property bool media: Player.available && Player.title !== ""
             readonly property bool isExpanded: mode === "expanded"
@@ -879,14 +918,25 @@ Variants {
                                     + Config.island.searchFieldHeight }
                 })
 
-                width:  (geometry[island.mode] || geometry.idle).w
-                height: (geometry[island.mode] || geometry.idle).h
+                width:  pillWidth.value
+                height: pillHeight.value
 
                 // Theme colours carry no alpha, so it's applied here.
-                // The island-bar layer rule blurs whatever shows through.
+                // The island-bar layer rule blurs whatever shows
+                // through — one surface, so every mode is blurred
+                // equally and the only question is how much of it is
+                // allowed to show.
+                //
+                // The two popups get their own answer: see
+                // Config.island.popupOpacity.
+                readonly property real fillOpacity:
+                    island.mode === "osd" || island.mode === "notify"
+                        ? Config.island.popupOpacity
+                        : Config.island.opacity
+
                 function tint(c) {
                     const col = Qt.color(c);
-                    return Qt.rgba(col.r, col.g, col.b, Config.island.opacity);
+                    return Qt.rgba(col.r, col.g, col.b, pill.fillOpacity);
                 }
 
                 // The control centre is one panel with cards on it,
@@ -898,8 +948,29 @@ Variants {
                 // Now the panel is the surface and the cards sit on
                 // it, which is also what lets the layout editor move
                 // them around without leaving a shape behind.
+                // Hover is a lift, not a recolour. The shape grows
+                // and rises and that is the whole of the feedback —
+                // a fill that changes as well is a second thing
+                // happening for one event, and at pill size it reads
+                // as the colour being wrong rather than as a
+                // response. Compact keeps the resting fill.
+                // Two fills, and the line between them is whether the
+                // shape is still the pill or has become a panel.
+                //
+                // Resting, hovered, and the OSD are the pill: the OSD
+                // is a volume bar that grew out of it for a second
+                // and went away again, and lightening for that reads
+                // as a different object arriving rather than as the
+                // same one saying something. The control centre is
+                // dark for its own reason — the cards are the
+                // surfaces there and the panel behind them is not.
+                //
+                // Everything else is a panel you are reading or
+                // typing into, and those take the container.
                 color: tint(island.mode === "idle"
                             || island.mode === "hidden"
+                            || island.mode === "compact"
+                            || island.mode === "osd"
                             || island.mode === "expanded"
                         ? Theme.surfaceLowest
                         : Theme.surfaceContainer)
@@ -954,29 +1025,86 @@ Variants {
                 // toggles and sliders above it get their clicks; this
                 // only catches presses on empty pill.
 
-                // Both axes on one curve, so the shape scales as a
+                // Both axes on one spring, so the shape scales as a
                 // shape rather than as two edges that happen to be
-                // moving at the same time.
-                Behavior on width { Morph { shape: island } }
-                Behavior on height { Morph { shape: island } }
+                // moving at the same time. Two springs, one set of
+                // numbers: they are given the same response and the
+                // same bounce, and they start together, so they stay
+                // in step without having to be one object.
+                //
+                // A floor at zero because the corner is derived from
+                // the height and a negative height is a corner drawn
+                // inside out. The spring keeps its real state either
+                // way — see Widgets/Spring.qml.
+                Spring {
+                    id: pillWidth
+                    shape: island
+                    minimum: 0
+                    target: (pill.geometry[island.mode] || pill.geometry.idle).w
+                }
+
+                Spring {
+                    id: pillHeight
+                    shape: island
+                    minimum: 0
+                    target: (pill.geometry[island.mode] || pill.geometry.idle).h
+                }
                 // The pill's colour is deliberately not animated. In
                 // the expanded state it goes transparent so the cards
                 // read as separate surfaces, and fading a full-width
                 // background in and out underneath a morph and a
                 // content fade is three transitions at once.
 
+                // The pill's own content, and the only mode that is
+                // there at rest. It is outside the layer below for
+                // exactly that reason: a clock cannot be presented,
+                // because it never arrives.
                 IdleMode    { id: idleMode; win: root; island: island; pill: pill }
-                SearchMode  { win: root; island: island; pill: pill }
-                SessionMode { win: root; island: island; pill: pill }
-                PickerMode  { win: root; island: island; pill: pill }
-                NotifyMode  { win: root; island: island; pill: pill }
-                CentreMode  { id: centreMode; win: root; island: island; pill: pill }
-                ControlMode { id: controlMode; win: root; island: island }
-                OsdMode     { win: root; island: island; pill: pill }
-                AuthMode    { win: root; island: island; pill: pill }
-                ClipboardMode { win: root; island: island; pill: pill }
-                SwitcherMode  { win: root; island: island; pill: pill }
-                OverviewMode  { win: root; island: island; pill: pill }
+
+                // Everything that is a panel, on one surface that
+                // arrives as a panel does.
+                //
+                // A cross-fade alone reads as content appearing over
+                // the shape. macOS presents a surface by growing it
+                // the last few percent into place, anchored at the
+                // edge it came from — a popover, Notification Centre,
+                // a sheet — and that is what says it came out of the
+                // pill rather than landing on it.
+                //
+                // Scaling here rather than inside each mode is also
+                // what makes it mean the right thing. Going from the
+                // launcher to the control centre is not an arrival,
+                // it is the same panel showing something else, and it
+                // stays a cross-fade: the scale only moves when there
+                // is no panel on either side of the change.
+                Item {
+                    id: panelLayer
+                    anchors.fill: parent
+
+                    readonly property bool present: !island.collapsing
+                        && island.mode !== "compact"
+
+                    scale: emerge.value
+                    transformOrigin: Item.Top
+
+                    Spring {
+                        id: emerge
+                        shape: island
+                        target: panelLayer.present ? 1 : Motion.emergeScale
+                    }
+
+                    SearchMode  { win: root; island: island; pill: pill }
+                    SessionMode { win: root; island: island; pill: pill }
+                    PickerMode  { win: root; island: island; pill: pill }
+                    NotifyMode  { win: root; island: island; pill: pill }
+                    CentreMode  { id: centreMode; win: root; island: island; pill: pill }
+                    ControlMode { id: controlMode; win: root; island: island }
+                    OsdMode     { win: root; island: island; pill: pill }
+                    AuthMode    { win: root; island: island; pill: pill }
+                    ClipboardMode { win: root; island: island; pill: pill }
+                    SwitcherMode  { win: root; island: island; pill: pill }
+                    OverviewMode  { win: root; island: island; pill: pill }
+                }
 
                 // Declared after the modes, so the edge is drawn over
                 // whatever they put against it — a list row scrolling
@@ -1089,10 +1217,11 @@ Variants {
                 anchors.top: pill.bottom
                 anchors.topMargin: Config.island.podGap
 
+                // The pill's width, taken directly: it is already on a
+                // spring, and chasing a spring with a second spring
+                // puts a lag between two edges meant to be one line.
                 width: pill.width
-                height: shown
-                    ? Math.max(rows, 1) * rowHeight + Theme.padCard * 2
-                    : 0
+                height: shelfHeight.value
 
                 // Taken from the pill rather than restated, so the two
                 // surfaces cannot end up different colours in a mode
@@ -1113,8 +1242,16 @@ Variants {
                 opacity: shown ? 1 : 0
                 visible: opacity > 0.01
 
-                Behavior on width  { Morph { shape: island } }
-                Behavior on height { Morph { shape: island } }
+                Spring {
+                    id: shelfHeight
+                    shape: island
+                    minimum: 0
+                    target: shelf.shown
+                        ? Math.max(shelf.rows, 1) * shelf.rowHeight
+                          + Theme.padCard * 2
+                        : 0
+                }
+
                 Behavior on opacity { ContentFade { revealing: shelf.shown } }
 
                 SearchList { win: root; island: island; shelf: shelf }
@@ -1287,7 +1424,14 @@ Variants {
             }
             function wallpapers(): void { root.openPicker("wallpaper") }
             function palettes(): void { root.openPicker("theme") }
-            function icons(): void { root.openPicker("icon") }
+
+            // Not a picker any more. An icon theme is changed about
+            // once and then left, a grid of twenty of them is worse
+            // than a list, and previewing one means resolving icons
+            // out of a theme that is not the current one — which is
+            // real machinery for an annual decision. Settings does it
+            // better and already did.
+            function icons(): void { root.openSettings("appearance") }
             function hide(): void { root.closePicker() }
         }
 

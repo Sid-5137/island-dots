@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""island-dots — put the generated palette in front of Qt and KDE apps.
+
+    island-qt-apply [--colors PATH] [--qt6ct PATH] [--kdeglobals PATH]
+
+matugen writes two files and neither of them is read where it lands:
+
+    ~/.config/qt6ct/colors/island.conf       a QPalette, for Qt widgets
+    ~/.local/share/color-schemes/Island.colors   a KColorScheme
+
+The first does nothing until qt6ct.conf names it. The second does
+nothing until its colour groups are in ~/.config/kdeglobals. Both of
+those are contested files — qt6ct.conf holds the style, the fonts and
+the icon theme, kdeglobals holds the widget style — so matugen must
+not write to either, exactly as it must not write gtk.css. This owns
+the two edits, the way bin/island-gtk-apply owns gtk.css.
+
+Run it after matugen, and it is safe to run at any other time: it
+changes only the keys it is responsible for and is idempotent.
+
+Qt widgets and KF6 applications are two audiences, not one. A KDE app
+does not go through QT_QPA_PLATFORMTHEME and never sees qt6ct's
+palette; it reads kdeglobals directly, on any desktop. So both halves
+are needed for "Qt apps follow the wallpaper" to be true.
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+DATA = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+
+# From the scheme file, these groups are ours to copy wholesale.
+COLOUR_GROUPS = re.compile(r"^(Colors:.+|WM|ColorEffects:.+)$")
+
+# From [General], only these. It is shared with font and toolbar
+# settings that are nothing to do with us.
+GENERAL_KEYS = ("ColorScheme", "Name", "shadeSortColumn")
+
+GROUP_RE = re.compile(r"^\s*\[([^\]]+)\]\s*$")
+KEY_RE = re.compile(r"^\s*([^=\s\[][^=]*?)\s*=")
+
+
+def parse(path):
+    """INI to {group: {key: value}}, order preserved, comments dropped."""
+    groups, current = {}, None
+
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped[0] in "#;":
+            continue
+
+        header = GROUP_RE.match(line)
+        if header:
+            current = header.group(1)
+            groups.setdefault(current, {})
+            continue
+
+        if current is None or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        groups[current][key.strip()] = value.strip()
+
+    return groups
+
+
+def apply_keys(path, wanted):
+    """Set {group: {key: value}} in an INI file, byte-preserving the rest.
+
+    Rewritten line by line rather than through configparser, which
+    would re-emit the whole file: qt6ct.conf holds @ByteArray values
+    with backslash escapes and a geometry blob, and round-tripping
+    those through a parser is how you lose someone's window position.
+    """
+    pending = {g: dict(kv) for g, kv in wanted.items()}
+    out, current = [], None
+
+    def flush(group):
+        left = pending.get(group)
+        if not left:
+            return
+        # Before the blank line that usually ends a group, so the file
+        # does not grow a gap every run.
+        while out and not out[-1].strip():
+            out.pop()
+        out.extend(f"{k}={v}" for k, v in left.items())
+        out.append("")
+        left.clear()
+
+    if path.exists():
+        for line in path.read_text(encoding="utf-8",
+                                   errors="replace").splitlines():
+            header = GROUP_RE.match(line)
+            if header:
+                flush(current)
+                current = header.group(1)
+                out.append(line)
+                continue
+
+            key = KEY_RE.match(line)
+            if key and current in pending:
+                name = key.group(1).strip()
+                if name in pending[current]:
+                    out.append(f"{name}={pending[current].pop(name)}")
+                    continue
+
+            out.append(line)
+
+        flush(current)
+
+    for group, kv in pending.items():
+        if not kv:
+            continue
+        if out and out[-1].strip():
+            out.append("")
+        out.append(f"[{group}]")
+        out.extend(f"{k}={v}" for k, v in kv.items())
+        out.append("")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(out).rstrip("\n") + "\n", encoding="utf-8")
+
+
+def main():
+    ap = argparse.ArgumentParser(add_help=True, description=__doc__)
+    ap.add_argument("--colors", type=Path,
+                    default=DATA / "color-schemes/Island.colors")
+    ap.add_argument("--qt6ct", type=Path,
+                    default=CONFIG / "qt6ct/qt6ct.conf")
+    ap.add_argument("--kdeglobals", type=Path,
+                    default=CONFIG / "kdeglobals")
+    ap.add_argument("--palette", type=Path,
+                    default=CONFIG / "qt6ct/colors/island.conf")
+    args = ap.parse_args()
+
+    # ── Qt widgets, through qt6ct ────────────────────────────────
+    #
+    # A Qt application reads this when it starts and not again.
+    # qt6ct 0.11 does not re-read the colour scheme at runtime:
+    # rewriting the file, rewriting qt6ct.conf, and toggling
+    # custom_palette off and back on were all tried against a running
+    # application and it kept the palette it launched with. So a
+    # window that is already open keeps the old colours until it is
+    # restarted, and there is nothing this can do about it.
+    #
+    # GTK has the gsettings nudge in island-gtk-apply and Qt has no
+    # equivalent. Worth retrying if qt6ct grows one.
+    if args.palette.exists():
+        apply_keys(args.qt6ct, {"Appearance": {
+            "custom_palette": "true",
+            "color_scheme_path": str(args.palette),
+        }})
+        print(f"  {args.qt6ct}  -> {args.palette.name}")
+    else:
+        print(f"island-qt-apply: no palette at {args.palette};"
+              " run matugen once (change the wallpaper) first",
+              file=sys.stderr)
+
+    # ── KF6 applications, through kdeglobals ─────────────────────
+    if not args.colors.exists():
+        print(f"island-qt-apply: no colour scheme at {args.colors};"
+              " run matugen once (change the wallpaper) first",
+              file=sys.stderr)
+        return 0
+
+    scheme = parse(args.colors)
+    wanted = {g: kv for g, kv in scheme.items() if COLOUR_GROUPS.match(g)}
+
+    general = scheme.get("General", {})
+    keep = {k: general[k] for k in GENERAL_KEYS if k in general}
+    if keep:
+        wanted["General"] = keep
+
+    apply_keys(args.kdeglobals, wanted)
+    print(f"  {args.kdeglobals}  <- {len(wanted)} groups from"
+          f" {args.colors.name}")
+
+    # KF6 applications do have a live channel, even though Qt widgets
+    # do not: KColorScheme listens for this and re-reads kdeglobals
+    # when it arrives. Costs nothing when nobody is listening, which
+    # on a desktop with no KDE application running is always.
+    #
+    # The 0 is KGlobalSettings::PaletteChanged.
+    subprocess.run(
+        ["dbus-send", "--session", "--type=signal", "/KGlobalSettings",
+         "org.kde.KGlobalSettings.notifyChange", "int32:0", "int32:0"],
+        check=False, capture_output=True)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

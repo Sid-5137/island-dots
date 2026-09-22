@@ -69,13 +69,19 @@ Row {
             !(root.island.media && Config.island.pillTitle)
 
         anchors.verticalCenter: parent.verticalCenter
-        width: shown ? dateText.implicitWidth + 10 : 0
+        width: dateWidth.value
         height: dateText.implicitHeight
         clip: true
 
-        // On the pill's own curve: these slots are the pill's
-        // width, one level down.
-        Behavior on width { Morph { shape: island } }
+        // On the pill's own spring: these slots are the pill's width,
+        // one level down, and a slot that arrived on a different
+        // curve from the shape around it would read as two moves.
+        Spring {
+            id: dateWidth
+            shape: island
+            minimum: 0
+            target: dateSlot.shown ? dateText.implicitWidth + 10 : 0
+        }
 
         Text {
             id: dateText
@@ -100,13 +106,17 @@ Row {
         readonly property bool shown: root.island.media
 
         anchors.verticalCenter: parent.verticalCenter
-        width: shown ? mediaRow.implicitWidth + 10 : 0
+        width: mediaWidth.value
         height: mediaRow.implicitHeight
         clip: true
 
-        // On the pill's own curve: these slots are the pill's
-        // width, one level down.
-        Behavior on width { Morph { shape: island } }
+        // As above.
+        Spring {
+            id: mediaWidth
+            shape: island
+            minimum: 0
+            target: mediaSlot.shown ? mediaRow.implicitWidth + 10 : 0
+        }
 
         Row {
             id: mediaRow
@@ -188,11 +198,17 @@ Row {
                 readonly property bool shown: root.hovered
 
                 anchors.verticalCenter: parent.verticalCenter
-                width: shown ? transport.implicitWidth + 6 : 0
+                width: transportWidth.value
                 height: transport.implicitHeight
                 clip: true
 
-                Behavior on width { Morph { shape: island } }
+                Spring {
+                    id: transportWidth
+                    shape: island
+                    minimum: 0
+                    target: transportSlot.shown
+                        ? transport.implicitWidth + 6 : 0
+                }
 
                 Row {
                     id: transport

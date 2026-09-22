@@ -123,6 +123,29 @@ Singleton {
     // already look.
     readonly property int iconRow: 22
 
+    // The same colour, at zero alpha.
+    //
+    // `"transparent"` is #00000000 — black that merely happens to be
+    // invisible — so a ColorAnimation between a fill and
+    // `"transparent"` drags its RGB down to black on the way out and
+    // back up from black on the way in. Half way through a hover fade
+    // the row is darker than the surface it sits on, which is a black
+    // flash under the cursor.
+    //
+    // It survived for as long as it did because it is invisible on a
+    // palette whose surfaces are already near black — a wallpaper
+    // derived one usually is. Any lighter surface shows it, which is
+    // what the named presets are: Nord's #343a48 dips to #1f232b on
+    // its way in.
+    //
+    // Fading a colour to its own zero-alpha keeps the hue and moves
+    // only the alpha, which is what "fade out" was always supposed to
+    // mean.
+    function fade(c) {
+        const col = Qt.color(c);
+        return Qt.rgba(col.r, col.g, col.b, 0);
+    }
+
     // The corner a shape of this height should have. One number cannot
     // serve both a 34px pill and a 374px panel, so the radius grows
     // with the shape and stops at a capsule — and since the pill's

@@ -100,7 +100,8 @@ Column {
                 radius: Theme.radiusLarge
                 color: modelData.active
                     ? Qt.rgba(1, 1, 1, 0.08)
-                    : (netHover.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent")
+                    : (netHover.containsMouse ? Qt.rgba(1, 1, 1, 0.04)
+                                              : Qt.rgba(1, 1, 1, 0))
 
                 Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
@@ -311,7 +312,8 @@ Column {
             radius: Theme.radiusLarge
             color: modelData.connected
                 ? Qt.rgba(1, 1, 1, 0.08)
-                : (btHover.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent")
+                : (btHover.containsMouse ? Qt.rgba(1, 1, 1, 0.04)
+                                          : Qt.rgba(1, 1, 1, 0))
 
             Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 

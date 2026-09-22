@@ -15,7 +15,7 @@ the drawings.
 | `expanded` | click | calendar, battery, toggles, sliders, media |
 | `search` | `Super+R` | application launcher |
 | `clipboard` | `Super+V` | clipboard history |
-| `picker` | `Super+Shift+W/T/I` | wallpapers, palettes, icon themes |
+| `picker` | `Super+Shift+W/T` | wallpapers and palettes, as a grid. `Super+Shift+I` opens Settings instead: an icon theme is picked once and then left, and twenty near-identical folder icons is a list, not a grid |
 | `session` | `Super+Shift+Q` | lock, log out, suspend, reboot, shut down |
 | `centre` | `Super+N` | notification history |
 | `notify` | on arrival | a notification, briefly |
@@ -102,49 +102,140 @@ lists-in-the-panel and the layout editor are all taken from
 
 ### Motion
 
-The shape springs open and settles shut. Those are different curves,
-because they are different events: a spring on arrival feels
-responsive, and a spring on dismissal feels like the interface arguing
-with you.
+Every shape in the shell is on a spring, and a spring is described the
+way Apple describes one: a **response**, which is its natural period
+and reads as the speed of the thing, and a **bounce**, which is one
+minus the damping fraction. That is the pair SwiftUI's
+`Spring(duration:bounce:)` takes, so a figure read off Apple's
+documentation means here what it means there.
 
-| | Curve | Time |
+| | Response | Bounce |
 |:--|:--|:--|
-| open | spring, damping 0.78 — about 1.5% overshoot | 240 ms |
-| close | critically damped, no overshoot | 200 ms |
-| hover | spring, damping 0.78 | 200 ms |
-| pod peek | spring, damping 0.55 | 300 ms |
-| content in | 40 ms lead, then 150 ms | 190 ms |
-| content out | immediately, and quicker | 90 ms |
+| open | 240 ms | 0.15 — `.snappy`, about 0.6% overshoot |
+| close | 190 ms | 0.05 |
+| hover | 180 ms | 0.15 |
+| pod peek | 280 ms | 0.40 |
+| content in | 40 ms lead, then 150 ms | — an easing, not a spring |
+| content out | 90 ms, immediately | — |
 
-Those are the **fluid** tempo, and the numbers are measured rather
-than invented. Sampling [saneAspect's Dynamite
+Those are the **snappy** tempo. The bounces are Apple's three exactly:
+**smooth** is 0, **snappy** 0.15, **bouncy** 0.30. The responses are
+not — SwiftUI's named springs all run at half a second, which is a
+phone animation and reads as slow on a shell you drive with a pointer.
+macOS's own chrome runs nearer a quarter second, and that is also
+where the island already was: sampling [saneAspect's Dynamite
 V3](https://www.youtube.com/watch?v=Ob98KFByTec) at 60fps — the
 panel's height in one column of pixels, frame by frame — its control
-centre opens in about 180 ms and overshoots its final height by 1.4%,
-which is a damping fraction of roughly 0.8. That was already this
-spring. The only thing that differed was the clock: 460 ms against his
-180. Two and a half times slower is the whole of the difference
-between motion you feel and motion you wait for.
+centre opens in about 180 ms and overshoots by 1.4%. The two
+references agree about the speed and differ only about how much
+overshoot to spend on it, and Apple's answer is the smaller one.
 
-**calm** is the old tempo, kept for anyone who wants the extra beat on
-a large screen. **springy** keeps the speed and spends the damping
-instead: 0.62 is an overshoot you watch rather than feel.
+**A spring, not a curve, because a curve cannot be interrupted.** An
+easing is a function of one variable — how far through it is — so it
+cannot know that the property was already moving when it started, or
+how fast. Reverse a Qt `Behavior` mid-flight and it restarts from a
+standstill at whatever value it had reached: brush the pill and leave
+again, or open the control centre and shut it before it has arrived,
+and there is a visible hitch at the turn. `Widgets/Spring.qml` carries
+its velocity through the reversal instead. That continuity is most of
+what makes motion feel attached to the pointer rather than played at
+it, and it is why the springs are not Behaviors at all — a Behavior
+owns a start and an end, and a spring has neither.
+
+It is solved rather than stepped: the closed-form solution of the
+damped oscillator, evaluated at each frame's own dt. So the motion is
+identical at 60Hz and at 240Hz and a dropped frame costs a frame
+rather than changing the curve. Qt ships a `SpringAnimation` and it is
+not this one — it steps a fixed 16 ms Euler, which would run every
+morph on a 120Hz panel at 62.5.
+
+**Departures spring too, barely.** They used to be critically damped
+on the argument that a spring on dismissal reads as the interface
+arguing with you. macOS does not agree, and neither does this any
+more; what it keeps from that argument is the size of the number.
+Bounce on the way out is 0.05, because half of what the island
+dismisses is collapsing to nothing and an overshoot past nothing is a
+negative width. Every spring that can reach zero also carries a floor,
+and clamps only what is read out — the oscillator keeps its true state
+so it still settles from where it really is.
+
+**Arriving is not only a fade.** A surface grows the last four percent
+into place as it fades in, anchored at the top edge, which is the
+edge it came out of. That is the macOS presentation everywhere from a
+popover to Notification Centre, and it is the difference between
+content appearing *over* the shape and content coming *out* of it. It
+is applied to the panel modes as a group rather than to each of them,
+which is also what makes it mean the right thing: going from the
+launcher to the control centre is not an arrival, it is the same panel
+showing something else, and it stays a plain cross-fade.
 
 The content is choreographed against the shape rather than gated on
 it. It used to wait until the pill had reached 97% of its final width
 and only then fade in, which is why opening the control centre read as
-a resize followed by a screen. Now the shape moves alone for 80ms, the
-content fades into it while it is still growing, and it is fully in
-long before the shape settles. On the way out the content leaves
+a resize followed by a screen. Now the shape moves alone for 40 ms,
+the content fades into it while it is still growing, and it is fully
+in long before the shape settles. On the way out the content leaves
 first: content still fading while the shape closes over it looks like
 a mistake.
 
-`Services/Motion.qml` holds the whole vocabulary — it samples a damped
-second-order step response and hands Qt a bezier spline, since Qt has
-no spring easing. Tempo is one control in Settings → Island; damping,
-durations and the content lead are each their own slider a fold below
-it, and **Reduce motion** drops the springs and the shape morphs while
+Fades stay easings, in both directions and everywhere. A cross-fade
+has no velocity to carry and no overshoot to spend, and Apple eases
+those too.
+
+`Services/Motion.qml` holds the whole vocabulary and runs two engines
+on purpose. The shapes get `Widgets/Spring.qml`. Everything small
+enough that interrupting it is not a thing you can see — a toggle
+knob, a row highlight, a button's press — gets a bezier spline sampled
+from the same spring, which costs one curve rather than a physics step
+per frame per control. Tempo is one control in Settings → Island;
+response, bounce and the emerge scale are each their own slider a fold
+below it, and **Reduce motion** drops the springs and the emerge while
 keeping the cross-fades.
+
+### Palette
+
+The shell's colours are twenty-six Material role names —
+`surface_container_high`, `on_surface_variant`, and so on — and
+`Services/Theme.qml` is the only thing that reads them. Everything
+else asks Theme. That indirection is what lets the roles be filled
+from two completely different places without anything downstream
+knowing which:
+
+- **from the wallpaper**, by matugen, which derives a Material palette
+  from the image;
+- **from a preset**, by `bin/island-palette`, which fills the same
+  templates from a table of twelve colours per theme.
+
+Twelve, not twenty-six, because the rest is one shared mapping. A
+preset says what its crust, base, three surfaces, overlay, text,
+subtext, three accents and red are — under the names its own authors
+use, so a gruvbox value looked up in gruvbox's documentation is
+findable by the name it has there — and the mapping onto Material
+happens once for all of them. Adding a theme is twelve hex values.
+
+The ramp has to ascend, and the one step no theme names is
+interpolated rather than invented: Material reads
+`surface_container_*` as elevation, so a surface darker than the one
+below it puts a card behind the thing it is sitting on.
+
+**The accents are the quiet variants.** Every one of these palettes
+has a loud set and a muted set, and `primary` here is not a swatch on
+a page — it is the fill behind a selected row, the edge of whatever
+the pointer is on, the active segment of a control. A colour chosen to
+be noticed is the wrong one for something on screen all day. So
+gruvbox is Gruvbox Material rather than the original's `#fb4934` and
+`#b8bb26`, and Nord's accent is nord9 rather than the Frost cyan every
+Nord preview leads with. Catppuccin is left as published: it is
+high-value by design, and its accents are meant to carry dark text,
+which is exactly how the shell uses them.
+
+Under a preset the wallpaper had no say in the palette, so the two can
+disagree. **Tint the wallpaper** washes the image toward the accent —
+most of the way to grey, then back out in one hue, which leaves the
+shapes and takes the argument away. A hue rotation would leave a blue
+sky blue-ish and still wrong. It is a `MultiEffect` on the layer that
+is already being drawn, enabled only while it is wanted, so the
+ordinary case pays for no render target at all.
 
 ### Shape
 

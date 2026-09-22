@@ -100,7 +100,7 @@ Item {
 
                 border.width: 1
                 border.color: row.active
-                    ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
+                    ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(1, 1, 1, 0)
 
                 scale: rowHover.pressed ? 0.97 : 1
 

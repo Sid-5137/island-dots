@@ -37,8 +37,10 @@ Item {
 
     // The real thing's contract, so the preview springs open and
     // settles shut exactly as the island does. See Services/Motion.qml.
-    readonly property int morphTime: open ? Motion.hover : Motion.collapse
-    readonly property var morphCurve: open ? Motion.arrive : Motion.settle
+    readonly property int springResponse:
+        open ? Motion.hoverResponse : Motion.collapseResponse
+    readonly property real springBounce:
+        open ? Motion.arriveBounce : Motion.departBounce
 
     Rectangle {
         id: backdrop
@@ -83,11 +85,19 @@ Item {
             // narrower than it is tall. Four made-up workspaces never
             // reach it, but a preview that mirrors the pod has to
             // mirror the whole line or it is a preview of the old one.
-            width: shown ? Math.max(root.shapeHeight,
-                                    (root.open ? openDashes.implicitWidth
-                                               : restDashes.implicitWidth) + 16)
-                         : 0
+            width: leftPodWidth.value
             height: root.shapeHeight
+
+            Spring {
+                id: leftPodWidth
+                shape: root
+                minimum: 0
+                target: leftPod.shown
+                    ? Math.max(root.shapeHeight,
+                               (root.open ? openDashes.implicitWidth
+                                          : restDashes.implicitWidth) + 16)
+                    : 0
+            }
             // The real pod's own line, against the same height — see
             // Theme.corner. Reading the slider directly drew a shape
             // the island never takes: at the default 8 the pill is
@@ -105,7 +115,6 @@ Item {
             Bezel { outer: parent.radius }
             clip: true
 
-            Behavior on width { Morph { shape: root } }
             Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
 
             Row {
@@ -238,10 +247,25 @@ Item {
 
             anchors.centerIn: parent
 
-            width: Math.max(root.open ? Config.island.compactWidth
-                                      : Config.island.idleWidth,
-                            contents.implicitWidth + Config.island.padding * 2)
-            height: root.shapeHeight
+            width: pillWidth.value
+            height: pillHeight.value
+
+            Spring {
+                id: pillWidth
+                shape: root
+                minimum: 0
+                target: Math.max(root.open ? Config.island.compactWidth
+                                           : Config.island.idleWidth,
+                                 contents.implicitWidth
+                                 + Config.island.padding * 2)
+            }
+
+            Spring {
+                id: pillHeight
+                shape: root
+                minimum: 0
+                target: root.shapeHeight
+            }
 
             radius: Theme.corner(height)
             color: root.shapeColor
@@ -252,9 +276,7 @@ Item {
             // what an edge is as well as about what a corner is.
             Bezel { outer: parent.radius }
 
-            Behavior on width { Morph { shape: root } }
-            Behavior on height { Morph { shape: root } }
-            // No Behavior on radius, for the same reason the island
+            // No spring on radius, for the same reason the island
             // has none: the corner is a function of a height that is
             // already on a spring, so it arrives with the shape rather
             // than chasing it on a second clock.
@@ -302,8 +324,16 @@ Item {
             readonly property int icon: root.open ? 18 : 16
             readonly property int gap: root.open ? 11 : 7
 
-            width: shown ? 3 * icon + 2 * gap + 16 : 0
+            width: rightPodWidth.value
             height: root.shapeHeight
+
+            Spring {
+                id: rightPodWidth
+                shape: root
+                minimum: 0
+                target: rightPod.shown
+                    ? 3 * rightPod.icon + 2 * rightPod.gap + 16 : 0
+            }
             radius: Theme.corner(height)
             color: root.shapeColor
             border.width: shown ? 1 : 0
@@ -313,7 +343,6 @@ Item {
             Bezel { outer: parent.radius }
             clip: true
 
-            Behavior on width { Morph { shape: root } }
             Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
 
             // Stand-ins. The real pod draws whatever has placed an icon;
@@ -331,15 +360,19 @@ Item {
                         // Circles, because Widgets/TrayIcon draws
                         // circles. The preview had them as rounded
                         // squares.
-                        width: rightPod.icon
-                        height: rightPod.icon
+                        width: iconSize.value
+                        height: iconSize.value
                         radius: width / 2
                         opacity: root.open ? 1 : 0.78
                         color: index === 0 ? Theme.primary
                             : (index === 1 ? Theme.secondary : Theme.tertiary)
 
-                        Behavior on width { Morph { shape: root } }
-                        Behavior on height { Morph { shape: root } }
+                        Spring {
+                            id: iconSize
+                            shape: root
+                            minimum: 0
+                            target: rightPod.icon
+                        }
                     }
                 }
             }

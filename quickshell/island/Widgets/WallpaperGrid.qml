@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Widgets
 import "root:/Services"
 
 // Wallpaper thumbnails. Picking one sets it and re-derives the
@@ -79,7 +80,14 @@ Item {
         Repeater {
             model: root.list
 
-            Rectangle {
+            // ClippingRectangle, not Rectangle: `clip` on a Rectangle
+            // clips to the bounding box and ignores the radius, so the
+            // thumbnail kept its square corners inside a rounded card
+            // and overhung the border at all four of them. This clips
+            // to the shape it draws, and insets the content inside the
+            // border on its own — which is what the old 2px margin on
+            // the image was standing in for.
+            ClippingRectangle {
                 id: cell
                 required property var modelData
 
@@ -93,7 +101,6 @@ Item {
                 height: root.cellHeight
                 radius: Theme.radiusLarge
                 color: Theme.surfaceHigh
-                clip: true
 
                 border.width: active ? 2 : (cellHover.containsMouse ? 1 : 0)
                 border.color: active ? Theme.primary : Theme.outlineVariant
@@ -102,7 +109,6 @@ Item {
 
                 Image {
                     anchors.fill: parent
-                    anchors.margins: cell.active ? 2 : 0
                     source: "file://" + cell.modelData
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true

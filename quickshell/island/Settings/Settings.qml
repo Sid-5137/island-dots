@@ -71,22 +71,29 @@ PanelWindow {
         height: 680
 
         opacity: root.open ? 1 : 0
-        scale: root.open ? 1 : 0.96
+        scale: emerge.value
 
-        // The island's own motion, so the settings window arrives the
-        // way everything else does. See Services/Motion.qml.
+        // The island's own motion, so this window arrives the way
+        // everything else does — a spring on the shape, an easing on
+        // the fade. Reversing it halfway, which is what shutting a
+        // window you only just opened is, carries the velocity
+        // through instead of restarting. See Services/Motion.qml.
+        readonly property int springResponse:
+            root.open ? Motion.expandResponse : Motion.collapseResponse
+        readonly property real springBounce:
+            root.open ? Motion.arriveBounce : Motion.departBounce
+
+        Spring {
+            id: emerge
+            shape: panel
+            target: root.open ? 1 : Motion.emergeScale
+        }
+
         Behavior on opacity {
             NumberAnimation {
                 duration: root.open ? Motion.contentIn : Motion.contentOut
                 easing.type: Easing.BezierSpline
                 easing.bezierCurve: Motion.ease
-            }
-        }
-        Behavior on scale {
-            NumberAnimation {
-                duration: root.open ? Motion.expand : Motion.collapse
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: root.open ? Motion.arrive : Motion.settle
             }
         }
 
@@ -152,7 +159,8 @@ PanelWindow {
                         radius: Theme.radiusLarge
                         color: active
                             ? Theme.surfaceHigh
-                            : (navHover.containsMouse ? Theme.surfaceLow : "transparent")
+                            : (navHover.containsMouse ? Theme.surfaceLow
+                              : Theme.fade(Theme.surfaceLow))
 
                         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
@@ -265,7 +273,7 @@ PanelWindow {
 
                 color: Config.ui.advanced ? Theme.primary
                     : (advHover.containsMouse ? Theme.surfaceHigh
-                                              : "transparent")
+                                              : Theme.fade(Theme.surfaceHigh))
                 border.width: 1
                 border.color: Config.ui.advanced
                     ? Theme.primary : Theme.outlineVariant

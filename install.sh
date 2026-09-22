@@ -14,6 +14,7 @@ set -euo pipefail
 DOTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}"
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 BIN="$HOME/.local/bin"
 
 link() {
@@ -52,7 +53,11 @@ done
 # settings.json lives in the first of these, generated colours in the
 # second. Without the directories every write fails silently: nothing
 # persists, and the shell comes up on declared defaults every time.
-mkdir -p "$CONFIG/island" "$STATE/island" "$HOME/Pictures/Screenshots"
+# color-schemes is where KColorScheme looks; matugen aborts its whole
+# run on the first output it cannot write, so a missing directory here
+# would take the palette and the GTK colours down with it.
+mkdir -p "$CONFIG/island" "$STATE/island" "$HOME/Pictures/Screenshots" \
+         "$DATA/color-schemes" "$CONFIG/qt6ct/colors"
 
 echo
 echo "Generating:"
@@ -64,6 +69,7 @@ echo "Generating:"
 sed -e "s|@DOTS@|$DOTS|g" \
     -e "s|@CONFIG@|$CONFIG|g" \
     -e "s|@STATE@|$STATE|g" \
+    -e "s|@DATA@|$DATA|g" \
     "$DOTS/matugen/config.toml.in" > "$CONFIG/island/matugen.toml"
 echo "  $CONFIG/island/matugen.toml"
 
@@ -93,6 +99,10 @@ if [ -x "$DOTS/bin/island-gtk-apply" ]; then
     fi
     "$DOTS/bin/island-gtk-apply" --no-nudge "${seed[@]}" || true
     echo "  ~/.config/gtk-{3,4}.0/gtk.css"
+    # Silent until matugen has produced a palette, which is the first
+    # wallpaper change. island-gtk-apply calls island-qt-apply itself,
+    # so this only says so.
+    echo "  ~/.config/qt6ct/qt6ct.conf, ~/.config/kdeglobals (colours)"
 fi
 
 # The lock screen authenticates against a PAM file named by

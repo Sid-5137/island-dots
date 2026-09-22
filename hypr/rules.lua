@@ -140,7 +140,7 @@ hl.layer_rule({
 -- ignore_alpha is low so nothing gets skipped for being too
 -- transparent. The panels set their own opacity; blur only shows
 -- through if they are actually translucent.
-for _, ns in ipairs({ "island-launcher", "island-settings", "island-shortcuts" }) do
+for _, ns in ipairs({ "island-settings", "island-shortcuts" }) do
     hl.layer_rule({
         name         = ns,
         match        = { namespace = "^" .. ns .. "$" },
@@ -161,12 +161,10 @@ for _, ns in ipairs({ "hyprshot", "selection", "slurp" }) do
     })
 end
 
-for _, ns in ipairs({ "island-notifications", "island-osd" }) do
-    hl.layer_rule({
-        name         = ns,
-        match        = { namespace = "^" .. ns .. "$" },
-        blur         = true,
-        ignore_alpha = 0.1,
-        no_anim      = true,
-    })
-end
+-- There is no island-notifications, island-osd or island-launcher
+-- surface and there has not been since those became modes of the pill
+-- rather than windows of their own. `hyprctl layers` lists exactly
+-- two: island-wallpaper and island-bar. Rules for the other three sat
+-- here matching nothing, which is worse than absent — they read as
+-- the notification popup having its own blur settings, so the place
+-- you would go to fix its blur was the one place that could not.

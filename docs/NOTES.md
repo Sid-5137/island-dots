@@ -22,6 +22,34 @@ this is the long version behind it.
   the control points carry the overshoot. `Services/Motion.qml` does
   that, and the comment there says so.
 
+  That clamp is also why the sampled curves cannot be the whole story.
+  A spline whose y steps back down crashes Qt, and stepping back down
+  is exactly what an interrupted spring has to do: reverse a shape
+  halfway open and the progress toward the *new* target starts
+  negative, because the thing is still travelling the other way. So
+  velocity cannot be carried through a bezier at all, at any price.
+  The shapes are solved analytically instead — `Widgets/Spring.qml` —
+  and the sampled curves are kept for the controls small enough that
+  nobody can interrupt them visibly.
+
+- **Qt's `SpringAnimation` runs at 62.5fps, whatever your monitor
+  does.** It is a fixed 16 ms Euler step: `velocity += spring * (to -
+  value) - damping * velocity`, then `value += velocity * 0.016`, and
+  it refuses to update at all when less than 16 ms has elapsed. On a
+  120Hz panel that is every other frame, and the staircase is visible
+  on anything that travels far. Simulating that loop in Python
+  reproduces Qt's output to five decimal places, which is how the step
+  was identified — it is not documented.
+
+  It also means its two numbers are not a frequency and a damping
+  ratio but artefacts of that discretisation. `spring: 2, damping:
+  0.2` from Qt's own example measures as a 0.50 s response at a
+  damping fraction of 0.59, and the continuous-limit conversion that
+  ought to give those numbers is off by enough to see. Solving the
+  oscillator in closed form at each frame's real dt costs a handful of
+  lines, is frame-rate independent, and takes Apple's response and
+  bounce directly.
+
 - **Hyprland's Lua migration breaks things silently.** Three separate
   APIs stopped working with no error and no log line:
   - `hyprctl keyword` — rejected outright with "keyword can't work
@@ -138,15 +166,15 @@ this is the long version behind it.
   a reload landing between two writes puts the adapter back to what
   was on disk before the second one.
 
-  Picking a Tempo writes eleven motion keys. Five of them did not
+  Picking a Tempo writes twelve motion keys. Five of them did not
   survive, the file was left holding a mixture of two tempos, and the
   row read back as **Custom** — so the symptom was the settings app
   disagreeing with the setting you had just made, with nothing
   anywhere reporting an error. Reproducible in about fifteen lines:
 
   ```qml
-  Motion.setTempo("calm");
-  // then, a tick later, compare Config.motion against Motion.tempos.calm
+  Motion.setTempo("smooth");
+  // then, a tick later, compare Config.motion against Motion.tempos.smooth
   ```
 
   The fix is a zero-interval timer, which is not a delay — it fires on

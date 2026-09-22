@@ -104,7 +104,7 @@ Column {
                     radius: height / 2
                     color: current ? Theme.primary
                         : (colHover.containsMouse ? Theme.surfaceHigh
-                                                  : "transparent")
+                                                  : Theme.fade(Theme.surfaceHigh))
                     border.width: 1
                     border.color: current ? Theme.primary : Theme.outlineVariant
 
@@ -151,7 +151,7 @@ Column {
                     height: 28
                     radius: Theme.radiusSmall
                     color: actHover.containsMouse && usable
-                        ? Theme.surfaceHigh : "transparent"
+                        ? Theme.surfaceHigh : Theme.fade(Theme.surfaceHigh)
                     border.width: 1
                     border.color: Theme.outlineVariant
                     opacity: usable ? 1 : 0.4
@@ -274,8 +274,8 @@ Column {
                     readonly property int cellW: slot.w
                     readonly property int cellH: slot.h
 
-                    x: ControlLayout.itemX(canvas.width, cellX)
-                    y: ControlLayout.itemY(cellY)
+                    x: cardX.value
+                    y: cardY.value
                     width: ControlLayout.itemWidth(canvas.width, cellW)
                     height: ControlLayout.itemHeight(cellH)
 
@@ -285,34 +285,39 @@ Column {
                     // ones it is being dragged over, which is most of
                     // what makes a drag feel like picking something up
                     // rather than like editing two numbers.
-                    scale: dragging ? 1.04 : 1
+                    scale: cardLift.value
 
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: Motion.hover
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: Motion.arrive
-                        }
+                    Spring {
+                        id: cardLift
+                        response: Motion.hoverResponse
+                        bounce: Motion.arriveBounce
+                        target: card.dragging ? 1.04 : 1
                     }
 
                     // Snapping between cells is the whole feedback, so
-                    // it is animated. Not while dragging: a spring
-                    // between the pointer and the card is lag.
-                    Behavior on x {
-                        enabled: !card.dragging
-                        NumberAnimation {
-                            duration: Motion.hover
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: Motion.arrive
-                        }
+                    // it is sprung — and a card knocked from cell to
+                    // cell twice in quick succession carries the first
+                    // move's velocity into the second rather than
+                    // stopping dead between them.
+                    //
+                    // Not while dragging: a spring between the pointer
+                    // and the card is lag. Disabled, a Spring tracks
+                    // its target exactly, which is what the Behavior's
+                    // own `enabled` used to buy.
+                    Spring {
+                        id: cardX
+                        enabled: !card.dragging && !Motion.reduced
+                        response: Motion.hoverResponse
+                        bounce: Motion.arriveBounce
+                        target: ControlLayout.itemX(canvas.width, card.cellX)
                     }
-                    Behavior on y {
-                        enabled: !card.dragging
-                        NumberAnimation {
-                            duration: Motion.hover
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: Motion.arrive
-                        }
+
+                    Spring {
+                        id: cardY
+                        enabled: !card.dragging && !Motion.reduced
+                        response: Motion.hoverResponse
+                        bounce: Motion.arriveBounce
+                        target: ControlLayout.itemY(card.cellY)
                     }
 
                     ControlItem {
@@ -623,7 +628,8 @@ Column {
                 width: chip.implicitWidth + 44
                 height: 34
                 radius: Theme.radiusSmall
-                color: addHover.containsMouse ? Theme.surfaceHigh : "transparent"
+                color: addHover.containsMouse ? Theme.surfaceHigh
+                                              : Theme.fade(Theme.surfaceHigh)
                 border.width: 1
                 border.color: Theme.outlineVariant
 

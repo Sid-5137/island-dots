@@ -19,7 +19,7 @@ hl.bind(mod .. " + S",         hl.dsp.exec_cmd(Shell .. "settings toggle"), { de
 hl.bind(mod .. " + SHIFT + C", hl.dsp.exec_cmd(Shell .. "control toggle"), { description = "Shell: Control centre" })
 hl.bind(mod .. " + SHIFT + W", hl.dsp.exec_cmd(Shell .. "picker wallpapers"), { description = "Shell: Wallpaper picker" })
 hl.bind(mod .. " + SHIFT + T", hl.dsp.exec_cmd(Shell .. "picker palettes"), { description = "Shell: Palette picker" })
-hl.bind(mod .. " + SHIFT + I", hl.dsp.exec_cmd(Shell .. "picker icons"), { description = "Shell: Icon picker" })
+hl.bind(mod .. " + SHIFT + I", hl.dsp.exec_cmd(Shell .. "picker icons"), { description = "Shell: Icon theme (Settings)" })
 hl.bind(mod .. " + CTRL + W",  hl.dsp.exec_cmd(Shell .. "wallpaper next"), { description = "Shell: Next wallpaper" })
 hl.bind(mod .. " + L",         hl.dsp.exec_cmd(Shell .. "lock activate"), { description = "Shell: Lock" })
 hl.bind(mod .. " + SHIFT + Q", hl.dsp.exec_cmd(Shell .. "session toggle"), { description = "Shell: Power menu" })

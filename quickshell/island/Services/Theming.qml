@@ -11,6 +11,40 @@ Singleton {
     property var cursors: []
     property var gtkThemes: []
 
+    // The named palettes, as [{ value, label }] ready for a ChoiceRow.
+    // Asked of the script rather than restated here: a list of presets
+    // in QML and a list of presets in Python are two sources of truth
+    // for one fact, and they disagree the first time somebody adds a
+    // theme to only one of them.
+    property var palettes: []
+
+    // How a wallpaper-derived palette may be read. Material defines
+    // nine of these; five are worth offering, and the settings page
+    // and the picker both read this rather than each keeping a list —
+    // they had drifted to eight and five respectively.
+    //
+    // The first four are one axis, least colour to most: monochrome
+    // is grey, neutral is grey with the wallpaper in it, tonal is
+    // Material's own default and what matugen uses when asked for
+    // nothing, vibrant takes the chroma to maximum.
+    //
+    // Content is not on that axis. It is the one that says "use the
+    // colours that are actually in the image" — the palette matches
+    // the seed rather than being derived from it.
+    //
+    // Left out: fidelity, which Material's own documentation calls
+    // almost identical to content; expressive, which deliberately
+    // moves the hue away from the seed and so undoes the point of
+    // deriving from a wallpaper at all; rainbow and fruit-salad,
+    // which are novelties.
+    readonly property var schemes: [
+        { value: "scheme-monochrome", label: "Mono" },
+        { value: "scheme-neutral",    label: "Neutral" },
+        { value: "scheme-tonal-spot", label: "Tonal" },
+        { value: "scheme-vibrant",    label: "Vibrant" },
+        { value: "scheme-content",    label: "Content" }
+    ]
+
     // bin/island-gtk-apply does the actual work. It is a script and
     // not a string of shell built here because it has to touch
     // gsettings, two settings.ini files, two gtk.css files and
@@ -63,6 +97,44 @@ Singleton {
                 if (this.text.trim() !== "")
                     console.warn("[Theming]", this.text.trim());
             }
+        }
+    }
+
+    // bin/island-palette is authoritative about which palettes exist;
+    // --list prints one "name<TAB>label" per line for exactly this.
+    Process {
+        id: paletteScan
+        running: true
+        command: ["sh", "-c",
+            'PATH="$HOME/.local/bin:$PATH"; exec island-palette --list']
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const out = this.text.trim();
+                if (out === "") return;
+
+                root.palettes = out.split("\n").map(function(line) {
+                    const parts = line.split("\t");
+                    // base, surface, text, accent, secondary,
+                    // tertiary, red — see bin/island-palette, which
+                    // decides the order.
+                    const c = (parts[2] || "").split(",");
+                    return {
+                        value: parts[0],
+                        label: parts[1] || parts[0],
+                        base: c[0] || "#000000",
+                        surface: c[1] || "#000000",
+                        text: c[2] || "#ffffff",
+                        accents: c.slice(3).filter(function(x) { return x })
+                    };
+                });
+            }
+        }
+
+        onExited: function(code) {
+            if (code === 127)
+                console.warn("[Theming] island-palette not found on PATH —"
+                    + " run install.sh to link it into ~/.local/bin");
         }
     }
 

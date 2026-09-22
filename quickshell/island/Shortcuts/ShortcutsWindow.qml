@@ -59,20 +59,29 @@ PanelWindow {
         height: Math.min(700, root.height - 80)
 
         opacity: Shortcuts.open ? 1 : 0
-        scale: Shortcuts.open ? 1 : 0.96
+        scale: emerge.value
+
+        // The island's own motion, so this window arrives the way
+        // everything else does — a spring on the shape, an easing on
+        // the fade. Reversing it halfway, which is what shutting a
+        // window you only just opened is, carries the velocity
+        // through instead of restarting. See Services/Motion.qml.
+        readonly property int springResponse:
+            Shortcuts.open ? Motion.expandResponse : Motion.collapseResponse
+        readonly property real springBounce:
+            Shortcuts.open ? Motion.arriveBounce : Motion.departBounce
+
+        Spring {
+            id: emerge
+            shape: panel
+            target: Shortcuts.open ? 1 : Motion.emergeScale
+        }
 
         Behavior on opacity {
             NumberAnimation {
                 duration: Shortcuts.open ? Motion.contentIn : Motion.contentOut
                 easing.type: Easing.BezierSpline
                 easing.bezierCurve: Motion.ease
-            }
-        }
-        Behavior on scale {
-            NumberAnimation {
-                duration: Shortcuts.open ? Motion.expand : Motion.collapse
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Shortcuts.open ? Motion.arrive : Motion.settle
             }
         }
 

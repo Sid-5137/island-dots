@@ -237,7 +237,8 @@ Item {
 
                     color: opt.active
                         ? Qt.rgba(1, 1, 1, 0.10)
-                        : (rowHover.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent")
+                        : (rowHover.containsMouse ? Qt.rgba(1, 1, 1, 0.05)
+                                              : Qt.rgba(1, 1, 1, 0))
 
                     Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 

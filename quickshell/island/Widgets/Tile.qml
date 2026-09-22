@@ -25,7 +25,8 @@ Rectangle {
     color: active ? Theme.primary : Qt.rgba(1, 1, 1, 0.06)
     border.width: 1
     border.color: active ? Theme.primary
-        : (hover.containsMouse ? Theme.outlineVariant : "transparent")
+        : (hover.containsMouse ? Theme.outlineVariant
+                               : Theme.fade(Theme.outlineVariant))
 
     Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
     Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }

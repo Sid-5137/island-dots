@@ -12,14 +12,19 @@ hl.config({
         repeat_rate        = 25,
         repeat_delay       = 600,
         force_no_accel     = false,
-        -- accel_profile   = "flat",
+        -- Left unset, so libinput's own adaptive curve applies. Both
+        -- profiles are offered per device in Settings > Input;
+        -- "flat" is a gaming preference and a poor desktop default.
+        -- accel_profile   = "adaptive",
 
         touchpad = {
             natural_scroll       = true,
             tap_to_click         = true,
             drag_lock            = true,
             disable_while_typing = true,
-            scroll_factor        = 0.6,
+            -- scroll_factor is left at libinput's 1.0. Scaling it
+            -- here makes every list in every application disagree
+            -- with what the driver says two fingers travelled.
         },
     },
 

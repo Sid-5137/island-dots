@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
+import QtQuick.Effects
 
 import "root:/Services"
 
@@ -26,6 +27,20 @@ Variants {
 
         color: Theme.background
 
+        // A preset palette did not come out of this image, so the two
+        // can disagree — a Catppuccin photograph under a Gruvbox shell
+        // is two desktops at once. Washing the wallpaper toward the
+        // palette is the cheaper half of the fix; the other half would
+        // be shipping a wallpaper per theme, which is megabytes of
+        // somebody else's licensing in a config repo.
+        //
+        // Never under "wallpaper": there the palette was derived from
+        // this image, and tinting the image toward it would be the
+        // shell arguing with its own answer.
+        readonly property bool tinting:
+            Config.appearance.colorSource === "preset"
+            && Config.appearance.tintWallpaper
+
         // Two images that swap which one is visible. Neither source is
         // ever cleared: clearing and reassigning during a fade meant a
         // wallpaper already held by the hidden layer could not be shown
@@ -34,6 +49,38 @@ Variants {
         Item {
             id: stage
             anchors.fill: parent
+
+            // Off entirely when not tinting, so the usual case costs no
+            // render target at all — this is a full-screen texture and
+            // it is redrawn for every frame of a crossfade.
+            layer.enabled: win.tinting
+            layer.effect: MultiEffect {
+                // Pull the photograph most of the way to grey, then
+                // push it back out in one hue. That is a monochrome
+                // wash rather than a colour shift: a hue rotation
+                // leaves a blue sky blue-ish and still wrong, while a
+                // wash leaves the shapes and takes the argument away.
+                saturation: -0.6
+                colorization: 0.72
+                colorizationColor: Theme.primary
+
+                // Back off the brightness and add a little contrast:
+                // the wash flattens the midtones, and a wallpaper the
+                // island has to sit on top of wants to be darker than
+                // the island anyway.
+                brightness: -0.14
+                contrast: 0.12
+
+                // Changing preset moves this rather than cutting to
+                // it, which is the same courtesy the crossfade does
+                // for the image underneath.
+                Behavior on colorizationColor {
+                    ColorAnimation {
+                        duration: Config.wallpaper.crossfadeDuration
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+            }
 
             property bool showA: true
             property Image pending: null

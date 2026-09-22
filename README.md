@@ -37,7 +37,9 @@ timestamped rather than assumed so it plays at real speed;
 |:--|:--|
 | **One surface, eleven modes** | Clock, hover, control centre, launcher, clipboard, pickers, power menu, notifications, history, OSD and polkit prompts — the same shape, morphing. |
 | **Two pods** | Workspaces left, tray right. They share the island's shape, collapse when they have nothing to say, and open when you point at one. |
-| **Wallpaper-driven theming** | matugen feeds the shell, GTK3, GTK4 and Hyprland's window borders from one wallpaper. One per monitor if you want. |
+| **Motion that can be interrupted** | Every shape is on a real spring — Apple's two numbers, a response and a bounce — solved per frame rather than sampled into a curve. Reverse one halfway and it carries its velocity through instead of restarting from a standstill. |
+| **A picker, not a second settings page** | `Super+Shift+W` opens a grid of wallpapers at their real 16:9; `Super+Shift+T` the palettes, each preset drawn as the desktop it will give you. Arrow keys and Enter. |
+| **Theming, from either end** | One wallpaper feeds the shell, GTK3, GTK4, Qt, KDE and Hyprland's window borders through matugen — or pick Gruvbox, Nord or Catppuccin and the same six outputs come from that instead. |
 | **A launcher, and its answer** | Empty until you type. Fuzzy over names, keywords, initials and a subsequence fallback, on a second surface below the field. |
 | **Notification daemon** | Not a client of one — the shell owns `org.freedesktop.Notifications`. Actions, inline reply, history, Focus mode. |
 | **Session lock** | A real `ext-session-lock` surface with PAM, not a shell-out to hyprlock. Drawn from the same palette as the shell, and it says why a password failed rather than only that it did — Caps Lock, the reader, the wait. |
@@ -45,7 +47,7 @@ timestamped rather than assumed so it plays at real speed;
 | **Continuous gestures** | Four-finger swipes that track your fingers rather than firing on release, over a persistent socket. |
 | **Live compositor control** | Blur, gaps, borders, rounding, pointer accel and key repeat, applied as you move the slider. |
 | **Switcher and overview** | Alt+Tab across every workspace; `Super+W` for live window thumbnails. |
-| **Smart visibility** | Reserve the strip, or let the island move aside only when a window actually reaches it. |
+| **Smart visibility** | Reserve the strip, or let the island move aside only when a window actually reaches it. What Always reserves is the top margin plus the island's height and nothing more, and both are sliders. |
 | **Clipboard history** | Filterable and keyboard-driven, backed by cliphist. |
 | **System tray** | Four icons at rest and the rest behind a count, so a busy tray never becomes a bar. |
 | **Calendar with events** | Reads `.ics` directly — GNOME Calendar's store, vdirsyncer, khal — so nothing extra is needed. |
@@ -121,7 +123,8 @@ The script symlinks `hypr/`, `quickshell/island/` and
 `fontconfig/fonts.conf` into `~/.config` and `bin/` into
 `~/.local/bin`, creates the state directories,
 generates `~/.config/island/matugen.toml` with this machine's absolute
-paths, puts `~/.config/gtk-{3,4}.0/gtk.css` under the shell's control,
+paths, puts `~/.config/gtk-{3,4}.0/gtk.css`, `qt6ct.conf` and
+`kdeglobals` under the shell's control,
 and reports missing dependencies — including the icon font, which it
 checks by glyph rather than by name. It installs nothing for you; the
 one exception it offers is `/etc/pam.d/island`, which is also the only
@@ -216,6 +219,8 @@ bin/                  linked into ~/.local/bin by install.sh
                       island-gtk-apply    GTK/Qt appearance
                       island-calendar     .ics reader
                       island-mime         default applications
+                      island-palette      the named palettes
+                      island-qt-apply     Qt and KDE colours
                       island-gen-example  regenerates the example config
 hypr/                 Hyprland config, one module per concern
 fontconfig/           text rendering, linked into ~/.config
@@ -236,19 +241,63 @@ quickshell/island/
 
 ## Theming
 
-Wallpaper → matugen → four outputs:
+Colours come from one of two places, and everything downstream is
+told the same thing either way:
+
+| Source | What it is |
+|:--|:--|
+| **Wallpaper** | matugen derives a Material palette from the image. **Derived as** says how far it may stray from it. |
+| **Preset** | Gruvbox, Nord, Catppuccin Mocha or Macchiato, used unchanged. `bin/island-palette`. |
+
+A preset is not a seed. Handing matugen gruvbox's accent and letting
+it generate gives Material's idea of a palette that happens to be a
+gruvbox hue, and gruvbox is not a hue — it is `#282828` behind
+`#d4be98`. So the presets fill the same templates matugen does, from a
+table instead of from an image, and adding an output works for both.
+
+Nothing in them glows. Every one of these palettes has a loud variant
+and a quiet one — gruvbox ships bright accents beside its neutral
+ones, Nord leads with a Frost cyan — and the quiet one is taken every
+time, because `primary` here is a fill with text on it rather than a
+swatch on a page. Gruvbox is **Gruvbox Material**, Nord's accent is
+**nord9** rather than nord8.
+
+Under a preset the wallpaper did not choose the palette, so the two
+can disagree — a Catppuccin photograph under a Gruvbox shell is two
+desktops at once. **Tint the wallpaper** washes it toward the palette
+and is on by default. It is a GPU effect on the layer already being
+drawn, not a rewritten file, so it costs nothing when it is off and
+switches instantly. The alternative would have been shipping a
+wallpaper per theme, which is megabytes of somebody else's licensing
+in a config repo.
+
+Either way, six outputs:
 
 | Output | Read by |
 |:--|:--|
 | `~/.local/state/island/colors.json` | the shell, via `Services/Theme.qml` |
 | `gtk-3.0/matugen.css` | GTK3, through adw-gtk3 |
 | `gtk-4.0/matugen.css` | GTK4 / libadwaita, directly |
+| `qt6ct/colors/island.conf` | Qt widget apps, through qt6ct |
+| `color-schemes/Island.colors` | KDE apps, through KColorScheme |
 | `hyprctl eval` | window borders, via `Services/Compositor.qml` |
 
-matugen writes `matugen.css`, never `gtk.css` — that one is contested,
-and one stray root-owned symlink used to take the whole run down with
-it. `bin/island-gtk-apply` owns `gtk.css` and imports the theme,
-`matugen.css` and your own `user.css` into it.
+Qt is two audiences, not one. A Qt widget application reads whatever
+`QT_QPA_PLATFORMTHEME` hands it, which here is qt6ct. A KDE
+application does not go through the platform theme at all — it reads
+`kdeglobals` directly, on any desktop — so KColorScheme is a second
+file in a second format, and both are needed before "Qt apps follow
+the wallpaper" is true.
+
+**matugen never writes a file it does not own.** `gtk.css`,
+`qt6ct.conf` and `kdeglobals` all hold settings that are somebody
+else's — a theme import, a widget style, the fonts — and matugen
+aborts its entire run on the first output it cannot write, which used
+to take the shell's palette down with one stray root-owned symlink.
+So it writes the generated half beside the contested one, and a script
+owns the join: `bin/island-gtk-apply` for `gtk.css`,
+`bin/island-qt-apply` for the other two. Both are idempotent and safe
+to run by hand when something refuses to apply.
 
 Text rendering is `fontconfig/fonts.conf`, linked alongside the rest.
 Qt reads fontconfig directly while GTK reads gsettings, so without it
@@ -291,6 +340,7 @@ manager, a terminal.
 - [ ] **Fingerprint is untested.** The PAM file ships and the shell
       reports which piece is missing, but no reader has ever been
       attached. An issue either way would be useful.
+
       The lock screen now arms the reader in its own PAM conversation,
       started when the lock engages rather than when a password is
       submitted — a single conversation would make you wait for

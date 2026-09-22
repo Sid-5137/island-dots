@@ -1,0 +1,317 @@
+#!/usr/bin/env python3
+"""island-dots — render the theme outputs from a named palette.
+
+    island-palette --list
+    island-palette gruvbox
+
+The shell has two ways to get its colours. One is the wallpaper:
+matugen reads an image, derives a Material palette from it and fills
+the templates in matugen/templates/. The other is this — the same
+templates, filled from a palette somebody else designed.
+
+It is the same templates on purpose. Adding an output (a Qt palette, a
+KDE scheme, whatever comes next) is one file in matugen/templates/ and
+one entry in matugen.toml, and both sources pick it up. The only thing
+this has to know how to do is what matugen does: substitute
+`{{colors.ROLE.dark.FIELD}}`.
+
+Why not hand matugen the palette's accent and let it generate. Because
+that produces Material's idea of a palette that happens to be a
+gruvbox hue, and gruvbox is not a hue — it is #282828 behind #ebdbb2,
+and a generated scheme will not land on either. Somebody choosing
+gruvbox is asking for gruvbox's colours, not for colours derived from
+them.
+"""
+
+import argparse
+import re
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+CONFIG = Path.home() / ".config/island/matugen.toml"
+
+# ── The palettes ─────────────────────────────────────────────────────
+#
+# Twelve colours each, under the names their own authors use, so a
+# gruvbox value looked up in the gruvbox documentation is findable
+# here by the name it has there. The mapping onto Material's role
+# names happens once, below, for all of them.
+#
+#   crust               the darkest: what the pill and the panels are
+#   base                the desktop behind them
+#   surface0/1/2        what sits on the base: cards, rows, inputs
+#   overlay             borders, and text that is switched off
+#   text/subtext        foreground, and the quieter one
+#   accent              the colour the theme is recognised by
+#   secondary/tertiary  the other two it uses for variety
+#   red                 errors. Every one of these has a red.
+#
+# Ordered darkest to lightest and it has to stay that way: the shell
+# reads the ramp as elevation, so a surface1 darker than surface0 puts
+# a card behind the thing it is sitting on.
+#
+# Nothing here glows. Every one of these palettes has a loud variant
+# and a quiet one — gruvbox has bright accents beside its neutral
+# ones, Catppuccin has a pink sitting next to its lavender — and the
+# quiet one is taken every time. These colours are not decoration: the
+# accent is the selection behind text you are reading and the edge of
+# the shape you are pointing at, and a colour chosen to be noticed is
+# the wrong one for something on screen all day.
+
+PRESETS = {
+    "gruvbox": {
+        "label": "Gruvbox",
+        # Gruvbox *Material*, dark medium — not the original. The
+        # original's bright accents are a lime #b8bb26 and a signal
+        # red #fb4934, which are the two colours people mean when they
+        # say a palette glows. Material is the same author's cast with
+        # the saturation taken out, and it is what nearly every
+        # gruvbox setup published in the last few years actually uses.
+        "crust": "#1d2021", "base": "#282828",
+        "surface0": "#32302f", "surface1": "#3c3836", "surface2": "#45403d",
+        "overlay": "#928374",    # grey1, which is also its comment colour
+        "text": "#d4be98", "subtext": "#a89984",
+        "accent": "#7daea3",     # blue
+        "secondary": "#a9b665",  # green
+        "tertiary": "#d3869b",   # purple
+        "red": "#ea6962",
+    },
+    "nord": {
+        "label": "Nord",
+        # Polar Night for the surfaces, Snow Storm for the text, Frost
+        # for the accents. The crust is below nord0, which Nord itself
+        # does not name — every Nord shell picks one, and this is the
+        # usual choice.
+        "crust": "#242933", "base": "#2e3440",
+        "surface0": "#3b4252", "surface1": "#434c5e", "surface2": "#4c566a",
+        "overlay": "#616e88",
+        "text": "#eceff4", "subtext": "#d8dee9",
+        # nord9, not nord8. nord8 is the Frost cyan every Nord preview
+        # leads with, and as a swatch it is lovely — but `primary` here
+        # is a fill with text on it, sitting behind a selected row and
+        # around whatever you are pointing at, and a saturated cyan at
+        # that size reads as lit rather than coloured. nord9 is the
+        # same family a step towards the blue, and it is what Nord's
+        # own interface examples use for exactly this job.
+        "accent": "#81a1c1",     # nord9
+        "secondary": "#8fbcbb",  # nord7
+        "tertiary": "#b48ead",   # nord15
+        "red": "#bf616a",        # nord11
+    },
+    "catppuccin-mocha": {
+        "label": "Mocha",
+        "crust": "#11111b", "base": "#1e1e2e",
+        "surface0": "#313244", "surface1": "#45475a", "surface2": "#585b70",
+        "overlay": "#6c7086",
+        "text": "#cdd6f4", "subtext": "#a6adc8",
+        "accent": "#cba6f7",     # mauve
+        "secondary": "#89b4fa",  # blue
+        "tertiary": "#b4befe",   # lavender, not pink — see below
+        "red": "#f38ba8",
+    },
+    "catppuccin-macchiato": {
+        "label": "Macchiato",
+        "crust": "#181926", "base": "#24273a",
+        "surface0": "#363a4f", "surface1": "#494d64", "surface2": "#5b6078",
+        "overlay": "#6e738d",
+        "text": "#cad3f5", "subtext": "#a5adcb",
+        "accent": "#c6a0f6",     # mauve
+        "secondary": "#8aadf4",  # blue
+        "tertiary": "#b7bdf8",   # lavender, not pink — see below
+        "red": "#ed8796",
+    },
+}
+
+
+# What --list hands the picker, in the order it draws them.
+PREVIEW = ("base", "surface1", "text", "accent",
+           "secondary", "tertiary", "red")
+
+
+def parse(c):
+    return tuple(int(c[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def mix(a, b, t):
+    """`t` of the way from a to b."""
+    x, y = parse(a), parse(b)
+    return "#%02x%02x%02x" % tuple(
+        round(x[i] + (y[i] - x[i]) * t) for i in range(3))
+
+
+def roles(p):
+    """A palette's twelve colours, as the twenty-six Material roles the
+    templates ask for.
+
+    One mapping for every preset. A theme needing its own would be one
+    whose surfaces do not stack the way the other three do, and that is
+    worth noticing rather than working around here.
+    """
+    return {
+        "source_color": p["accent"],
+
+        "primary": p["accent"],
+        "on_primary": p["crust"],
+        "primary_container": p["surface1"],
+        "secondary": p["secondary"],
+        "on_secondary": p["crust"],
+        "tertiary": p["tertiary"],
+        "on_tertiary": p["crust"],
+        "error": p["red"],
+        "on_error": p["crust"],
+
+        "background": p["base"],
+        "on_background": p["text"],
+
+        # The ramp, and it ascends: Material reads it as elevation, and
+        # `surface` sits second from the bottom rather than at it — see
+        # any generated palette, where surface is lighter than
+        # surface_container_lowest and darker than _low.
+        #
+        # `_low` is the one step none of these themes names. Every
+        # other slot is a colour somebody chose; this one is the
+        # distance between two of them, and interpolating it is more
+        # honest than inventing a constant per theme.
+        "surface_container_lowest": p["crust"],
+        "surface": p["base"],
+        "surface_container_low": mix(p["base"], p["surface0"], 0.45),
+        "surface_container": p["surface0"],
+        "surface_container_high": p["surface1"],
+        "surface_container_highest": p["surface2"],
+
+        "on_surface": p["text"],
+        "on_surface_variant": p["subtext"],
+        "outline": p["overlay"],
+        "outline_variant": p["surface1"],
+
+        # Used by the KDE scheme's Complementary set, which is
+        # deliberately the other way up from everything else.
+        "inverse_surface": p["text"],
+        "inverse_on_surface": p["base"],
+
+        # Black in every one of these. A palette that tinted its own
+        # shadow would be describing a light source, and none of them
+        # do.
+        "shadow": "#000000",
+        "scrim": "#000000",
+    }
+
+
+# ── Rendering ────────────────────────────────────────────────────────
+
+PLACEHOLDER = re.compile(
+    r"\{\{\s*colors\.([a-z_]+)\.(?:dark|light|default)\.([a-z_]+)\s*\}\}")
+
+
+def field(hex_colour, name):
+    r, g, b = (int(hex_colour[i:i + 2], 16) for i in (1, 3, 5))
+
+    if name == "hex":
+        return hex_colour
+    if name == "hex_stripped":
+        return hex_colour[1:]
+    if name == "red":
+        return str(r)
+    if name == "green":
+        return str(g)
+    if name == "blue":
+        return str(b)
+    if name == "rgb":
+        return f"rgb({r}, {g}, {b})"
+    if name == "rgba":
+        return f"rgba({r}, {g}, {b}, 1)"
+    raise KeyError(name)
+
+
+def render(text, colours, where):
+    missing = []
+
+    def sub(m):
+        role, name = m.group(1), m.group(2)
+        if role not in colours:
+            missing.append(role)
+            return m.group(0)
+        try:
+            return field(colours[role], name)
+        except KeyError:
+            missing.append(f"{role}.{name}")
+            return m.group(0)
+
+    out = PLACEHOLDER.sub(sub, text)
+    if missing:
+        # Loudly, and without writing: a template that silently kept
+        # its placeholders would land as a literal "{{colors...}}" in
+        # somebody's GTK stylesheet and break the whole file.
+        raise SystemExit(
+            f"island-palette: {where} wants colours this does not define: "
+            + ", ".join(sorted(set(missing))))
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("preset", nargs="?", help="which palette to render")
+    ap.add_argument("--list", action="store_true",
+                    help="print the presets, one 'name\\tlabel' per line")
+    ap.add_argument("--config", type=Path, default=CONFIG,
+                    help="matugen.toml, for the template paths")
+    args = ap.parse_args()
+
+    if args.list:
+        # name <TAB> label <TAB> seven colours, comma separated. The
+        # colours are for the picker's preview, which draws a preset
+        # as a small desktop rather than as one accent dot — a single
+        # swatch cannot tell Mocha from Macchiato, and the surfaces
+        # are most of what you are choosing between.
+        #
+        #   base, surface, text, accent, secondary, tertiary, red
+        for name, p in PRESETS.items():
+            preview = ",".join(p[k] for k in PREVIEW)
+            print(f"{name}\t{p['label']}\t{preview}")
+        return 0
+
+    if not args.preset:
+        ap.error("a preset is required; --list shows them")
+    if args.preset not in PRESETS:
+        raise SystemExit(f"island-palette: no such preset {args.preset!r};"
+                         f" try one of {', '.join(PRESETS)}")
+
+    if not args.config.exists():
+        raise SystemExit(f"island-palette: no {args.config} — run install.sh")
+
+    colours = roles(PRESETS[args.preset])
+    config = tomllib.loads(args.config.read_text())
+    templates = config.get("templates", {})
+    if not templates:
+        raise SystemExit(f"island-palette: {args.config} lists no templates")
+
+    hooks = []
+    for name, spec in templates.items():
+        src = Path(spec["input_path"]).expanduser()
+        dst = Path(spec["output_path"]).expanduser()
+
+        if not src.exists():
+            print(f"island-palette: skipping {name}: no {src}",
+                  file=sys.stderr)
+            continue
+
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(render(src.read_text(), colours, src.name))
+        print(f"  {dst}")
+
+        if spec.get("post_hook"):
+            hooks.append(spec["post_hook"])
+
+    # After every file, not after each one: a hook that reads two
+    # outputs — island-qt-apply does — must not run while the second
+    # is still the last wallpaper's.
+    for hook in hooks:
+        subprocess.run(["sh", "-c", hook], check=False)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

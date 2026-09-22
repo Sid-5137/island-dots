@@ -22,7 +22,7 @@ Singleton {
     // onAdapterUpdated, but this is here for explicit saves.
     // Bump when a key changes meaning rather than merely appearing.
     // New keys need no migration — the merge on load handles those.
-    readonly property int currentVersion: 4
+    readonly property int currentVersion: 5
 
     // Set once the startup merge has run, so the file watcher's reload
     // doesn't start writing in a loop.
@@ -37,10 +37,15 @@ Singleton {
         //   1 -> 2  faces gone; tray and workspaces are pods now
         //   2 -> 3  motion is a spring: duration/overshoot replaced
         //   3 -> 4  controlHeight gone; the panel is a layout
+        //   4 -> 5  the spring is solved rather than sampled, so it
+        //           is described by response and bounce. A duration
+        //           and a damping fraction cannot be carried over:
+        //           the old numbers were a curve's length and this
+        //           one has none.
         //
         // The next one goes here:
         //
-        //   if (from < 5) { adapter.island.foo = adapter.island.oldFoo }
+        //   if (from < 6) { adapter.island.foo = adapter.island.oldFoo }
         adapter.version = currentVersion;
         persist();
     }
@@ -272,6 +277,11 @@ Singleton {
                 //            reserved so windows start below it
                 // "smart"  — hidden until a window reaches the strip
                 //            it sits in, then out of the way
+                //
+                // What "always" costs is topMargin + idleHeight, so
+                // both of those are how you make it cost less; the
+                // two sliders are on the Island page next to each
+                // other for that reason.
                 property string visibility: "always"
 
                 // How long the island stays revealed after the cursor
@@ -379,6 +389,18 @@ Singleton {
                 // solid and the blur costs nothing but does nothing.
                 property real opacity: 0.85
 
+                // The OSD and notification popups, which are more
+                // translucent than the rest of the island on purpose.
+                //
+                // They are the two modes that arrive over whatever you
+                // were looking at rather than because you asked, so
+                // they should sit over it rather than stamp on it. The
+                // blur is the same blur — every mode is one layer
+                // surface and it has been blurred all along — but at
+                // 0.85 there is not enough of it showing to see. At
+                // 0.62 there is.
+                property real popupOpacity: 0.62
+
                 property int radius: 8
                 property int topMargin: 8
 
@@ -391,8 +413,18 @@ Singleton {
 
                 // Power menu, also drawn inside the island.
                 // Picker strip: wallpapers, palettes and icon sets.
-                property int pickerWidth: 620
-                property int pickerHeight: 190
+                // Three wallpapers across at their real 16:9, two
+                // rows deep. A strip of small cards fits in less, and
+                // was what the picker used to be — but a wallpaper
+                // cropped to a square tells you almost nothing about
+                // the wallpaper.
+                // Two rows have to actually fit, so the height is
+                // the arithmetic rather than a round number:
+                //   14 top + 26 tabs + 12 gap + 2 rows + 14 bottom,
+                // where a row is (cell - gap) * 9/16 + gap and a cell
+                // is a third of the width less the side margins.
+                property int pickerWidth: 720
+                property int pickerHeight: 340
 
                 property int sessionWidth: 460
                 property int sessionHeight: 128
@@ -492,24 +524,30 @@ Singleton {
             // which turns it into easing curves. The comments there
             // explain the model; these are the dials.
             property JsonObject motion: JsonObject {
-                // These are the `fluid` tempo in Services/Motion.qml,
+                // These are the `snappy` tempo in Services/Motion.qml,
                 // spelled out. The tempo tables are the place to argue
                 // about them; this is only what a fresh install gets.
                 //
-                // The shape. Arrivals spring, departures do not — a
-                // spring on the way out reads as the interface
-                // arguing with you.
-                property int expandDuration: 240
-                property int collapseDuration: 200
-                property int hoverDuration: 200
-                property int popDuration: 300
+                // A response is the spring's natural period, in
+                // milliseconds, and reads as the speed of the thing.
+                // It is not a duration: a spring has no end, only a
+                // settle, and the shape is already where you are
+                // looking well before it stops.
+                property int expandResponse: 240
+                property int collapseResponse: 190
+                property int hoverResponse: 180
+                property int popResponse: 280
 
-                // How much the shape overshoots on the way in, as
-                // Apple's damping fraction. 1.0 is no overshoot at
-                // all, 0.8 is about one and a half percent, 0.6 is
-                // visibly springy, 0.4 is a toy.
-                property real arriveDamping: 0.78
-                property real popDamping: 0.55
+                // Bounce, as Apple defines it: one minus the damping
+                // fraction. 0 settles without overshoot, 0.15 is a
+                // lift you feel, 0.3 is one you watch, 0.5 is a toy.
+                //
+                // Departures spring too, but barely. Half of what the
+                // island dismisses is collapsing to nothing, and an
+                // overshoot past nothing is a negative width.
+                property real arriveBounce: 0.15
+                property real departBounce: 0.05
+                property real popBounce: 0.40
 
                 // The content follows the shape rather than waiting
                 // for it: it starts `contentLead` into the morph and
@@ -524,6 +562,12 @@ Singleton {
                 property int fadeIn: 90
                 property int fadeOut: 60
 
+                // How small a surface starts before it grows into
+                // place, so it reads as emerging from the shape it
+                // came out of rather than being laid over it. 1.0 is
+                // a plain cross-fade.
+                property real emergeScale: 0.96
+
                 // Takes the springs and the shape morphs away and
                 // leaves the cross-fades, which are not a vestibular
                 // trigger.
@@ -531,6 +575,35 @@ Singleton {
             }
 
             property JsonObject appearance: JsonObject {
+                // Where the colours come from.
+                //
+                //   "wallpaper"  matugen derives a Material palette
+                //                from the image. wallpaper.scheme says
+                //                how far it may stray from it.
+                //   "preset"     a palette somebody else designed,
+                //                used unchanged. See bin/island-palette.
+                //
+                // Both fill the same templates in matugen/templates/,
+                // so the shell, GTK, Qt, KDE and the window borders
+                // follow either one without knowing which it was.
+                property string colorSource: "wallpaper"
+
+                // Which one, under "preset". The names are
+                // bin/island-palette's, which is also what the
+                // settings page lists — it asks the script rather
+                // than keeping a second copy of the list.
+                property string preset: "catppuccin-mocha"
+
+                // Wash the wallpaper toward the preset, so a
+                // Catppuccin photograph under a Gruvbox shell stops
+                // looking like two desktops at once.
+                //
+                // Only ever applies under "preset". Under "wallpaper"
+                // the palette came out of the image, and tinting the
+                // image toward it would be arguing with its own
+                // answer.
+                property bool tintWallpaper: true
+
                 // Shell panels
                 property real panelOpacity: 0.85
                 property int panelRadius: 8
@@ -605,18 +678,27 @@ Singleton {
             // sensitivity or an acceleration profile.
             property JsonObject input: JsonObject {
                 // "adaptive" accelerates with speed; "flat" is 1:1.
-                property string mouseAccel: "flat"
-                property real mouseSensitivity: 1.0
+                // Adaptive is libinput's own default and what every
+                // other desktop hands you, so a pointer moved here
+                // behaves the way the same hand expects it to
+                // everywhere else. Flat is a gaming preference, not a
+                // desktop one, and it was the wrong shipped default.
+                property string mouseAccel: "adaptive"
+                property real mouseSensitivity: 0.8
                 property bool naturalScrollMouse: false
 
                 property bool touchpadEnabled: true
-                property string touchpadAccel: "flat"
-                property real touchpadSensitivity: 1.0
+                property string touchpadAccel: "adaptive"
+                property real touchpadSensitivity: 0.8
                 property bool tapToClick: true
                 property bool naturalScroll: true
                 property bool dragLock: true
                 property bool disableWhileTyping: true
-                property real scrollFactor: 0.6
+                // 1.0 is libinput's own scroll distance. 0.6 was a
+                // thumb on the scale: it made every list in every
+                // application slower than the touchpad's driver says
+                // two fingers mean.
+                property real scrollFactor: 1.0
 
                 property int repeatRate: 25
                 property int repeatDelay: 600
@@ -631,24 +713,6 @@ Singleton {
                 property int lockTimeout: 300
                 property int screenOffTimeout: 360
                 property int suspendTimeout: 1800
-            }
-
-            property JsonObject wallpaper: JsonObject {
-                property string directory: Quickshell.env("HOME") + "/Pictures/Wallpapers"
-                property int crossfadeDuration: 450
-
-                // matugen scheme: scheme-monochrome, scheme-tonal-spot,
-                // scheme-vibrant, scheme-content, scheme-expressive…
-                property string scheme: "scheme-tonal-spot"
-
-                // Cycle wallpapers on a timer. 0 disables.
-                property int rotateMinutes: 0
-
-                // Give each monitor its own wallpaper. The palette
-                // still comes from one of them — the focused one —
-                // because there is one GTK theme and one set of
-                // window borders to drive.
-                property bool perMonitor: false
             }
 
             // The lock surface. Separate from `idle`, which decides
@@ -687,6 +751,29 @@ Singleton {
                 // on a laptop, noise on a desktop, and Battery.present
                 // already hides it where there is nothing to report.
                 property bool showBattery: true
+            }
+
+            property JsonObject wallpaper: JsonObject {
+                property string directory: Quickshell.env("HOME") + "/Pictures/Wallpapers"
+                property int crossfadeDuration: 450
+
+                // How a wallpaper-derived palette is read. The five
+                // worth offering are listed in Services/Theming.qml,
+                // which is what both the settings page and the picker
+                // show; matugen accepts the other four too if one is
+                // written here by hand.
+                //
+                // tonal-spot is Material's own default, and matugen's.
+                property string scheme: "scheme-tonal-spot"
+
+                // Cycle wallpapers on a timer. 0 disables.
+                property int rotateMinutes: 0
+
+                // Give each monitor its own wallpaper. The palette
+                // still comes from one of them — the focused one —
+                // because there is one GTK theme and one set of
+                // window borders to drive.
+                property bool perMonitor: false
             }
 
             // How the volume the shell shows relates to the volume

@@ -60,20 +60,22 @@ Item {
     // ── How the shape moves ──────────────────────────────────
     //
     // Same contract as the island: the pod says where it is going and
-    // every Behavior on it reads the answer. A peek is the one moment
+    // every spring on it reads the answer. A peek is the one moment
     // a pod is allowed to be springy — nothing in it is being read at
     // that instant, and a shape that pops is the entire point of it.
     // Opening under the cursor is not: a capsule that overshoots
     // while you are reaching for a tray icon moves the icon.
-    readonly property int morphTime:
-        !shown ? Motion.collapse
-               : (peeking ? Motion.peek
-                          : (open ? Motion.hover : Motion.collapse))
+    readonly property int springResponse:
+        !shown ? Motion.collapseResponse
+               : (peeking ? Motion.popResponse
+                          : (open ? Motion.hoverResponse
+                                  : Motion.collapseResponse))
 
-    readonly property var morphCurve:
-        !shown ? Motion.settle
-               : (peeking ? Motion.pop
-                          : (open ? Motion.arrive : Motion.settle))
+    readonly property real springBounce:
+        !shown ? Motion.departBounce
+               : (peeking ? Motion.popBounce
+                          : (open ? Motion.arriveBounce
+                                  : Motion.departBounce))
 
     function peek() {
         if (!Config.island.podPeek || !present) return;
@@ -102,42 +104,72 @@ Item {
     anchors.right: side === "left" ? pill.left : undefined
     anchors.left: side === "right" ? pill.right : undefined
 
-    // Negative on the way out, so the pod slides under the pill's edge
-    // as it goes rather than blinking off beside it.
-    anchors.rightMargin: shown ? Config.island.podGap : -8
-    anchors.leftMargin: shown ? Config.island.podGap : -8
+    anchors.rightMargin: tuck.value
+    anchors.leftMargin: tuck.value
 
-    // Never narrower than it is tall. One workspace dot or one tray
-    // icon measures about twenty-five pixels against a height of
-    // thirty-four, and the corner is clamped to half the shorter side
-    // — so the pod ends up a lozenge standing on end beside a pill
-    // lying down, which is the one shape the island does not own. At
-    // the floor it is square, the corner has the full half to spend,
-    // and a pod with a single thing in it comes out round.
-    width: shown ? Math.max(height, open ? openWidth : restWidth) : 0
+    // Negative on the way out, so the pod slides under the pill's
+    // edge as it goes rather than blinking off beside it. One spring
+    // for both: only one of the two anchors is ever set.
+    Spring {
+        id: tuck
+        shape: root
+        target: root.shown ? Config.island.podGap : -8
+    }
 
-    // Matches the pill rather than being a fixed height of its own:
-    // hovering either one lifts all three shapes together.
-    height: island.mode === "compact"
-        ? Config.island.compactHeight : Config.island.idleHeight
+    width: podWidth.value
+    height: podHeight.value
 
     opacity: shown ? 1 : 0
-    scale: shown ? 1 : Motion.absentScale
+    scale: podScale.value
     // Toward the pill, so a leaving pod collapses into the island
     // instead of shrinking into its own middle.
     transformOrigin: side === "left" ? Item.Right : Item.Left
     visible: opacity > 0.01
 
-    // The same curve the pill uses, so the three shapes move as one
-    // object. Collapsing to nothing is the reason departures are
-    // critically damped and not merely gentler: an overshoot at zero
+    // The same spring the pill is on, so the three shapes move as one
+    // object. Collapsing to nothing is why departures keep so little
+    // bounce, and why each of these has a floor: an overshoot at zero
     // is a negative width, and a negative width anchored to the
     // pill's edge draws over the pill.
-    Behavior on width { Morph { shape: root } }
-    Behavior on height { Morph { shape: root } }
-    Behavior on anchors.rightMargin { Morph { shape: root } }
-    Behavior on anchors.leftMargin { Morph { shape: root } }
-    Behavior on scale { Morph { shape: root } }
+
+    // Never narrower than it is tall. One workspace dot or one tray
+    // icon measures about twenty-five pixels against a height of
+    // thirty-four, and the corner is clamped to half the shorter side
+    // — so the pod would end up a lozenge standing on end beside a
+    // pill lying down, which is the one shape the island does not
+    // own. At the floor it is square, the corner has the full half to
+    // spend, and a pod with a single thing in it comes out round.
+    //
+    // Measured against the height's target rather than its current
+    // value: a width that chased the height's spring would arrive
+    // behind it, and the two are one shape.
+    Spring {
+        id: podWidth
+        shape: root
+        minimum: 0
+        target: root.shown
+            ? Math.max(podHeight.target,
+                       root.open ? root.openWidth : root.restWidth)
+            : 0
+    }
+
+    // Matches the pill rather than being a fixed height of its own:
+    // hovering either one lifts all three shapes together.
+    Spring {
+        id: podHeight
+        shape: root
+        minimum: 0
+        target: root.island.mode === "compact"
+            ? Config.island.compactHeight : Config.island.idleHeight
+    }
+
+    // How far it leans out of the way while it is absent.
+    Spring {
+        id: podScale
+        shape: root
+        minimum: 0
+        target: root.shown ? 1 : Motion.absentScale
+    }
 
     Behavior on opacity {
         ContentFade { revealing: root.shown }
@@ -154,9 +186,11 @@ Item {
     readonly property real radius: Theme.corner(height)
     clip: true
 
+    // The pill's, exactly — and a pod only exists while the island is
+    // docked, so that is one colour rather than a choice. Hovering
+    // lifts all three shapes and recolours none of them.
     readonly property color fill: {
-        const c = Qt.color(island.mode === "idle" || island.mode === "hidden"
-            ? Theme.surfaceLowest : Theme.surfaceContainer);
+        const c = Qt.color(Theme.surfaceLowest);
         return Qt.rgba(c.r, c.g, c.b, Config.island.opacity);
     }
 

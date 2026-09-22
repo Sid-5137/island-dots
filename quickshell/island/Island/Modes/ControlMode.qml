@@ -103,16 +103,15 @@ Item {
         // A page slides in from the right, so the grid steps left as
         // it goes. Far enough to read as displacement, not so far that
         // it looks like a second thing moving.
-        x: root.page === "" ? 0 : -18
+        x: gridSlide.value
         opacity: root.page === "" ? 1 : 0
         visible: opacity > 0.01
 
-        Behavior on x {
-            NumberAnimation {
-                duration: Motion.hover
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Motion.arrive
-            }
+        Spring {
+            id: gridSlide
+            response: Motion.hoverResponse
+            bounce: Motion.arriveBounce
+            target: root.page === "" ? 0 : -18
         }
         Behavior on opacity {
             NumberAnimation { duration: Motion.fadeOut }
@@ -145,16 +144,15 @@ Item {
         anchors.fill: parent
         anchors.margins: Config.island.controlPad
 
-        x: root.page === "" ? 18 : 0
+        x: pageSlide.value
         opacity: root.page === "" ? 0 : 1
         visible: opacity > 0.01
 
-        Behavior on x {
-            NumberAnimation {
-                duration: Motion.hover
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Motion.arrive
-            }
+        Spring {
+            id: pageSlide
+            response: Motion.hoverResponse
+            bounce: Motion.arriveBounce
+            target: root.page === "" ? 18 : 0
         }
         Behavior on opacity {
             NumberAnimation { duration: Motion.fadeIn }

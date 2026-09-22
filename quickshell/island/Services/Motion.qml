@@ -3,12 +3,51 @@ pragma Singleton
 import Quickshell
 import QtQuick
 
-// The island's motion, in one place. Springs rather than eases, and
-// asymmetric: opening springs, closing does not. Qt has no spring
-// easing, so the step response is sampled into a bezier spline here.
+// The island's motion, in one place.
+//
+// Every shape in the shell moves on a spring described the way Apple
+// describes one: a **response**, which is the spring's natural period
+// and reads as the speed of the thing, and a **bounce**, which is one
+// minus the damping fraction. That is the pair SwiftUI's
+// `Spring(duration:bounce:)` takes, so a figure read off Apple's
+// documentation means here what it means there:
+//
+//     .smooth   bounce 0      settles without overshoot
+//     .snappy   bounce 0.15   a lift you feel
+//     .bouncy   bounce 0.30   one you watch
+//
+// The bounces below are those three exactly. The responses are not:
+// SwiftUI's named springs all run at half a second, which is a phone
+// animation and reads as slow on a shell you drive with a pointer.
+// macOS's own chrome runs nearer a quarter second — a menu, a
+// popover, Control Centre — and so does this, which is also where the
+// island already was when it was measured against Dynamite V3.
+//
+// Two engines, and the split is deliberate:
+//
+//   Widgets/Spring.qml   the shapes. Integrated per frame from the
+//                        response and bounce below, so a reversal
+//                        carries its velocity through instead of
+//                        restarting from a standstill.
+//
+//   the curves below     everything small enough that interrupting
+//                        it is not a thing you can see: a toggle
+//                        knob, a row highlight, a button's press.
+//                        Sampled from the same spring, so the
+//                        character matches, and a great deal cheaper
+//                        than a physics step per frame per control.
+//
+// Fades are easings in both cases. A cross-fade has no velocity to
+// carry and no overshoot to spend, and Apple eases those too.
 
 Singleton {
     id: root
+
+    // ── Sampling a spring into a bezier ──────────────────────
+    //
+    // Qt has no spring easing, so the step response is sampled into a
+    // bezier spline here. Only the curves below use this; Spring.qml
+    // solves the same system in closed form instead.
 
     // Qt segfaults on a bezier spline whose segments differ in width
     // or whose endpoints step back down in y — no warning, no
@@ -45,6 +84,8 @@ Singleton {
 
     // Unit step response of a damped second-order system. zeta < 1
     // overshoots then rings down; >= 1 approaches without overshoot.
+    // The same system Spring.qml solves — this one only has to be
+    // evaluated at fixed points rather than at an arbitrary dt.
     function step(t, zeta, w0) {
         const decay = Math.exp(-zeta * w0 * t);
 
@@ -61,18 +102,13 @@ Singleton {
                             + (zeta * w0 / a) * Math.sinh(a * t));
     }
 
-    // An easing curve shaped like a spring.
-    //
-    //   zeta  the damping fraction, as Apple defines it
-    //   span  how many natural periods to run for; the curve is
-    //         normalised to its own duration, so this only decides how
-    //         much of the settle you keep
-    //
-    // sample()'s clamp costs the ring-down — the peak survives, which
+    // An easing curve shaped like a spring of the given bounce.
+    // sample()'s clamp costs the ring-down; the peak survives, which
     // is the part you can see.
-    function springCurve(zeta, span) {
+    function springCurve(bounce) {
         const w0 = 2 * Math.PI;    // response of 1, so t is in periods
-        return sample(u => step(u * span, zeta, w0));
+        const zeta = Math.max(0.0001, Math.min(1, 1 - bounce));
+        return sample(u => step(u * tail, zeta, w0));
     }
 
     // A curve that holds at zero for `lead` of its duration, then eases
@@ -91,21 +127,41 @@ Singleton {
         });
     }
 
-    // ── The curves ───────────────────────────────────────────
+    // ── The spring ───────────────────────────────────────────
+    //
+    // What Widgets/Spring.qml reads. Milliseconds and a fraction.
 
-    // Arrivals: one overshoot of about one and a half percent, then it
-    // settles. Small enough that you feel it rather than watch it.
-    readonly property var arrive:
-        springCurve(Config.motion.arriveDamping, 1.10)
+    readonly property int expandResponse: Config.motion.expandResponse
+    readonly property int collapseResponse: Config.motion.collapseResponse
+    readonly property int hoverResponse: Config.motion.hoverResponse
+    readonly property int popResponse: Config.motion.popResponse
 
-    // Departures: critically damped, so a shape on its way out never
-    // springs back toward where it came from.
-    readonly property var settle: springCurve(1.0, 1.15)
+    // Arrivals get Apple's `.snappy`. Departures spring too — macOS
+    // never simply stops a shape — but with most of the bounce taken
+    // out of them, because half of what the island dismisses is
+    // collapsing to nothing and an overshoot past nothing is a
+    // negative width. Spring.qml clamps the rest; this keeps it from
+    // needing to.
+    readonly property real arriveBounce: Config.motion.arriveBounce
+    readonly property real departBounce: Config.motion.departBounce
 
     // A pop that wants to be noticed. For a pod peeking at you, and
     // for nothing that carries text you are meant to read while it
     // moves.
-    readonly property var pop: springCurve(Config.motion.popDamping, 1.40)
+    readonly property real popBounce: Config.motion.popBounce
+
+    // ── The curves ───────────────────────────────────────────
+    //
+    // The same springs, sampled, for the small controls. `tail` is how
+    // many natural periods the sample runs for: the spring is
+    // normalised to its own duration, so this only decides how much of
+    // the settle a curve keeps, and the duration a call site asks for
+    // is the response with that tail on it.
+
+    readonly property real tail: 1.15
+
+    readonly property var arrive: springCurve(arriveBounce)
+    readonly property var settle: springCurve(departBounce)
 
     // Fast out, slow in, one segment. For anything that is a
     // cross-fade rather than a shape.
@@ -115,34 +171,33 @@ Singleton {
     readonly property var reveal: leadCurve(Config.motion.contentLead,
                                             contentIn)
 
-    // Eleven sliders describe motion exactly and answer the wrong
-    // question, so they are grouped into three tempos. The sliders
-    // stay underneath.
+    // ── Tempo ────────────────────────────────────────────────
     //
-    //   fluid   measured off Dynamite V3: ~180ms, zeta ~0.8
-    //   calm    what shipped before; a beat slower
-    //   springy same tempo, zeta 0.62 — an overshoot you watch
+    // Twelve sliders describe motion exactly and answer the wrong
+    // question, so they are grouped into three — Apple's three, by
+    // name, because the bounce in each is Apple's number for it. The
+    // sliders stay underneath.
     readonly property var tempos: ({
-        fluid: {
-            expandDuration: 240, collapseDuration: 200,
-            hoverDuration: 200,  popDuration: 300,
-            arriveDamping: 0.78, popDamping: 0.55,
+        smooth: {
+            expandResponse: 280, collapseResponse: 230,
+            hoverResponse: 210,  popResponse: 300,
+            arriveBounce: 0.0, departBounce: 0.0, popBounce: 0.25,
             contentLead: 40, contentInDuration: 150,
             contentOutDuration: 90,
             fadeIn: 90, fadeOut: 60
         },
-        calm: {
-            expandDuration: 460, collapseDuration: 300,
-            hoverDuration: 380,  popDuration: 420,
-            arriveDamping: 0.80, popDamping: 0.50,
-            contentLead: 80, contentInDuration: 220,
-            contentOutDuration: 120,
-            fadeIn: 120, fadeOut: 70
+        snappy: {
+            expandResponse: 240, collapseResponse: 190,
+            hoverResponse: 180,  popResponse: 280,
+            arriveBounce: 0.15, departBounce: 0.05, popBounce: 0.40,
+            contentLead: 40, contentInDuration: 150,
+            contentOutDuration: 90,
+            fadeIn: 90, fadeOut: 60
         },
-        springy: {
-            expandDuration: 300, collapseDuration: 220,
-            hoverDuration: 240,  popDuration: 340,
-            arriveDamping: 0.62, popDamping: 0.42,
+        bouncy: {
+            expandResponse: 260, collapseResponse: 200,
+            hoverResponse: 190,  popResponse: 300,
+            arriveBounce: 0.30, departBounce: 0.10, popBounce: 0.50,
             contentLead: 40, contentInDuration: 160,
             contentOutDuration: 90,
             fadeIn: 90, fadeOut: 60
@@ -183,17 +238,19 @@ Singleton {
     // Reduce Motion takes the springs and the shape morphs away and
     // leaves the cross-fades, which are not a vestibular trigger. It
     // is the one preference here that is not a matter of taste.
+    //
+    // Spring.qml reads this itself and snaps rather than solving; the
+    // durations below are for the curve call sites, which have no
+    // other way to be told.
 
     readonly property bool reduced: Config.motion.reduceMotion
 
     readonly property int expand:
-        reduced ? 0 : Config.motion.expandDuration
+        reduced ? 0 : Math.round(expandResponse * tail)
     readonly property int collapse:
-        reduced ? 0 : Config.motion.collapseDuration
+        reduced ? 0 : Math.round(collapseResponse * tail)
     readonly property int hover:
-        reduced ? 0 : Config.motion.hoverDuration
-    readonly property int peek:
-        reduced ? 0 : Config.motion.popDuration
+        reduced ? 0 : Math.round(hoverResponse * tail)
 
     // Lead plus reveal: the content is fully in well before the shape
     // has finished, which is what makes the two read as one movement
@@ -211,7 +268,19 @@ Singleton {
     readonly property int fadeIn: Config.motion.fadeIn
     readonly property int fadeOut: Config.motion.fadeOut
 
-    // How far a pod leans out of the way while it is absent. Reduce
-    // Motion flattens it, per the note above.
+    // ── Presentation ─────────────────────────────────────────
+    //
+    // A surface arriving does not only fade in: it grows the last
+    // fraction of the way, anchored at the edge it came from, so it
+    // reads as emerging from the shape rather than being laid over
+    // it. That is the macOS presentation everywhere from a popover to
+    // Notification Centre, and the number is small on purpose —
+    // enough to feel, not enough to be a zoom.
+    //
+    // Reduce Motion flattens it, per the note above.
+    readonly property real emergeScale:
+        reduced ? 1.0 : Config.motion.emergeScale
+
+    // How far a pod leans out of the way while it is absent.
     readonly property real absentScale: reduced ? 1.0 : 0.82
 }
