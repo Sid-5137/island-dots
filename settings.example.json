@@ -124,6 +124,13 @@
         "visibility": "always",
         "workspaceStyle": "dashes"
     },
+    "lock": {
+        "attemptsBeforeDelay": 5,
+        "blur": 0.5,
+        "delaySeconds": 30,
+        "scrimOpacity": 0.6,
+        "showBattery": true
+    },
     "motion": {
         "arriveDamping": 0.78,
         "collapseDuration": 200,

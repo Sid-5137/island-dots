@@ -114,7 +114,7 @@ Column {
         }
     }
 
-    SectionHeader { text: "Lock" }
+    SectionHeader { text: "Lock"; section: "lock" }
 
     // The lock screen is a real ext-session-lock surface with PAM
     // behind it. If PAM is misconfigured the only way out is a TTY, so
@@ -162,6 +162,56 @@ Column {
             text: "Lock now"
             onClicked: Lock.lock()
         }
+    }
+
+    SliderRow {
+        configKey: "lock.scrimOpacity"
+        label: "Dim"
+        description: "How far the wallpaper darkens behind the field."
+        from: 0.0; to: 1.0; stepSize: 0.05; decimals: 2
+        value: Config.lock.scrimOpacity
+        onMoved: function(v) { Config.lock.scrimOpacity = v }
+    }
+
+    SliderRow {
+        configKey: "lock.blur"
+        label: "Blur"
+        description: "Drawn by the shell. The compositor's blur cannot"
+            + " reach a lock surface, which is above everything."
+        from: 0.0; to: 1.0; stepSize: 0.05; decimals: 2
+        value: Config.lock.blur
+        onMoved: function(v) { Config.lock.blur = v }
+    }
+
+    ToggleRow {
+        configKey: "lock.showBattery"
+        label: "Battery"
+        description: "At the foot of the lock screen, where there is one to show."
+        checked: Config.lock.showBattery
+        onToggled: function(v) { Config.lock.showBattery = v }
+    }
+
+    // A wait rather than a lockout, and the numbers say so: anyone
+    // holding this keyboard can already reach a TTY, so a long one
+    // only ever costs the person who mistyped.
+    SliderRow {
+        configKey: "lock.attemptsBeforeDelay"
+        advanced: true
+        label: "Attempts before a wait"
+        description: "Wrong passwords the field takes in a row. 0 never waits."
+        from: 0; to: 10; stepSize: 1
+        value: Config.lock.attemptsBeforeDelay
+        onMoved: function(v) { Config.lock.attemptsBeforeDelay = v }
+    }
+
+    SliderRow {
+        configKey: "lock.delaySeconds"
+        advanced: true
+        shown: Config.lock.attemptsBeforeDelay > 0
+        label: "Wait for"
+        from: 5; to: 120; stepSize: 5; suffix: " s"
+        value: Config.lock.delaySeconds
+        onMoved: function(v) { Config.lock.delaySeconds = v }
     }
 
     // Fingerprint unlock needs four separate things to line up and

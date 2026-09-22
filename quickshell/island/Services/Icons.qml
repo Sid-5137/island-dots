@@ -76,6 +76,13 @@ Singleton {
     readonly property string reboot:   glyph(0x0F021)  // fa-refresh
     readonly property string shutdown: glyph(0x0F011)  // fa-power_off
 
+    // ── Lock ─────────────────────────────────────────────────
+    //
+    // Not Session: those are things you pick off the power menu, and
+    // these two are states the lock screen reports back at you.
+    readonly property string fingerprint: glyph(0xF0237)  // md-fingerprint
+    readonly property string capsLock:    glyph(0xF0A9B)  // md-caps_lock
+
     // ── Content ──────────────────────────────────────────────
     readonly property string bell:      glyph(0x0F0F3)  // fa-bell
     readonly property string clipboard: glyph(0x0F0EA)  // fa-paste

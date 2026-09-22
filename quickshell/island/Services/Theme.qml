@@ -74,8 +74,9 @@ Singleton {
     readonly property int fontSizeTitle:  22
 
     // The lock screen clock: display type, not text at any of the four
-    // sizes above.
-    readonly property int fontSizeClock:  84
+    // sizes above. Large enough to read from across the room, which is
+    // the whole job of a clock nobody is sitting in front of.
+    readonly property int fontSizeClock:  104
 
     // All derived from the one radius the user sets. Pick by what the
     // thing IS, not its size — Qt clamps to half the shorter side, so

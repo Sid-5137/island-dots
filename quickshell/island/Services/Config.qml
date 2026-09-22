@@ -13,6 +13,7 @@ Singleton {
     readonly property alias appearance: adapter.appearance
     readonly property alias input: adapter.input
     readonly property alias idle: adapter.idle
+    readonly property alias lock: adapter.lock
     readonly property alias audio: adapter.audio
     readonly property alias apps: adapter.apps
     readonly property alias ui: adapter.ui
@@ -79,8 +80,8 @@ Singleton {
     }
 
     readonly property var sections:
-        ["island", "motion", "appearance", "input", "idle", "wallpaper",
-         "audio", "apps", "ui"]
+        ["island", "motion", "appearance", "input", "idle", "lock",
+         "wallpaper", "audio", "apps", "ui"]
 
     // "island.hoverGrace" -> the shipped value, or undefined if the
     // path isn't one we declare.
@@ -648,6 +649,44 @@ Singleton {
                 // because there is one GTK theme and one set of
                 // window borders to drive.
                 property bool perMonitor: false
+            }
+
+            // The lock surface. Separate from `idle`, which decides
+            // WHEN the screen locks — these are what it looks like and
+            // how it behaves once it has.
+            property JsonObject lock: JsonObject {
+                // How much of the wallpaper survives behind the lock.
+                // The scrim is the palette's darkest surface rather
+                // than black, so the lock belongs to the same theme as
+                // the rest of the shell instead of being the one
+                // surface that ignores it.
+                property real scrimOpacity: 0.60
+
+                // Qt's Gaussian over the wallpaper, 0 to 1.
+                //
+                // Deliberately not appearance.blurSize. That one is
+                // Hyprland resampling whatever sits behind a panel;
+                // this is one full-screen image blurred in our own
+                // scene graph, and it is static — it costs a frame
+                // when the lock engages and nothing after. Sharing a
+                // number would tie two unrelated costs together.
+                property real blur: 0.50
+
+                // Wrong passwords before the field stops taking them,
+                // and for how long. 0 attempts turns the wait off.
+                //
+                // Deliberately small. This is a delay that costs a
+                // stranger their patience, not a lockout that costs
+                // you your session — anyone holding the keyboard can
+                // already reach a TTY, so a long one only ever
+                // punishes the person who mistyped.
+                property int attemptsBeforeDelay: 5
+                property int delaySeconds: 30
+
+                // The battery at the foot of the surface. Worth having
+                // on a laptop, noise on a desktop, and Battery.present
+                // already hides it where there is nothing to report.
+                property bool showBattery: true
             }
 
             // How the volume the shell shows relates to the volume

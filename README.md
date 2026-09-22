@@ -40,7 +40,7 @@ timestamped rather than assumed so it plays at real speed;
 | **Wallpaper-driven theming** | matugen feeds the shell, GTK3, GTK4 and Hyprland's window borders from one wallpaper. One per monitor if you want. |
 | **A launcher, and its answer** | Empty until you type. Fuzzy over names, keywords, initials and a subsequence fallback, on a second surface below the field. |
 | **Notification daemon** | Not a client of one — the shell owns `org.freedesktop.Notifications`. Actions, inline reply, history, Focus mode. |
-| **Session lock** | A real `ext-session-lock` surface with PAM, not a shell-out to hyprlock. |
+| **Session lock** | A real `ext-session-lock` surface with PAM, not a shell-out to hyprlock. Drawn from the same palette as the shell, and it says why a password failed rather than only that it did — Caps Lock, the reader, the wait. |
 | **Polkit agent** | Prompts appear in the island. polkitd still decides; only the asking moved. |
 | **Continuous gestures** | Four-finger swipes that track your fingers rather than firing on release, over a persistent socket. |
 | **Live compositor control** | Blur, gaps, borders, rounding, pointer accel and key repeat, applied as you move the slider. |
@@ -291,6 +291,17 @@ manager, a terminal.
 - [ ] **Fingerprint is untested.** The PAM file ships and the shell
       reports which piece is missing, but no reader has ever been
       attached. An issue either way would be useful.
+      The lock screen now arms the reader in its own PAM conversation,
+      started when the lock engages rather than when a password is
+      submitted — a single conversation would make you wait for
+      pam_fprintd to give up before it would let you type. That split
+      is the part that has never met hardware. The password path is
+      unchanged and does not depend on it.
+
+      One rough edge is known from reading rather than running: with
+      `pamConfig` set to `island`, *submitting* a password still walks
+      the whole stack, so pam_fprintd gets its swipes in before
+      pam_unix is asked. It predates the split.
 - [ ] **The layout editor has not been driven by a real pointer.** Two
       defects were found and fixed by reading it — the grip's inset and
       a missing height ceiling — but none of it has met an actual mouse.
