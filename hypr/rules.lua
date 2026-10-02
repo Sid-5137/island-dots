@@ -125,27 +125,37 @@ hl.layer_rule({
     match        = { namespace = "^island-bar$" },
     no_anim      = true,
     blur         = true,
-    -- Low, because the control centre's cards are translucent and
-    -- anything under the threshold is skipped entirely rather than
-    -- blurred faintly.
-    ignore_alpha = 0.03,
-    -- Blur the wallpaper rather than whatever window happens to be
-    -- underneath. Cheaper — there is one surface to sample instead of
-    -- a stack — and it means the island looks the same over a terminal
-    -- as it does over a video, which for something that is on screen
-    -- all the time matters more than seeing through it accurately.
-    xray         = true,
+    -- The blur mask is all or nothing per pixel: above the threshold
+    -- a pixel gets the blurred background, below it gets none. At 0.03
+    -- the soft antialiased edge of every shape was over the line, so
+    -- each one wore a hard-stepped ring of blurred background just
+    -- outside its outline. 0.35 puts the mask's edge inside the
+    -- shape's own, under the border, and still under every fill the
+    -- shell can be set to: the lowest is the popup slider's 0.4. It
+    -- was low once because the control centre's cards floated with no
+    -- panel behind them; the panel is the surface now.
+    ignore_alpha = 0.35,
+    -- No xray: blur what is actually underneath. xray blurred the
+    -- wallpaper instead, so the island looked the same over any window
+    -- — but an edge pixel the shape only partly covers still gets the
+    -- blur at full strength, and with xray that blur is the wallpaper.
+    -- Every curve wore a wallpaper-coloured line wherever the island
+    -- sat over a window, red over a dark terminal, and no threshold
+    -- removes it: measured on screen, only blurring the real
+    -- background did. The island now takes its tint from what is
+    -- under it, the way a macOS material does.
+    xray         = false,
 })
 
--- ignore_alpha is low so nothing gets skipped for being too
--- transparent. The panels set their own opacity; blur only shows
--- through if they are actually translucent.
+-- Under the lowest panel opacity (0.6) so a panel is always blurred,
+-- and well over its antialiased edge so the edge is not — see the
+-- island's rule above for what a low threshold does to an outline.
 for _, ns in ipairs({ "island-settings", "island-shortcuts" }) do
     hl.layer_rule({
         name         = ns,
         match        = { namespace = "^" .. ns .. "$" },
         blur         = true,
-        ignore_alpha = 0.1,
+        ignore_alpha = 0.5,
         no_anim      = true,
     })
 end

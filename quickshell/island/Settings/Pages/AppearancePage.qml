@@ -302,17 +302,19 @@ Column {
         onSelected: function(v) { Config.appearance.fontMono = v }
     }
 
-    SelectRow {
-        configKey: "appearance.fontIcons"
-        label: "Icons"
-        // Says why this list is short before the shortness reads as a
-        // missing font.
-        description: "Only fonts carrying the shell's icon glyphs are"
-            + " listed — they are codepoints, not images. A font without"
-            + " them draws boxes."
-        options: Theming.iconFonts
-        current: Config.appearance.fontIcons
-        onSelected: function(v) { Config.appearance.fontIcons = v }
+    // The icons are Tabler's and ship with the shell, so what is left
+    // to choose is the one thing Tabler itself lets you choose.
+    ChoiceRow {
+        configKey: "appearance.iconStroke"
+        label: "Icon stroke"
+        description: "Tabler Icons. Bold reads at a glance at the sizes"
+            + " the island draws; Regular is Tabler's own weight."
+        current: Config.appearance.iconStroke
+        options: [
+            { value: "2",   label: "Regular" },
+            { value: "2.5", label: "Bold" }
+        ]
+        onSelected: function(v) { Config.appearance.iconStroke = v }
     }
 
     SectionHeader { text: "Corners" }

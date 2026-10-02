@@ -212,18 +212,11 @@ Singleton {
         }
     }
 
-    // `fonts` is every family on the machine: the interface font is a
-    // free choice now that icons ask for `iconFonts` by name.
-    //
-    // `iconFonts` is the filtered one — ':charset=f0928', the same
-    // probe install.sh uses. Every icon is a codepoint (see Icons.qml)
-    // so a font without them draws boxes, and only fonts answering the
-    // probe are offered for it.
-    //
-    // `monoFonts` is the plain ':spacing=100' question.
+    // `fonts` is every family on the machine, `monoFonts` the plain
+    // ':spacing=100' question. No icon list: the icons ship with the
+    // shell (Services/Icons.qml) and are not a font to pick.
     property var fonts: []
     property var monoFonts: []
-    property var iconFonts: []
 
     // fontconfig lists every patched weight as its own family, so 206
     // families are about 132 fonts. A trailing weight word is dropped
@@ -252,21 +245,6 @@ Singleton {
         command: ["sh", "-c", "fc-list : family 2>/dev/null"]
         stdout: StdioCollector {
             onStreamFinished: { root.fonts = root.families(this.text); }
-        }
-    }
-
-    Process {
-        id: iconFontScan
-        running: true
-        command: ["sh", "-c", "fc-list ':charset=f0928' family 2>/dev/null"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.iconFonts = root.families(this.text);
-                if (root.iconFonts.length === 0)
-                    console.warn("[Theming] no font answers ':charset=f0928' —"
-                        + " the icons will be boxes until a Nerd Font v3 is"
-                        + " installed. See install.sh.");
-            }
         }
     }
 

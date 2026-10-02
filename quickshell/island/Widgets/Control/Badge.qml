@@ -28,22 +28,11 @@ Item {
         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
     }
 
-    // anchors.centerIn centres a text's LINE BOX rather than its ink,
-    // and an icon font's ink sits near the baseline. Widgets/Tile.qml
-    // works the offset out from the metrics and explains it at
-    // length; the same correction applies here, against the same
-    // configurable nudge.
-    FontMetrics {
-        id: fm
-        font: icon.font
-    }
-
+    // Plain centerIn: the icon font's line box is the icon's frame.
+    // See Widgets/Tile.qml.
     Text {
         id: icon
         anchors.centerIn: parent
-        anchors.verticalCenterOffset:
-            Math.round((fm.ascent - fm.descent) / 2 - font.pixelSize * 0.36)
-            + Config.island.tileIconOffset
 
         text: root.glyph
         color: root.lit ? Theme.textOnPrimary : Theme.text

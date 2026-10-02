@@ -54,7 +54,8 @@ Variants {
         // needed and charged every window on every workspace for it.
         //
         // Hovering grows the pill to compactHeight and it overhangs
-        // the reservation by those six pixels. That is deliberate:
+        // the reservation by those six pixels, or three when it grows
+        // from the middle. That is deliberate:
         // reserving the hovered height means paying for it the whole
         // time you are not hovering, and the pill floats above the
         // window either way.
@@ -441,6 +442,48 @@ Variants {
             if (searchInput) searchInput.text = "";
         }
 
+        // ── Click outside to close ───────────────────────────
+        //
+        // Island/Catcher.qml is a transparent layer under this window
+        // that takes a click anywhere else while a panel is open, and
+        // asks for it to close. This says when one is open and answers
+        // the request — the primary island only, like everything else
+        // that exists once.
+        //
+        // The panels you open and then leave. Not a notification or the
+        // OSD, which go on their own; not the switcher or overview,
+        // which the keyboard drives and closes; not an auth prompt,
+        // which should only ever close by being answered; and not a
+        // control centre that opened by itself on a track change,
+        // which closes on its own timer and was never yours to dismiss.
+        readonly property bool panelOpen: (expanded && !autoExpanded)
+            || centreOpen || sessionOpen || picker !== ""
+            || clipOpen || searching
+
+        Binding {
+            target: Panels
+            property: "open"
+            value: root.panelOpen
+            when: root.primary
+        }
+
+        Connections {
+            target: Panels
+            function onCloseRequested() {
+                if (root.primary) root.closePanels();
+            }
+        }
+
+        function closePanels() {
+            if (searching) closeSearch();
+            if (clipOpen) closeClipboard();
+            if (sessionOpen) closeSession();
+            picker = "";
+            centreOpen = false;
+            expanded = false;
+            collapseTimer.stop();
+        }
+
         function runSelected() {
             const i = searchList ? searchList.currentIndex : 0;
             const e = Search.results[i];
@@ -450,10 +493,36 @@ Variants {
             }
         }
 
+        // Top only, so the compositor centres it; as wide as the widest
+        // thing the island ever becomes, not the screen. Every frame of
+        // an animation redraws the whole window and Hyprland re-blurs
+        // all of it, and at full width two thirds of that was empty
+        // strip either side, drawn, blended and blurred ~120 times a
+        // second for nothing.
         anchors {
             top: true
-            left: true
-            right: true
+        }
+
+        implicitWidth: Math.min(screen ? screen.width : 1e6,
+                                Math.ceil(neededWidth * uiScale))
+
+        // Targets, not live sizes: a width that followed the springs
+        // would resize the surface on every frame of every morph.
+        readonly property real neededWidth: {
+            const c = Config.island;
+            const panels = Math.max(
+                c.controlWidth, c.centreWidth, c.notifyWidth, c.pickerWidth,
+                c.searchWidth, c.sessionWidth, c.clipWidth, c.authWidth,
+                c.osdWidth, c.switcherWidth,
+                Wm.workspaces.length * (c.overviewCard + 12) + 24);
+            // The pill at its widest resting shape with both pods out
+            // to their open width beside it.
+            const pods = Math.max(leftPod.restWidth, leftPod.openWidth)
+                + Math.max(rightPod.restWidth, rightPod.openWidth)
+                + 2 * c.podGap;
+            const resting = Math.max(c.compactWidth, pill.collapsedWidth) + pods;
+            // Slack for the spring overshooting and for the edge.
+            return Math.max(panels, resting) + 64;
         }
         // Headroom for the largest state the pill can reach. The
         // surface never resizes — it's a fixed strip the pill morphs
@@ -719,21 +788,38 @@ Variants {
                 return "idle";
             }
 
-            anchors.topMargin: dock.value
+            anchors.topMargin: dock.value - rise
 
             // Hidden parks the pill just off the top edge, the way a
-            // menu bar leaves in fullscreen. Every open mode sits two
-            // pixels lower than the collapsed one, which is the
-            // shadow of the shape having grown.
+            // menu bar leaves in fullscreen. Hanging from its top, every
+            // open mode sits two pixels lower than the collapsed one,
+            // the shadow of the shape having grown; growing from its
+            // middle, the rise below is that answer instead.
             Spring {
                 id: dock
                 shape: island
                 target: (island.mode === "hidden"
                     ? -pill.height - 4
                     : (island.mode === "idle" || island.mode === "compact"
+                       || Config.island.growFromCentre
                        ? Config.island.topMargin
                        : Config.island.topMargin + 2)) * root.uiScale
             }
+
+            // How far the top edge has gone up to make room: half of
+            // whatever the shape is taller than at rest, so the other
+            // half goes down and the middle stays where it was.
+            //
+            // Read off the live height rather than a target, so it
+            // rides the same spring — the shape opens around its
+            // middle all the way through, bounce included, instead of
+            // the top chasing the height on a curve of its own. Capped
+            // at half the top margin: past that there is no room
+            // above, and the rest grows down.
+            readonly property real rise: Config.island.growFromCentre
+                ? Math.min(Math.max(0, pill.height - Config.island.idleHeight) / 2,
+                           Config.island.topMargin / 2) * root.uiScale
+                : 0
 
             opacity: mode === "hidden" ? 0 : 1
 
@@ -890,12 +976,10 @@ Variants {
                                    + Config.island.searchFieldHeight },
                     session:  { w: Config.island.sessionWidth, h: Config.island.sessionHeight },
                     picker:   { w: Config.island.pickerWidth,  h: Config.island.pickerHeight },
+                    // As tall as what it holds — see
+                    // NotifyMode.contentHeight.
                     notify:   { w: Config.island.notifyWidth,
-                                h: Config.island.notifyHeight
-                                   + ((root.notice && root.notice.actions.length > 0)
-                                      ? Config.island.notifyActionHeight : 0)
-                                   + ((root.notice && root.notice.hasReply)
-                                      ? Config.island.notifyReplyHeight : 0) },
+                                h: notifyMode.contentHeight },
                     // Not centreHeight — see CentreMode.contentHeight,
                     // which treats that setting as a ceiling and works
                     // out the rest from what is actually in the list.
@@ -957,13 +1041,14 @@ Variants {
                 // Two fills, and the line between them is whether the
                 // shape is still the pill or has become a panel.
                 //
-                // Resting, hovered, and the OSD are the pill: the OSD
-                // is a volume bar that grew out of it for a second
-                // and went away again, and lightening for that reads
-                // as a different object arriving rather than as the
-                // same one saying something. The control centre is
-                // dark for its own reason — the cards are the
-                // surfaces there and the panel behind them is not.
+                // Resting, hovered, the OSD and a notification are the
+                // pill: each is something that grew out of it for a
+                // few seconds and went away again, and lightening for
+                // that reads as a different object arriving rather
+                // than as the same one saying something. The control
+                // centre and the notification centre are dark for
+                // their own reason — the cards are the surfaces there
+                // and the panel behind them is not.
                 //
                 // Everything else is a panel you are reading or
                 // typing into, and those take the container.
@@ -971,7 +1056,9 @@ Variants {
                             || island.mode === "hidden"
                             || island.mode === "compact"
                             || island.mode === "osd"
+                            || island.mode === "notify"
                             || island.mode === "expanded"
+                            || island.mode === "centre"
                         ? Theme.surfaceLowest
                         : Theme.surfaceContainer)
 
@@ -1077,26 +1164,59 @@ Variants {
                 // it is the same panel showing something else, and it
                 // stays a cross-fade: the scale only moves when there
                 // is no panel on either side of the change.
+                //
+                // Sized to the panel, not to the shape. Filling the
+                // shape meant every panel laid itself out again at the
+                // shape's size on every frame of a morph — a calendar
+                // closing went small-print and cramped on its way into
+                // the pill instead of being closed over. Now a panel
+                // is laid out once, at its own size, anchored where it
+                // grows from; the shape reveals it opening and covers
+                // it closing (the pill clips), and the size is held
+                // while the island collapses so the last panel keeps
+                // its layout to the end of its fade.
                 Item {
                     id: panelLayer
-                    anchors.fill: parent
+                    anchors.top: parent.top
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: size.width
+                    height: size.height
 
                     readonly property bool present: !island.collapsing
                         && island.mode !== "compact"
 
-                    scale: emerge.value
-                    transformOrigin: Item.Top
+                    property size size: Qt.size(pill.width, pill.height)
 
-                    Spring {
-                        id: emerge
-                        shape: island
-                        target: panelLayer.present ? 1 : Motion.emergeScale
+                    Binding on size {
+                        when: panelLayer.present
+                        value: {
+                            const g = pill.geometry[island.mode] || pill.geometry.idle;
+                            return Qt.size(g.w, g.h);
+                        }
+                        restoreMode: Binding.RestoreNone
                     }
+
+                    // How far the shape has opened toward this panel:
+                    // 0 at the pill, 1 at the panel's own size. Read off
+                    // the shape's live height, so the content grows and
+                    // shrinks on the shape's own spring rather than one
+                    // of its own that could run ahead or lag behind.
+                    // Held at 1 through an overshoot: the outline may
+                    // bounce, the content stays put.
+                    readonly property real openness: {
+                        const rest = pill.geometry.idle.h;
+                        const span = size.height - rest;
+                        if (span < 8) return present ? 1 : 0;
+                        return Math.max(0, Math.min(1, (pill.height - rest) / span));
+                    }
+
+                    scale: Motion.contentFloor + (1 - Motion.contentFloor) * openness
+                    transformOrigin: Item.Top
 
                     SearchMode  { win: root; island: island; pill: pill }
                     SessionMode { win: root; island: island; pill: pill }
                     PickerMode  { win: root; island: island; pill: pill }
-                    NotifyMode  { win: root; island: island; pill: pill }
+                    NotifyMode  { id: notifyMode; win: root; island: island; pill: pill }
                     CentreMode  { id: centreMode; win: root; island: island; pill: pill }
                     ControlMode { id: controlMode; win: root; island: island }
                     OsdMode     { win: root; island: island; pill: pill }

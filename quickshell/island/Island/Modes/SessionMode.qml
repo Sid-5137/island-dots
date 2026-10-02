@@ -84,7 +84,6 @@ Item {
                                ? Theme.error : Theme.text)
                         font.family: Theme.fontIcons
                         font.pixelSize: 22
-                        font.weight: Config.island.fontWeight
                         renderType: Text.NativeRendering
                         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
                     }

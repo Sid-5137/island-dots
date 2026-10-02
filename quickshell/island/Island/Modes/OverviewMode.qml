@@ -149,23 +149,37 @@ Item {
 
                             Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
+                            // Only while the overview is open. These
+                            // cards exist the whole time, and a live
+                            // capture asks Hyprland to render its
+                            // window into a second buffer every frame
+                            // — for every window, while nobody is
+                            // looking at any of them.
                             ScreencopyView {
                                 anchors.fill: parent
                                 anchors.margins: 1
-                                captureSource: thumb.toplevel ? thumb.toplevel.wayland : null
-                                live: true
+                                captureSource: root.shown && thumb.toplevel
+                                    ? thumb.toplevel.wayland : null
+                                live: root.shown
                                 paintCursor: false
                                 visible: hasContent
                             }
 
                             // Icon while the capture warms up, or if the
                             // toplevel couldn't be matched.
+                            // A fixed size rather than a share of the
+                            // card: the card grows from a few pixels as
+                            // the overview opens, and an icon sized off
+                            // it was looked up again from the theme at
+                            // every size on the way — 2px included.
                             IconImage {
                                 anchors.centerIn: parent
-                                implicitSize: Math.min(parent.width, parent.height) * 0.4
-                                source: Quickshell.iconPath(
-                                    thumb.modelData.cls.toLowerCase(),
-                                    "application-x-executable")
+                                implicitSize: 32
+                                source: root.shown
+                                    ? Quickshell.iconPath(
+                                          thumb.modelData.cls.toLowerCase(),
+                                          "application-x-executable")
+                                    : ""
                                 visible: !thumb.toplevel
                             }
 

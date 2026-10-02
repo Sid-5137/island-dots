@@ -39,15 +39,18 @@ Item {
     //
     // It also lets nmcli and bluetoothctl go back to sleep. Those two
     // poll by spawning processes, and this is the only thing on screen
-    // that reads them.
+    // that reads them. The track position is the same: only the media
+    // card here shows it.
     onShownChanged: {
         if (shown) {
             Network.hold();
             Bluetooth.hold();
+            Player.hold();
         } else {
             page = "";
             Network.release();
             Bluetooth.release();
+            Player.release();
         }
     }
 
@@ -183,12 +186,7 @@ Item {
                     required property var modelData
                     width: ListView.view.width
 
-                    // Three bars, not five: nmcli reports a percentage
-                    // and the glyphs are the only thing between it and
-                    // a number nobody reads.
-                    glyph: modelData.signal > 66 ? ""
-                         : modelData.signal > 33 ? ""
-                                                 : ""
+                    glyph: Network.signalIcon(modelData.signal)
                     name: modelData.ssid
                     sub: modelData.active
                         ? "Connected"
@@ -252,7 +250,7 @@ Item {
                     required property var modelData
                     width: ListView.view.width
 
-                    glyph: ""
+                    glyph: Icons.bluetooth
                     name: modelData.name
                     sub: modelData.connected ? "Connected" : "Paired"
                     lit: modelData.connected
@@ -305,7 +303,7 @@ Item {
                         Audio.sink && modelData
                         && modelData.id === Audio.sink.id
 
-                    glyph: ""
+                    glyph: Icons.volumeHigh
                     name: Audio.sinkLabel(modelData)
                     sub: current ? "Output" : ""
                     lit: current

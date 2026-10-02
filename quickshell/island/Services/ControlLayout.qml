@@ -30,59 +30,59 @@ Singleton {
     //             notifications are not smaller, they are empty.
     readonly property var catalogue: ({
         calendar: {
-            name: "Calendar", glyph: "", kind: "month",
+            name: "Calendar", glyph: Icons.calendar, kind: "month",
             minW: 3, minH: 4, defW: 3, defH: 5
         },
         wifi: {
-            name: "Wi-Fi", glyph: "", kind: "conn",
+            name: "Wi-Fi", glyph: Icons.wifi, kind: "conn",
             minW: 1, minH: 1, defW: 3, defH: 1, labelled: true
         },
         bluetooth: {
-            name: "Bluetooth", glyph: "", kind: "conn",
+            name: "Bluetooth", glyph: Icons.bluetooth, kind: "conn",
             minW: 1, minH: 1, defW: 3, defH: 1, labelled: true
         },
         media: {
-            name: "Now playing", glyph: "", kind: "media",
+            name: "Now playing", glyph: Icons.music, kind: "media",
             minW: 2, minH: 2, defW: 3, defH: 2, labelled: true
         },
         sound: {
-            name: "Sound", glyph: "", kind: "level",
+            name: "Sound", glyph: Icons.volumeHigh, kind: "level",
             minW: 1, minH: 1, defW: 6, defH: 1, labelled: true
         },
         display: {
-            name: "Display", glyph: "", kind: "level",
+            name: "Display", glyph: Icons.brightness, kind: "level",
             minW: 1, minH: 1, defW: 3, defH: 1, labelled: true
         },
         notifications: {
-            name: "Notifications", glyph: "", kind: "notes",
+            name: "Notifications", glyph: Icons.bell, kind: "notes",
             minW: 3, minH: 2, defW: 6, defH: 3
         },
         clock: {
-            name: "Clock", glyph: "", kind: "clock",
+            name: "Clock", glyph: Icons.clock, kind: "clock",
             minW: 2, minH: 1, defW: 3, defH: 1, labelled: true
         },
         battery: {
-            name: "Battery", glyph: "", kind: "battery",
+            name: "Battery", glyph: Icons.batteryFull, kind: "battery",
             minW: 1, minH: 1, defW: 2, defH: 1, labelled: true
         },
         mic: {
-            name: "Microphone", glyph: "", kind: "toggle",
+            name: "Microphone", glyph: Icons.micOn, kind: "toggle",
             minW: 1, minH: 1, defW: 1, defH: 1, labelled: true
         },
         dnd: {
-            name: "Focus", glyph: "", kind: "toggle",
+            name: "Focus", glyph: Icons.bellOff, kind: "toggle",
             minW: 1, minH: 1, defW: 1, defH: 1, labelled: true
         },
         caffeine: {
-            name: "Keep awake", glyph: "", kind: "toggle",
+            name: "Keep awake", glyph: Icons.coffee, kind: "toggle",
             minW: 1, minH: 1, defW: 1, defH: 1, labelled: true
         },
         lock: {
-            name: "Lock", glyph: "", kind: "toggle",
+            name: "Lock", glyph: Icons.lock, kind: "toggle",
             minW: 1, minH: 1, defW: 1, defH: 1, labelled: true
         },
         settings: {
-            name: "Settings", glyph: "", kind: "toggle",
+            name: "Settings", glyph: Icons.settings, kind: "toggle",
             minW: 1, minH: 1, defW: 1, defH: 1, labelled: true
         }
     })

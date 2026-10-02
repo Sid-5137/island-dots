@@ -5,6 +5,7 @@ import QtQuick
 
 import "root:/Services"
 import "root:/Widgets"
+import "root:/Widgets/Control"
 
 // Notification history, with per-item dismiss and clear all.
 //
@@ -28,27 +29,24 @@ Item {
 
     readonly property bool shown: island.isCentre
 
-    // Island.qml sizes the centre from these rather than from a stored
-    // height, which could only ever disagree with what is in the panel
-    // — a notification list is empty most of the time.
-    //
-    // The three metrics are the layout's, declared here so the
-    // arithmetic and the anchors cannot drift apart.
-    readonly property int headerHeight: 30
-    readonly property int headerGap: 8
-    readonly property int rowGap: 6
+    // Island.qml sizes the centre from contentHeight rather than from
+    // a stored height, which could only ever disagree with what is in
+    // the panel — a notification list is empty most of the time.
+    readonly property int headerHeight: 28
+    readonly property int headerGap: 10
+    readonly property int rowGap: 8
 
-    // Room for "Nothing to catch up on" and the air it needs. Empty is
-    // a state worth showing properly rather than a state to be sized
-    // out of existence — a centre that collapsed to its header would
-    // read as broken rather than as quiet.
-    readonly property int emptyHeight: 80
+    // Room for the empty state and the air it needs. Empty is a state
+    // worth showing properly rather than a state to be sized out of
+    // existence — a centre that collapsed to its header would read as
+    // broken rather than as quiet.
+    readonly property int emptyHeight: 96
 
+    // Exact, not estimated: every row is built (history is capped at
+    // sixty), so the column's height is a measurement of what is there.
     readonly property int contentHeight: {
-        const n = Notifications.count;
-        const body = n === 0
-            ? emptyHeight
-            : n * Config.island.centreRowHeight + (n - 1) * rowGap;
+        const body = Notifications.count === 0
+            ? emptyHeight : rows.implicitHeight;
         // centreHeight is the ceiling, not the height: past it the
         // list scrolls, which is what a list is for.
         return Math.min(Config.island.centreHeight,
@@ -60,6 +58,8 @@ Item {
 
     Behavior on opacity { ContentFade { revealing: root.shown } }
 
+    // The control centre's own notifications card labels itself the
+    // same way, so the two read as one thing at two sizes.
     Item {
         id: centreHeader
         anchors.top: parent.top
@@ -67,19 +67,35 @@ Item {
         anchors.right: parent.right
         height: root.headerHeight
 
-        Text {
+        // In line with the icons on the cards below, as the button
+        // opposite is in line with their right edge.
+        Row {
             anchors.left: parent.left
+            anchors.leftMargin: Theme.padCard
             anchors.verticalCenter: parent.verticalCenter
-            text: Notifications.count > 0
-                ? Notifications.count + (Notifications.count === 1
-                    ? " notification" : " notifications")
-                : "Notifications"
-            color: Theme.primary
-            font.family: Theme.fontIsland
-            font.pixelSize: Theme.fontSizeNormal
-            font.weight: Font.Bold
-            font.letterSpacing: 1.2
-            renderType: Text.NativeRendering
+            spacing: 8
+
+            Text {
+                id: headerTitle
+                text: "Notifications"
+                color: Theme.text
+                font.family: Theme.fontIsland
+                font.pixelSize: Theme.fontSizeNormal
+                font.weight: Font.Bold
+                font.letterSpacing: 0.4
+                renderType: Text.NativeRendering
+            }
+
+            Text {
+                anchors.baseline: headerTitle.baseline
+                visible: Notifications.count > 0
+                text: Notifications.count
+                color: Theme.textDim
+                font.family: Theme.fontMono
+                font.pixelSize: Theme.fontSizeSmall
+                font.weight: Font.Bold
+                renderType: Text.NativeRendering
+            }
         }
 
         Button {
@@ -87,34 +103,42 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             visible: Notifications.count > 0
             implicitHeight: 24
-            text: "Clear"
+            padding: Theme.padRow
+            text: "Clear all"
             onClicked: Notifications.clear()
-        }
-
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: Theme.outlineVariant
         }
     }
 
-    Text {
+    // Empty: the bell and a line, centred in the room left for them.
+    Column {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: centreHeader.bottom
         anchors.topMargin: root.headerGap
             + (root.emptyHeight - implicitHeight) / 2
         visible: Notifications.count === 0
-        text: "Nothing to catch up on"
-        color: Theme.outline
-        font.family: Theme.fontIsland
-        font.pixelSize: Theme.fontSizeSmall
-        font.weight: Font.DemiBold
-        renderType: Text.NativeRendering
+        spacing: 8
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: Icons.bell
+            color: Theme.outline
+            font.family: Theme.fontIcons
+            font.pixelSize: 22
+            renderType: Text.NativeRendering
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "Nothing to catch up on"
+            color: Theme.textDim
+            font.family: Theme.fontIsland
+            font.pixelSize: Theme.fontSizeSmall
+            font.weight: Font.DemiBold
+            renderType: Text.NativeRendering
+        }
     }
 
-    ListView {
+    Flickable {
         id: centreList
         anchors.top: centreHeader.bottom
         anchors.topMargin: root.headerGap
@@ -122,161 +146,70 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         clip: true
-        spacing: root.rowGap
-        model: ScriptModel {
-            // Notifications are plain objects rebuilt on every change,
-            // so identity comparison would see them all as new. The id
-            // is what actually distinguishes them.
-            objectProp: "id"
-            values: Notifications.history
-        }
-        delegate: Rectangle {
-            required property var modelData
+        contentHeight: rows.implicitHeight
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentHeight > height
 
+        Column {
+            id: rows
             width: centreList.width
-            height: Config.island.centreRowHeight
-            // Concentric with the panel — see Theme.inner. These rows
-            // run the full inner width and the list reaches the
-            // bottom, so the first and last of them sit in the panel's
-            // corners; a 440px panel is round to 40 and an inset of 16
-            // leaves 24. radiusLarge said 17, and seven pixels of
-            // disagreement read as two panels rather than one.
-            radius: Theme.inner(root.pill.radius, root.inset)
-            color: rowHover.containsMouse
-                ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.04)
+            spacing: root.rowGap
 
-            Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
-
-            // Critical keeps a mark in history, not
-            // just in the popup that already went by.
-            Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                anchors.margins: Theme.padRow
-                width: 3
-                radius: width / 2
-                visible: modelData.critical
-                color: Theme.error
-            }
-
-            Rectangle {
-                id: rowIconBox
-                anchors.left: parent.left
-                anchors.leftMargin: 18
-                anchors.verticalCenter: parent.verticalCenter
-                width: 38
-                height: 38
-                // The popup's tile, same ratio — see NotifyMode.
-                radius: width * 0.225
-                color: Theme.surfaceHigh
-                clip: true
-
-                Image {
-                    id: rowImg
-                    anchors.fill: parent
-                    anchors.margins: modelData.image ? 0 : 9
-                    source: modelData.image
-                        ? modelData.image
-                        : (modelData.appIcon
-                           ? Quickshell.iconPath(modelData.appIcon, true) : "")
-                    fillMode: modelData.image
-                        ? Image.PreserveAspectCrop : Image.PreserveAspectFit
-                    asynchronous: true
-                    visible: status === Image.Ready
+            Repeater {
+                model: ScriptModel {
+                    // Notifications are plain objects rebuilt on every
+                    // change, so identity comparison would see them all
+                    // as new. The id is what actually distinguishes them.
+                    objectProp: "id"
+                    values: Notifications.history
                 }
 
-                Text {
-                    anchors.centerIn: parent
-                    visible: !rowImg.visible
-                    text: Icons.bell
-                    color: Theme.outline
-                    font.family: Theme.fontIcons
-                    font.pixelSize: 16
-                    font.weight: Font.DemiBold
-                    renderType: Text.NativeRendering
-                }
-            }
+                // A control-centre card, hugging what it holds.
+                Item {
+                    required property var modelData
 
-            Column {
-                anchors.left: rowIconBox.right
-                anchors.leftMargin: 12
-                anchors.right: rowDismiss.left
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
+                    width: rows.width
+                    height: face.implicitHeight + Theme.padCard * 2
 
-                Text {
-                    width: parent.width
-                    text: modelData.summary
-                    color: Theme.text
-                    font.family: Theme.fontIsland
-                    font.pixelSize: Theme.fontSizeSmall
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                    renderType: Text.NativeRendering
-                }
+                    Surface {
+                        anchors.fill: parent
+                        hovered: rowHover.containsMouse
+                    }
 
-                Text {
-                    width: parent.width
-                    text: modelData.body
-                    visible: text !== ""
-                    color: Theme.textDim
-                    font.family: Theme.fontIsland
-                    font.pixelSize: Theme.fontSizeSmall - 1
-                    font.weight: Font.DemiBold
-                    textFormat: Text.StyledText
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: 2
-                    elide: Text.ElideRight
-                    renderType: Text.NativeRendering
-                }
+                    // Under the face, so the face's close button sits
+                    // on top of it and takes its own click.
+                    MouseArea {
+                        id: rowHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        // The default action if there is one, as a
+                        // click on the popup does; otherwise the first
+                        // button, which is what this always did.
+                        cursorShape: modelData.hasDefault
+                                     || modelData.actions.length > 0
+                            ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: {
+                            if (!Notifications.activate(modelData)
+                                && modelData.actions.length > 0)
+                                Notifications.invoke(modelData, 0);
+                            Notifications.dismiss(modelData);
+                        }
+                    }
 
-                Text {
-                    width: parent.width
-                    text: modelData.appName
-                    color: Theme.outline
-                    font.family: Theme.fontIsland
-                    font.pixelSize: Theme.fontSizeSmall - 2
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                    renderType: Text.NativeRendering
-                }
-            }
-
-            Text {
-                id: rowDismiss
-                anchors.right: parent.right
-                anchors.rightMargin: 14
-                anchors.verticalCenter: parent.verticalCenter
-                text: "\u00d7"
-                color: dismissHover.containsMouse
-                    ? Theme.text : Theme.outline
-                font.family: Theme.fontIsland
-                font.pixelSize: 18
-                font.weight: Config.island.fontWeight
-                renderType: Text.NativeRendering
-
-                MouseArea {
-                    id: dismissHover
-                    anchors.fill: parent
-                    anchors.margins: -8
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Notifications.dismiss(modelData)
-                }
-            }
-
-            MouseArea {
-                id: rowHover
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: modelData.actions.length > 0
-                    ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: {
-                    if (modelData.actions.length > 0)
-                        Notifications.invoke(modelData, 0);
-                    Notifications.dismiss(modelData);
+                    NoticeFace {
+                        id: face
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.leftMargin: Theme.padCard
+                        anchors.rightMargin: Theme.padCard
+                        entry: modelData
+                        iconSize: 36
+                        bodyLines: 2
+                        dismissable: true
+                        hovered: rowHover.containsMouse
+                        onDismissed: Notifications.dismiss(modelData)
+                    }
                 }
             }
         }

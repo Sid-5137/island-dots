@@ -36,10 +36,26 @@ Row {
     readonly property bool shown:
         island.mode === "idle" || island.mode === "compact"
 
-    opacity: shown ? 1 : 0
+    // Two things decide whether the clock shows: the mode, faded as
+    // usual, and how close the shape is to the pill — the other half of
+    // panelLayer's openness in Island.qml. A panel opening takes the
+    // clock away within its first forty pixels, and a panel closing
+    // only gives it back in its last forty, so the two can never be on
+    // screen at once however the spring is tuned. A fade on its own
+    // timer could only guess where the spring would be. Measured
+    // against the hovered height, so a hover lift leaves it alone.
+    readonly property real closeness: Math.max(0, Math.min(1,
+        1 - (pill.height - Config.island.compactHeight) / 40))
+
+    property real fade: shown ? 1 : 0
+    Behavior on fade { ContentFade { revealing: root.shown } }
+
+    opacity: fade * closeness
     visible: opacity > 0.01
 
-    Behavior on opacity { ContentFade { revealing: root.shown } }
+    // And settles in as it comes back: a touch small while the shape
+    // is still closing, full size at rest.
+    scale: 1 - (1 - Motion.contentFloor) * 0.5 * (1 - closeness)
 
     // The pill itself. Hovering a pod lifts all three shapes, but it
     // must not put buttons under a cursor that is somewhere else.
@@ -146,17 +162,42 @@ Row {
                         required property int index
 
                         width: 2
-                        // The resting height is what a paused player
-                        // shows, so it has to be legible on its own.
-                        height: 9
+                        // Still, by default: an equaliser caught mid-
+                        // bar while something plays, level when it is
+                        // paused. The shape and the colour say which,
+                        // and neither needs a frame after the change.
+                        //
+                        // It used to dance the whole time, and that
+                        // meant redrawing the island at the display's
+                        // refresh rate — 120 commits a second, each
+                        // re-blurred by Hyprland — for as long as any
+                        // audio played. Measured, that was 15% of a
+                        // core in the shell alone, and on this laptop
+                        // the load was audible: the speakers crackled
+                        // at high volume until the bars stopped.
+                        // Config.island.animateBars brings it back.
+                        readonly property var playingHeights: [7, 13, 9]
+                        height: Player.playing ? playingHeights[index] : 9
                         radius: width / 2
                         anchors.verticalCenter: parent.verticalCenter
                         color: Player.playing ? Theme.primary : Theme.outline
 
                         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
 
+                        // One ease between the two shapes. Off while
+                        // the loop below owns the height, or every
+                        // step of it would be eased twice.
+                        Behavior on height {
+                            enabled: !Config.island.animateBars
+                            NumberAnimation {
+                                duration: Motion.fadeIn
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
                         SequentialAnimation on height {
-                            running: Player.playing && mediaSlot.shown
+                            running: Config.island.animateBars
+                                     && Player.playing && mediaSlot.shown
                                      && root.visible
                             loops: Animation.Infinite
 
@@ -225,9 +266,9 @@ Row {
 
                     Repeater {
                         model: [
-                            { g: "⏮", act: "prev" },
-                            { g: "",        act: "toggle" },
-                            { g: "⏭", act: "next" }
+                            { g: Icons.previous, act: "prev" },
+                            { g: "",             act: "toggle" },
+                            { g: Icons.next,     act: "next" }
                         ]
 
                         Text {
@@ -235,13 +276,17 @@ Row {
 
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData.act === "toggle"
-                                ? (Player.playing ? "⏸" : "▶")
+                                ? (Player.playing ? Icons.pause : Icons.play)
                                 : modelData.g
                             color: modelData.act === "toggle"
                                 ? Theme.primary : Theme.textDim
                             font.family: Theme.fontIcons
+                            // The pill's parity, not the text's: an odd
+                            // icon in an even pill has half a pixel of
+                            // slack, and it lands low. See LevelSlider.
                             font.pixelSize: Config.island.fontSize
-                            font.weight: Config.island.fontWeight
+                                - (Config.island.idleHeight
+                                   - Config.island.fontSize) % 2
                             renderType: Text.NativeRendering
 
                             MouseArea {

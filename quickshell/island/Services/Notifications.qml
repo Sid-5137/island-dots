@@ -68,13 +68,41 @@ Singleton {
         unread = 0;
     }
 
+    // Indices into n.actions of the ones that are buttons.
+    function buttonsOf(n) {
+        const out = [];
+        for (let i = 0; i < n.actions.length; i++) {
+            const a = n.actions[i];
+            if (a.identifier !== "default" && a.text !== "") out.push(i);
+        }
+        return out;
+    }
+
+    // `index` is a button's place on screen, not in the sender's list.
     function invoke(entry, index) {
         const n = liveFor(entry ? entry.id : -1);
         if (!n) return;
+        const real = entry.actionIndex ? entry.actionIndex[index] : index;
         try {
-            const a = n.actions[index];
+            const a = n.actions[real];
             if (a) a.invoke();
         } catch (e) { /* the sender went away mid-click */ }
+    }
+
+    // Clicking the notification itself: the default action, if the
+    // sender gave one. A terminal's usually brings its window forward.
+    function activate(entry) {
+        const n = liveFor(entry ? entry.id : -1);
+        if (!n) return false;
+        try {
+            for (const a of n.actions) {
+                if (a.identifier === "default") {
+                    a.invoke();
+                    return true;
+                }
+            }
+        } catch (e) { /* the sender went away mid-click */ }
+        return false;
     }
 
     // Chat clients that advertise a reply expect the text back over
@@ -138,7 +166,16 @@ Singleton {
                 urgency: root.urgencyName(n.urgency),
                 critical: n.urgency === NotificationUrgency.Critical,
                 time: Date.now(),
-                actions: n.actions.map(a => a.text),
+                // Buttons only. The spec's "default" action is what
+                // clicking the notification itself does, and senders
+                // mostly leave its label empty — listed with the rest
+                // it was a filled button with nothing on it. Any other
+                // unlabelled action goes too: a button that says
+                // nothing cannot be chosen. actionIndex maps each
+                // button back to the sender's own list.
+                actions: root.buttonsOf(n).map(i => n.actions[i].text),
+                actionIndex: root.buttonsOf(n),
+                hasDefault: n.actions.some(a => a.identifier === "default"),
                 hasReply: n.hasInlineReply,
                 replyHint: n.inlineReplyPlaceholder || "Reply"
             };

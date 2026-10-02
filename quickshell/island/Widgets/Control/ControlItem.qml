@@ -168,10 +168,10 @@ Item {
                 switch (root.itemKey) {
                     case "mic":      return Audio.micIcon;
                     case "dnd":      return Config.island.dnd
-                        ? "" : "";
-                    case "caffeine": return "";
-                    case "lock":     return "";
-                    default:         return "";
+                        ? Icons.bellOff : Icons.bell;
+                    case "caffeine": return Icons.coffee;
+                    case "lock":     return Icons.lock;
+                    default:         return Icons.settings;
                 }
             }
 

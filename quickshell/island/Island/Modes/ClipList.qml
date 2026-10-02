@@ -125,7 +125,6 @@ Item {
                     color: Theme.outline
                     font.family: Theme.fontIcons
                     font.pixelSize: 13
-                    font.weight: Font.DemiBold
                     renderType: Text.NativeRendering
                 }
 

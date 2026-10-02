@@ -111,13 +111,7 @@ Column {
                     anchors.leftMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     width: 22
-                    // Four bars, and until now not one of them: the
-                    // codepoints were a nibble off, so 70% drew a text
-                    // icon, 40% a star face, 15% a square-root box and
-                    // the floor a shower head. See Services/Icons.qml.
-                    text: modelData.signal > 70 ? Icons.wifi4
-                        : modelData.signal > 40 ? Icons.wifi3
-                        : modelData.signal > 15 ? Icons.wifi2 : Icons.wifi1
+                    text: Network.signalIcon(modelData.signal)
                     color: modelData.active ? Theme.primary : Theme.textDim
                     font.family: Theme.fontIcons
                     font.pixelSize: 15
@@ -323,7 +317,7 @@ Column {
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 width: 22
-                text: Icons.bluetoothDevice
+                text: Icons.bluetooth
                 color: modelData.connected ? Theme.primary : Theme.textDim
                 font.family: Theme.fontIcons
                 font.pixelSize: 15

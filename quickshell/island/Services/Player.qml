@@ -53,8 +53,27 @@ Singleton {
 
     // MPRIS position doesn't tick on its own — it has to be polled
     // while something is playing. 1s is enough for a progress bar.
+    //
+    // And only while a progress bar is on screen, which is the control
+    // centre's media card and nothing else. Polled unconditionally, the
+    // hidden bar still moved every second, and Qt Quick draws a frame
+    // for a change to a hidden item too: measured, the island repainted
+    // its whole surface once a second, re-blurred by Hyprland each
+    // time, for as long as anything played. Held the way Network and
+    // Bluetooth are, by whatever shows it.
+    property int watchers: 0
+
+    function hold() {
+        watchers++;
+        if (watchers === 1 && active && playing) active.positionChanged();
+    }
+
+    function release() {
+        watchers = Math.max(0, watchers - 1);
+    }
+
     Timer {
-        running: root.playing && root.active !== null
+        running: root.watchers > 0 && root.playing && root.active !== null
         interval: 1000
         repeat: true
         onTriggered: {

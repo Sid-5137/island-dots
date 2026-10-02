@@ -59,11 +59,6 @@ Singleton {
 
     property int brightness: 0
 
-    // Muted was U+F6A9, a Material glyph Nerd Fonts v3 moved out from
-    // under it — so the one state you most need to see was the one
-    // that drew nothing at all. See Services/Icons.qml; the whole ramp
-    // is one font family now, which is why that could not happen to
-    // the other three.
     readonly property string volumeIcon:
         muted ? Icons.volumeMuted
         : volume > 66 ? Icons.volumeHigh
@@ -161,7 +156,7 @@ Singleton {
         setBrightness(brightness + delta);
     }
 
-    function refresh() { poll.running = true }
+    function refresh() { if (root.backlight !== "") backlightNow.reload() }
 
     // Binding the nodes is what makes their audio properties readable
     // and writable; without it they report defaults.
@@ -182,17 +177,40 @@ Singleton {
     }
 
     // Only the backlight needs polling now — PipeWire pushes volume.
-    Process {
-        id: poll
-        running: true
-        command: ["sh", "-c", "brightnessctl -m 2>/dev/null | cut -d, -f4"]
+    //
+    // Read straight from sysfs. brightnessctl still sets it, because
+    // writing needs the permission it carries, but reading is one small
+    // file: this used to spawn sh, brightnessctl and cut every five
+    // seconds to fetch a single number. The device is found once.
+    property string backlight: ""     // /sys/class/backlight/<device>
 
+    Process {
+        running: true
+        command: ["sh", "-c", "ls -d /sys/class/backlight/* 2>/dev/null | head -1"]
         stdout: StdioCollector {
-            onStreamFinished: {
-                const t = this.text.trim();
-                if (t.endsWith("%")) root.brightness = parseInt(t) || 0;
-            }
+            onStreamFinished: root.backlight = this.text.trim()
         }
+    }
+
+    FileView {
+        id: backlightMax
+        path: root.backlight !== "" ? root.backlight + "/max_brightness" : ""
+        blockLoading: true
+        onLoaded: root.readBacklight()
+    }
+
+    FileView {
+        id: backlightNow
+        path: root.backlight !== "" ? root.backlight + "/brightness" : ""
+        blockLoading: true
+        onLoaded: root.readBacklight()
+    }
+
+    // The percentage brightnessctl prints, worked out the same way.
+    function readBacklight() {
+        const max = parseInt(backlightMax.text()) || 0;
+        const now = parseInt(backlightNow.text());
+        if (max > 0 && !isNaN(now)) brightness = Math.round(now * 100 / max);
     }
 
     Timer {

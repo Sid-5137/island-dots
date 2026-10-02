@@ -97,9 +97,9 @@ Item {
     Text {
         anchors.centerIn: parent
         visible: root.charging
-        text: ""
+        text: Icons.batteryCharging
         color: root.ringColor
-        font.family: Theme.fontFamily
+        font.family: Theme.fontIcons
         font.pixelSize: Math.round(root.height * 0.40)
         renderType: Text.NativeRendering
     }

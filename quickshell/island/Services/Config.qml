@@ -284,6 +284,10 @@ Singleton {
                 // other for that reason.
                 property string visibility: "always"
 
+                // How every clock the shell draws reads: "24h" (20:42)
+                // or "12h" (8:42 PM). See Services/Clock.qml.
+                property string clockFormat: "24h"
+
                 // How long the island stays revealed after the cursor
                 // leaves. Without a grace period hover and geometry
                 // fight each other: the pill moves out from under the
@@ -320,11 +324,25 @@ Singleton {
                 // Expand automatically when a new track starts.
                 property bool expandOnTrackChange: false
 
+                // Keep the pill's equaliser moving while audio plays.
+                // Off by default: it redraws the island at the
+                // display's refresh rate for as long as anything is
+                // playing, and on some laptops that load is audible
+                // through the speakers. See Modes/IdleMode.qml.
+                property bool animateBars: false
+
                 // Collapsed pill geometry.
                 property int idleWidth: 152
                 property int idleHeight: 34
                 property int compactWidth: 200
                 property int compactHeight: 40
+
+                // Grow from the middle — half of any extra height above
+                // the resting pill, half below — rather than hanging
+                // from the top edge. Upward is capped at half of
+                // topMargin, so a panel taller than that rises as far
+                // as it can and grows down from there.
+                property bool growFromCentre: true
 
                 // Pill typography. The clock is what you read at a
                 // glance, so it gets its own size rather than
@@ -455,22 +473,9 @@ Singleton {
                 // record label chose. 0 leaves the artwork alone.
                 property real artTint: 0.28
 
-                // Quick toggles with no daemon behind them yet. Kept
-                // here so the tiles have somewhere to persist, and so
-                // a notification server can read `dnd` when it lands.
-                // Nudge for control-centre glyphs. The metrics-based
-                // correction handles most icon fonts; this is here for
-                // the ones it doesn't, so it's a slider rather than a
-                // recompile.
-                property int tileIconOffset: 0
-
-                // Notification popup and history panel.
+                // Notification popup and history panel. Widths only:
+                // both are as tall as what they hold.
                 property int notifyWidth: 460
-                property int notifyHeight: 104
-                property int notifyActionHeight: 36
-                // Extra room for the inline reply field, on the
-                // notifications that carry one.
-                property int notifyReplyHeight: 38
                 property int notifyDuration: 5000
                 property int notifyCriticalDuration: 12000
                 property int centreWidth: 480
@@ -478,8 +483,7 @@ Singleton {
                 // A ceiling, not a height. The centre is as tall as
                 // the notifications in it — see
                 // Modes/CentreMode.qml's contentHeight — and this is
-                // where it stops growing and starts scrolling, which
-                // at the shipped row height is four of them.
+                // where it stops growing and starts scrolling.
                 //
                 // No migration: the stored number carries over intact
                 // and still means something true about the panel. It
@@ -487,7 +491,6 @@ Singleton {
                 // the kind of change that can invalidate a value
                 // somebody already chose.
                 property int centreHeight: 440
-                property int centreRowHeight: 88
 
                 // How long after the last Tab the switcher commits.
                 // Long enough to keep tabbing, short enough not to
@@ -516,6 +519,9 @@ Singleton {
                 // here without enabling it for tty logins too.
                 property string pamConfig: "login"
 
+                // Quick toggles with no daemon behind them yet. Kept
+                // here so the tiles have somewhere to persist, and so
+                // a notification server can read `dnd` when it lands.
                 property bool dnd: false
                 property bool caffeine: false
             }
@@ -533,10 +539,10 @@ Singleton {
                 // It is not a duration: a spring has no end, only a
                 // settle, and the shape is already where you are
                 // looking well before it stops.
-                property int expandResponse: 240
-                property int collapseResponse: 190
-                property int hoverResponse: 180
-                property int popResponse: 280
+                property int expandResponse: 340
+                property int collapseResponse: 300
+                property int hoverResponse: 240
+                property int popResponse: 300
 
                 // Bounce, as Apple defines it: one minus the damping
                 // fraction. 0 settles without overshoot, 0.15 is a
@@ -545,22 +551,22 @@ Singleton {
                 // Departures spring too, but barely. Half of what the
                 // island dismisses is collapsing to nothing, and an
                 // overshoot past nothing is a negative width.
-                property real arriveBounce: 0.15
-                property real departBounce: 0.05
-                property real popBounce: 0.40
+                property real arriveBounce: 0.22
+                property real departBounce: 0.10
+                property real popBounce: 0.35
 
                 // The content follows the shape rather than waiting
                 // for it: it starts `contentLead` into the morph and
                 // is fully in long before the shape has settled. On
                 // the way out it leaves first, and faster.
-                property int contentLead: 40
-                property int contentInDuration: 150
-                property int contentOutDuration: 90
+                property int contentLead: 50
+                property int contentInDuration: 180
+                property int contentOutDuration: 120
 
                 // Cross-fades that are not part of a morph: a colour
                 // changing, an indicator appearing.
-                property int fadeIn: 90
-                property int fadeOut: 60
+                property int fadeIn: 100
+                property int fadeOut: 75
 
                 // How small a surface starts before it grows into
                 // place, so it reads as emerging from the shape it
@@ -612,18 +618,17 @@ Singleton {
                 // wallpaper; a little scrim does.
                 property real panelScrim: 0.0
 
-                // The three fonts the shell draws with, all on the
-                // Appearance page.
-                //
-                // fontIcons is the only one that is not a free choice:
-                // the shell's icons are codepoints rather than images,
-                // so it has to be a font that carries them. Keeping it
-                // separate is what lets fontFamily be any face at all
-                // — an interface drawn entirely in a monospace patch
-                // is the cost of tying the two together.
+                // The fonts the shell draws text with, all on the
+                // Appearance page, and all a free choice: icons come
+                // from the Tabler subset in Services/, not from any
+                // of these.
                 property string fontFamily: "Adwaita Sans"
                 property string fontMono: "JetBrainsMono Nerd Font Mono"
-                property string fontIcons: "JetBrainsMono Nerd Font"
+
+                // Tabler's stroke width, on its 24-unit grid: "2.5"
+                // bold, "2" Tabler's own default. A separate font file
+                // each, not a weight — see Services/Icons.qml.
+                property string iconStroke: "2.5"
 
                 // The pill draws a clock, and a clock in a
                 // proportional face changes width as the digits change

@@ -60,7 +60,6 @@ Item {
             color: Theme.primary
             font.family: Theme.fontIcons
             font.pixelSize: Theme.fontSizeNormal
-            font.weight: Config.island.fontWeight
             renderType: Text.NativeRendering
         }
 

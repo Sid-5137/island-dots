@@ -35,7 +35,6 @@ Item {
         color: Osd.muted ? Theme.outline : Theme.primary
         font.family: Theme.fontIcons
         font.pixelSize: 18
-        font.weight: Font.DemiBold
         renderType: Text.NativeRendering
         horizontalAlignment: Text.AlignHCenter
     }

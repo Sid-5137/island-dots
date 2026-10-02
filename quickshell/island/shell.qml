@@ -14,6 +14,8 @@ import "root:/Shortcuts"
 
 ShellRoot {
     WallpaperLayer {}
+    // Before Island, always: it has to stack beneath it. See Catcher.qml.
+    Catcher {}
     Island {}
     Settings {}
     ShortcutsWindow {}

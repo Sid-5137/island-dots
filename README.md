@@ -140,19 +140,13 @@ wl-clipboard cliphist brightnessctl playerctl hyprshot slurp
 hypridle NetworkManager bluez python3
 ```
 
-Fonts: **JetBrainsMono Nerd Font, v3 or newer**. Every glyph the shell
-draws comes from it — `Services/Icons.qml` is the list — and v3 matters:
-it moved the whole Material Design range from `U+F500..U+FD46` up to
-`U+F0000` and beyond, and the shell uses the new codepoints. A v2 patch
-has the same family name and satisfies any check for it, then draws
-nothing where the Wi-Fi bars, the settings tab icons and the padlock on
-a secured network go. `install.sh` checks for a glyph rather than for a
-name for exactly that reason, and reports a v2 patch as something to
-replace rather than something to add to. To check by hand:
-
-```bash
-fc-list ':charset=f0928' family   # md-wifi_strength_4; v3 only
-```
+Fonts: **JetBrainsMono Nerd Font** is the default for the pill and for
+monospace text; any font works, and Settings > Appearance lists what
+you have. The shell's own icons are not a font you install: they are
+[Tabler Icons](https://tabler.io/icons) (MIT), built into
+`packages/tabler-icons/` at a bold and a regular stroke and loaded
+from beside `Services/Icons.qml`, which lists every one. Adding an
+icon is a line there and a run of `packages/tabler-icons/build.py`.
 
 Icons: an XDG icon theme for application icons in the launcher, the
 tray and notifications — `adwaita-icon-theme` and `hicolor-icon-theme`.
@@ -214,6 +208,7 @@ checkout).
 ```
 packages/             extracted, reusable on their own
                       qml-squircle        continuous corners for QML
+                      tabler-icons        the icon fonts, built from Tabler's SVGs
 bin/                  linked into ~/.local/bin by install.sh
                       island-gestures     libinput gesture daemon
                       island-gtk-apply    GTK/Qt appearance

@@ -18,12 +18,17 @@ Singleton {
     property bool scanning: false
     property string lastError: ""
 
-    // Font Awesome for both, which is what the comment here always
-    // claimed and what the wired icon was not: it was U+F6FF, a
-    // Material codepoint from Nerd Fonts v2, and it drew exactly the
-    // box this comment was written to avoid. See Services/Icons.qml.
     readonly property string icon:
         connType === "ethernet" ? Icons.ethernet : Icons.wifi
+
+    // Bars for an nmcli percentage. One function so the control centre
+    // and the Network page cannot disagree about the same network.
+    function signalIcon(signal) {
+        return signal > 70 ? Icons.wifi4
+             : signal > 40 ? Icons.wifi3
+             : signal > 15 ? Icons.wifi2
+             : Icons.wifi1;
+    }
 
     readonly property string label: {
         if (connType === "ethernet") return "Wired";

@@ -193,8 +193,15 @@ Item {
             text: root.glyph
             color: covered ? Theme.textOnPrimary : Theme.text
             font.family: Theme.fontIcons
-            font.pixelSize: Math.min(15, Math.round(
-                (root.vertical ? track.width : track.height) * 0.62))
+            // Same parity as the track's short side. An icon one pixel
+            // odder than the track it sits in has half a pixel of slack
+            // that has to go to one side, and measured on screen it
+            // went downward: a 15px icon in a 26px track sat low.
+            font.pixelSize: {
+                const across = root.vertical ? track.width : track.height;
+                const size = Math.min(15, Math.round(across * 0.62));
+                return size - (across - size) % 2;
+            }
             renderType: Text.NativeRendering
 
             readonly property bool covered: root.vertical

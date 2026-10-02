@@ -18,7 +18,14 @@ NumberAnimation {
     // True while the content is arriving.
     required property bool revealing
 
-    duration: revealing ? Motion.contentIn : Motion.contentOut
+    // For content that arrives as something else leaves the same
+    // space — the pill's clock after a panel. Waits for the other to
+    // go before it starts. See Motion.revealLate.
+    property bool late: false
+
+    duration: revealing ? (late ? Motion.contentInLate : Motion.contentIn)
+                        : Motion.contentOut
     easing.type: Easing.BezierSpline
-    easing.bezierCurve: revealing ? Motion.reveal : Motion.ease
+    easing.bezierCurve: revealing ? (late ? Motion.revealLate : Motion.reveal)
+                                  : Motion.ease
 }

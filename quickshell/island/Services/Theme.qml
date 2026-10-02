@@ -56,12 +56,11 @@ Singleton {
     readonly property string fontMono:
         Config.appearance.fontMono || "JetBrainsMono Nerd Font Mono"
 
-    // Icons only. Every glyph in Services/Icons.qml is a codepoint in
-    // this font, so anything drawing one asks for it by name instead
-    // of inheriting fontFamily — which is what frees fontFamily to be
-    // a proportional face.
-    readonly property string fontIcons:
-        Config.appearance.fontIcons || "JetBrainsMono Nerd Font"
+    // Icons only: the Tabler subset Services/Icons.qml loads from
+    // beside itself. Not a setting and not a fallback chain — every
+    // glyph in Icons.qml is a codepoint in that one file, and any
+    // other font answering to it would draw a different picture.
+    readonly property string fontIcons: Icons.family
 
     // The pill and what it holds. Monospace by default so the clock
     // does not change width with the time — see Config.fontIsland.

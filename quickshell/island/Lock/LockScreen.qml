@@ -171,7 +171,7 @@ WlSessionLock {
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: Clock.time
+                    text: Clock.timeBare
                     color: surface.ink
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeClock
@@ -441,16 +441,33 @@ WlSessionLock {
                 }
             }
 
-            Text {
+            // Two Texts, not one string: the icon font carries icons
+            // and nothing else, so a percentage set in it would come
+            // out in whatever fontconfig substitutes for the digits.
+            Row {
                 anchors.bottom: parent.bottom
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottomMargin: 34
+                spacing: 6
                 visible: Config.lock.showBattery && Battery.present
-                text: Battery.icon + "  " + Battery.level + "%"
-                color: surface.wash(0.42)
-                font.family: Theme.fontIcons
-                font.pixelSize: Theme.fontSizeSmall
-                renderType: Text.NativeRendering
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Battery.icon
+                    color: surface.wash(0.42)
+                    font.family: Theme.fontIcons
+                    font.pixelSize: Theme.fontSizeSmall + 2
+                    renderType: Text.NativeRendering
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Battery.level + "%"
+                    color: surface.wash(0.42)
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    renderType: Text.NativeRendering
+                }
             }
         }
     }

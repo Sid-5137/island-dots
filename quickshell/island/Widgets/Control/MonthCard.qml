@@ -15,8 +15,17 @@ Item {
 
     property int monthOffset: 0
 
+    // The date, as text that only changes at midnight. Clock.now ticks
+    // every second, and the grid used to be worked out from it directly
+    // — month arithmetic and forty-two "is this today" checks, every
+    // second, all day, for a card that is usually not on screen. A
+    // string that has not changed notifies nobody, so everything below
+    // now runs once a day.
+    readonly property string today: Qt.formatDateTime(Clock.now, "yyyy-MM-dd")
+    readonly property int todayDate: parseInt(today.slice(8, 10))
+
     readonly property var shown: {
-        const d = new Date(Clock.now);
+        const d = new Date(today + "T00:00:00");
         d.setDate(1);
         d.setMonth(d.getMonth() + monthOffset);
         return d;
@@ -102,8 +111,8 @@ Item {
         }
 
         Repeater {
-            model: [{ g: "‹", d: -1, left: true },
-                    { g: "›", d: 1,  left: false }]
+            model: [{ g: Icons.chevronLeft,  d: -1, left: true },
+                    { g: Icons.chevronRight, d: 1,  left: false }]
 
             // A glyph that brightens, not a chip that fills. The 22px
             // hover square these used to sit in was the only hover
@@ -122,7 +131,7 @@ Item {
                 text: modelData.g
                 color: nav.containsMouse ? Theme.text : Theme.outline
                 font.family: Theme.fontIcons
-                font.pixelSize: 15
+                font.pixelSize: 13
                 renderType: Text.NativeRendering
 
                 Behavior on color {
@@ -212,7 +221,7 @@ Item {
 
                         readonly property bool isToday:
                             inMonth && root.monthOffset === 0
-                            && day === Clock.now.getDate()
+                            && day === root.todayDate
 
                         width: root.cellW
                         height: root.cellH
@@ -284,7 +293,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 40
-                    text: modelData.allDay ? "all day" : modelData.time
+                    text: modelData.allDay ? "all day" : Clock.formatHM(modelData.time)
                     color: Theme.textDim
                     font.family: Theme.fontMono
                     font.pixelSize: Theme.fontSizeSmall - 2

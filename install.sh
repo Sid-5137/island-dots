@@ -185,20 +185,15 @@ do
     fi
 done
 
-# The icon font. Checked by GLYPH, not by name: a Nerd Fonts v2 patch
-# has the same family name but none of the v3 Material Design
-# codepoints the shell draws, so a name check says yes and every icon
-# is still a box. The probe is md-wifi_strength_4 (U+F0928), which is
-# in Services/Icons.qml and so cannot quietly stop being used.
-if fc-list ":charset=f0928" family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
-    printf '  ok   %s\n' "JetBrainsMono Nerd Font (v3)"
-elif fc-list : family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
-    # `fc-list : family`, not `fc-list family` — the first argument is a
-    # pattern, so the bare form asks for fonts whose family is literally
-    # "family" and prints nothing, and this branch could never be taken.
-    printf '  MISS %s\n' "JetBrainsMono Nerd Font — installed, but a v2 patch"
-    missing+=("jetbrains-mono-nerd-fonts")
-    font_is_v2=1
+# The default face for the pill and for monospace text. Not the icons
+# — those are Tabler, bundled in packages/tabler-icons — so any patch
+# version will do, and a missing one only means a fallback face.
+#
+# `fc-list : family`, not `fc-list family`: the first argument is a
+# pattern, and the bare form asks for a family literally named
+# "family".
+if fc-list : family 2>/dev/null | grep -qi "jetbrainsmono nerd"; then
+    printf '  ok   %s\n' "JetBrainsMono Nerd Font"
 else
     printf '  MISS %s\n' "JetBrainsMono Nerd Font"
     missing+=("jetbrains-mono-nerd-fonts")
@@ -267,13 +262,6 @@ if [ ${#missing[@]} -gt 0 ]; then
     echo "      mate-polkit xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \\"
     echo "      adwaita-icon-theme hicolor-icon-theme jetbrains-mono-nerd-fonts \\"
     echo "      python3"
-    if [ "${font_is_v2:-0}" -ne 0 ]; then
-        echo
-        echo "The Nerd Font you have is a v2 patch: it carries the right"
-        echo "family name and none of the glyphs the shell asks for. It"
-        echo "needs replacing rather than adding to. Check with:"
-        echo "  fc-list ':charset=f0928' family"
-    fi
 else
     echo "All dependencies present."
 fi

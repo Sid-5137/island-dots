@@ -9,6 +9,13 @@ import "root:/Widgets"
 // Transient notification popup. Takes the island over for a few
 // seconds, then hands it back.
 //
+// The face is NoticeFace, shared with the history rows. What is here is
+// the frame round it: one inset on all four sides, and whatever the
+// sender offers — actions, a reply — stacked underneath at that same
+// inset, across the full width. Island.qml sizes the popup from
+// contentHeight, so it is exactly as tall as what it holds rather than
+// a fixed box with the content floating in it.
+//
 // QML ids do not resolve across files, so the surfaces this needs are
 // passed in rather than looked up.
 
@@ -23,11 +30,24 @@ Item {
 
     // How far in the popup holds its contents. Tied to the radius
     // rather than flat, so the inset opens up with the corner it has
-    // to clear — otherwise the icon tile and the reply field end up
-    // inside the arc at any radius but the one this was measured at.
-    // The multiplier keeps today's default landing on today's 16.
+    // to clear — otherwise the icon and the reply field end up inside
+    // the arc at any radius but the one this was measured at.
     readonly property int inset:
         Math.max(Theme.padCard, Math.round(Config.island.radius * 1.15))
+
+    readonly property int gap: 12
+    readonly property int actionHeight: 28
+    readonly property int replyHeight: 32
+
+    readonly property var n: win.notice
+    readonly property bool hasActions: !!n && n.actions.length > 0
+    readonly property bool hasReply: !!n && n.hasReply === true
+
+    // Off the notice rather than the mode, so the shape already knows
+    // its height on the frame the popup starts to open.
+    readonly property int contentHeight: inset * 2 + face.implicitHeight
+        + (hasActions ? gap + actionHeight : 0)
+        + (hasReply ? gap + replyHeight : 0)
 
     readonly property bool shown: island.isNotify
 
@@ -36,101 +56,66 @@ Item {
 
     Behavior on opacity { ContentFade { revealing: root.shown } }
 
-    readonly property var n: win.notice
-
-    Rectangle {
-        id: noticeIcon
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        width: 46
-        height: 46
-        // Not a token, and not concentric with anything: this tile is
-        // vertically centred, so it never comes near a corner of the
-        // popup and has no corner to be concentric with. Its roundness
-        // is a fact about what it is — it stands in for an app icon,
-        // and an app icon is round to about two-ninths of its side on
-        // every platform that draws one. radiusLarge made it 17 of 46,
-        // better than a third, which is the blobby over-rounded tile
-        // that makes the whole popup read as squircle-first.
-        radius: width * 0.225
-        color: root.n && root.n.critical
-            ? Theme.error : Theme.surfaceHigh
-        clip: true
-
-        Image {
-            id: noticeImg
-            anchors.fill: parent
-            anchors.margins: root.n && root.n.image ? 0 : 11
-            source: {
-                if (!root.n) return "";
-                if (root.n.image) return root.n.image;
-                if (root.n.appIcon)
-                    return Quickshell.iconPath(root.n.appIcon, true);
-                return "";
-            }
-            fillMode: root.n && root.n.image
-                ? Image.PreserveAspectCrop : Image.PreserveAspectFit
-            asynchronous: true
-            visible: status === Image.Ready
-        }
-
-        Text {
-            anchors.centerIn: parent
-            visible: !noticeImg.visible
-            text: Icons.bell
-            color: root.n && root.n.critical
-                ? Theme.textOnError : Theme.textDim
-            font.family: Theme.fontIcons
-            font.pixelSize: 20
-            font.weight: Config.island.fontWeight
-            renderType: Text.NativeRendering
+    // Clicking the popup runs the sender's default action — the one the
+    // spec reserves for a click on the notification itself — and
+    // dismisses it; a right click only dismisses. Never the first
+    // button: that is a choice, and a stray click should not make it.
+    // Declared first, so the buttons and the reply field above it take
+    // their own clicks.
+    MouseArea {
+        anchors.fill: parent
+        anchors.margins: -root.inset
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        cursorShape: root.n && root.n.hasDefault
+            ? Qt.PointingHandCursor : Qt.ArrowCursor
+        onClicked: function(mouse) {
+            if (mouse.button === Qt.LeftButton) Notifications.activate(root.n);
+            win.dismissNotice();
         }
     }
 
-    Column {
-        anchors.left: noticeIcon.right
-        anchors.leftMargin: 14
+    NoticeFace {
+        id: face
+        anchors.top: parent.top
+        anchors.left: parent.left
         anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 3
+        entry: root.n
+        iconSize: 40
+        bodyLines: 3
+    }
 
-        Text {
-            width: parent.width
-            text: root.n ? root.n.summary : ""
-            color: Theme.text
-            font.family: Theme.fontIsland
-            font.pixelSize: Theme.fontSizeNormal
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
-        }
+    // Equal widths across the whole inner width, so the row is as wide
+    // as the face above it and ends where it ends. The first action is
+    // the one the sender means, so it is the filled one.
+    Row {
+        id: actions
+        anchors.top: face.bottom
+        anchors.topMargin: root.gap
+        anchors.left: parent.left
+        anchors.right: parent.right
+        spacing: 8
+        visible: root.hasActions
 
-        Text {
-            width: parent.width
-            text: root.n ? root.n.body : ""
-            visible: text !== ""
-            color: Theme.textDim
-            font.family: Theme.fontIsland
-            font.pixelSize: Theme.fontSizeSmall
-            font.weight: Font.DemiBold
-            // Senders send markup whether or not it's
-            // advertised; rendering it raw shows tags.
-            textFormat: Text.StyledText
-            wrapMode: Text.WordWrap
-            maximumLineCount: 2
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
-        }
+        Repeater {
+            id: actionRepeater
+            model: root.n ? root.n.actions : []
 
-        Text {
-            width: parent.width
-            text: root.n ? root.n.appName : ""
-            color: Theme.outline
-            font.family: Theme.fontIsland
-            font.pixelSize: Theme.fontSizeSmall - 2
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
+            Button {
+                required property var modelData
+                required property int index
+
+                width: (actions.width - actions.spacing
+                        * (actionRepeater.count - 1)) / actionRepeater.count
+                implicitHeight: root.actionHeight
+                padding: Theme.padRow
+                text: modelData
+                kind: index === 0 ? "primary" : "plain"
+
+                onClicked: {
+                    Notifications.invoke(root.n, index);
+                    win.dismissNotice();
+                }
+            }
         }
     }
 
@@ -144,12 +129,10 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        height: 30
-        // This one *is* in the corner — it spans the full inner width
-        // along the bottom, so its two bottom corners sit directly
-        // inside the panel's. See Theme.inner: inset from a corner of
-        // 22 by 16 leaves 6, and radiusNormal's 14 on a 30px-tall box
-        // was very nearly a capsule tucked into a gentle corner.
+        height: root.replyHeight
+        // In the corner: it spans the full inner width along the
+        // bottom, so its two bottom corners sit directly inside the
+        // panel's. See Theme.inner.
         radius: Theme.inner(root.pill.radius, root.inset)
         visible: root.canReply
 
@@ -157,7 +140,7 @@ Item {
             ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.06)
         border.width: 1
         border.color: replyField.activeFocus
-            ? Theme.primary : Theme.outlineVariant
+            ? Theme.primary : Qt.rgba(1, 1, 1, 0.09)
 
         Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
         Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
@@ -165,8 +148,8 @@ Item {
         TextInput {
             id: replyField
             anchors.fill: parent
-            anchors.leftMargin: 11
-            anchors.rightMargin: sendBtn.width + 16
+            anchors.leftMargin: 12
+            anchors.rightMargin: sendBtn.width + 20
             verticalAlignment: Text.AlignVCenter
             color: Theme.text
             font.family: Theme.fontIsland
@@ -190,7 +173,7 @@ Item {
         Text {
             id: sendBtn
             anchors.right: parent.right
-            anchors.rightMargin: 11
+            anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             text: "Send"
             color: replyField.text === ""
@@ -198,7 +181,7 @@ Item {
                 : (sendHover.containsMouse ? Theme.primary : Theme.text)
             font.family: Theme.fontIsland
             font.pixelSize: Theme.fontSizeSmall
-            font.weight: Font.DemiBold
+            font.weight: Font.Bold
             renderType: Text.NativeRendering
 
             Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
@@ -226,8 +209,7 @@ Item {
         }
     }
 
-    readonly property bool canReply:
-        !!n && n.hasReply === true && island.isNotify
+    readonly property bool canReply: hasReply && island.isNotify
 
     // Island.qml holds the dismiss timer while this is true.
     Binding {
@@ -242,53 +224,5 @@ Item {
         Notifications.reply(root.n, replyField.text);
         replyField.text = "";
         win.dismissNotice();
-    }
-
-    // Click runs the first action if there is one, and
-    // dismisses either way — a notification you've
-    // acted on shouldn't linger.
-    Row {
-        id: actions
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: root.canReply ? replyBox.height + 6 : 0
-        spacing: 6
-        visible: root.n && root.n.actions.length > 0
-
-        // The first action is the one the sender means, so it is
-        // filled rather than merely filling on hover. Which action a
-        // popup is for is worth knowing before you have moved the
-        // pointer onto one of them.
-        Repeater {
-            model: root.n ? root.n.actions : []
-
-            Button {
-                required property var modelData
-                required property int index
-
-                implicitHeight: 26
-                padding: Theme.padRow
-                text: modelData
-                kind: index === 0 ? "primary" : "plain"
-
-                onClicked: {
-                    Notifications.invoke(root.n, index);
-                    win.dismissNotice();
-                }
-            }
-        }
-    }
-
-    // Clicking the body dismisses. Actions have their own buttons, so
-    // the whole popup being one big button would make a stray click
-    // run whatever the sender put first.
-    MouseArea {
-        anchors.fill: parent
-        // Declared last, so this sits above everything. Keep it clear
-        // of the controls underneath or it swallows their clicks.
-        anchors.bottomMargin: (root.canReply ? replyBox.height + 6 : 0)
-                            + (actions.visible ? 32 : 0)
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: win.dismissNotice()
     }
 }

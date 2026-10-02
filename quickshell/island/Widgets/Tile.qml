@@ -31,28 +31,12 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
     Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
-    // anchors.centerIn centres the text's LINE BOX, not the glyph.
-    // The box runs from ascent above the baseline to descent below,
-    // so its middle sits at (ascent + descent) / 2 from the top.
-    // An icon's ink is centred near the baseline instead — roughly
-    // 0.36em above it for this font family.
-    //
-    // Offset = where the ink actually sits, minus where the box
-    // centre is:  (ascent - descent) / 2 - 0.36em
-    //
-    // Metrics differ between icon fonts, so tileIconOffset is there
-    // to nudge the remainder rather than requiring an edit here.
-    FontMetrics {
-        id: fm
-        font: icon.font
-    }
-
+    // anchors.centerIn centres a text's line box, not its ink — and
+    // the icon font's line box is the icon's own 24-unit frame, so
+    // here the two are the same thing. See packages/tabler-icons.
     Text {
         id: icon
         anchors.centerIn: parent
-        anchors.verticalCenterOffset:
-            Math.round((fm.ascent - fm.descent) / 2 - font.pixelSize * 0.36)
-            + Config.island.tileIconOffset
 
         text: root.glyph
         color: root.active ? Theme.textOnPrimary : Theme.text

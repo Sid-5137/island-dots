@@ -78,18 +78,63 @@ Singleton {
         dispatch("hl.dsp.focus({ workspace = \"e" + rel + "\" })");
     }
 
+    // The last reply, and the last value given to each list below.
+    //
+    // hyprctl answers with the same bytes when nothing has changed, and
+    // a list assigned afresh is a changed list to everything bound to
+    // it: the pods tore down and rebuilt their chips on every refresh,
+    // whether or not a single window had moved. Compared as text, which
+    // is what the reply already is.
+    property string lastReply: ""
+    property var assigned: ({})
+    property string lastFocusEvent: ""
+
+    function assign(name, value) {
+        const key = JSON.stringify(value);
+        if (assigned[name] === key) return;
+        assigned[name] = key;
+        root[name] = value;
+    }
+
+    // The top-level JSON values in a --batch reply, which arrive one
+    // after another with nothing between them that JSON.parse accepts.
+    // Strings are tracked so a bracket in a window title is text.
+    function splitJson(text) {
+        const out = [];
+        let depth = 0, start = -1, inString = false, escaped = false;
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            if (inString) {
+                if (escaped) escaped = false;
+                else if (ch === "\\") escaped = true;
+                else if (ch === "\"") inString = false;
+            } else if (ch === "\"") {
+                inString = true;
+            } else if (ch === "{" || ch === "[") {
+                if (depth++ === 0) start = i;
+            } else if (ch === "}" || ch === "]") {
+                if (--depth === 0) out.push(text.slice(start, i + 1));
+            }
+        }
+        return out;
+    }
+
     Process {
         id: query
         running: true
-        // Two JSON blobs, separated by a marker so one read gets both.
-        command: ["sh", "-c",
-            "hyprctl activeworkspace -j; echo '###'; " +
-            "hyprctl workspaces -j; echo '###'; hyprctl clients -j"]
+        // One process: --batch answers each request in turn. This was
+        // sh and three separate hyprctl calls — four processes for
+        // every refresh.
+        command: ["hyprctl", "--batch",
+                  "j/activeworkspace; j/workspaces; j/clients"]
 
         stdout: StdioCollector {
             onStreamFinished: {
-                const parts = this.text.split("###");
-                if (parts.length < 2) return;
+                if (this.text === root.lastReply) return;
+                root.lastReply = this.text;
+
+                const parts = root.splitJson(this.text);
+                if (parts.length < 3) return;
 
                 try {
                     const ws = JSON.parse(parts[0]);
@@ -105,16 +150,16 @@ Singleton {
                     const clients = JSON.parse(parts[2] || "[]");
                     const mapped = clients.filter(c => c.mapped && !c.hidden);
 
-                    root.windows = mapped
+                    root.assign("windows", mapped
                         .filter(c => c.workspace && c.workspace.id === root.activeId)
                         .map(c => ({
                             x: c.at[0], y: c.at[1],
                             w: c.size[0], h: c.size[1]
-                        }));
+                        })));
 
                     // Most-recently-focused first, so Alt+Tab lands on
                     // the previous window rather than an arbitrary one.
-                    root.allWindows = mapped
+                    root.assign("allWindows", mapped
                         .filter(c => c.workspace && c.workspace.id > 0)
                         // Current workspace first, then focus history
                         // within each group. Pure focus order sends the
@@ -134,7 +179,7 @@ Singleton {
                             workspaceId: c.workspace.id,
                             workspaceName: c.workspace.name,
                             focused: c.focusHistoryID === 0
-                        }));
+                        })));
 
                     const f = mapped.find(c => c.focusHistoryID === 0);
                     root.focusedAddress = f ? f.address : "";
@@ -144,12 +189,12 @@ Singleton {
 
                 try {
                     const all = JSON.parse(parts[1]);
-                    root.workspaces = all
+                    root.assign("workspaces", all
                         // Special workspaces have negative ids and
                         // shouldn't appear in the indicator.
                         .filter(w => w.id > 0)
                         .map(w => ({ id: w.id, name: w.name, windows: w.windows }))
-                        .sort((a, b) => a.id - b.id);
+                        .sort((a, b) => a.id - b.id));
                 } catch (e) {
                     console.warn("[Wm] workspaces parse failed:", e);
                 }
@@ -185,6 +230,20 @@ Singleton {
 
         function onRawEvent(event) {
             switch (event.name) {
+                // Sent alongside activewindowv2 on every focus change,
+                // so answering both refreshed twice.
+                case "activewindow":
+                    return;
+                // Also sent each time the focused window's title
+                // changes — a terminal animating its title fires it
+                // several times a second, and every one cost a full
+                // re-query. A title is not what this tracks; a
+                // different window is.
+                case "activewindowv2":
+                    if (event.data === root.lastFocusEvent) return;
+                    root.lastFocusEvent = event.data;
+                    debounce.restart();
+                    return;
                 case "openwindow":
                 case "closewindow":
                 case "movewindow":
@@ -194,8 +253,6 @@ Singleton {
                 case "focusedmon":
                 case "fullscreen":
                 case "changefloatingmode":
-                case "activewindow":
-                case "activewindowv2":
                 case "movewindowv2":
                 case "togglegroup":
                 case "pin":

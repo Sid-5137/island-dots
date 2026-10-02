@@ -85,8 +85,15 @@ this is the long version behind it.
   change signal never fires.
 - `clip: true` clips to the bounding rectangle, not the rounded shape.
   Anything opaque touching a rounded corner must round it itself.
-- `anchors.centerIn` centres a text's line box, not its glyph. Icon
-  fonts reserve descent space they never use.
+- `anchors.centerIn` centres a text's line box, not its glyph. The
+  shell's icon font makes the two the same box — see
+  `packages/tabler-icons/build.py` — but any other font in an icon's
+  place brings the gap back.
+- Qt lays text out on unrounded metrics and then snaps the baseline to
+  a whole pixel, rounding down. A font whose ascent is a fraction of
+  the pixel size draws half a pixel low; an odd-sized icon centred in
+  an even-sized box has the same half pixel to lose, the same way.
+  Measure on screen before nudging anything.
 - A `Grid` takes its width from its children — deriving a child size
   from the Grid's width is circular and collapses silently.
 - **Notifications are destroyed the moment the handler returns**

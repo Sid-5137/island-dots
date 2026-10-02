@@ -130,9 +130,9 @@ Item {
 
         Repeater {
             model: [
-                { glyph: "", act: "prev" },
-                { glyph: "",       act: "play" },
-                { glyph: "", act: "next" }
+                { glyph: Icons.previous, act: "prev" },
+                { glyph: "",             act: "play" },
+                { glyph: Icons.next,     act: "next" }
             ]
 
             Item {
@@ -155,11 +155,14 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: parent.isPlay
-                        ? (Player.playing ? "" : "")
+                        ? (Player.playing ? Icons.pause : Icons.play)
                         : parent.modelData.glyph
                     color: Qt.rgba(1, 1, 1, tapped.containsMouse ? 1 : 0.85)
                     font.family: Theme.fontIcons
-                    font.pixelSize: parent.isPlay ? 12 : 11
+                    // Even, like the 26px row both sit in, so neither
+                    // has a half pixel to lose; the skips a size under
+                    // the button they flank.
+                    font.pixelSize: parent.isPlay ? 12 : 10
                     renderType: Text.NativeRendering
                 }
 

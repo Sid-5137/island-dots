@@ -289,7 +289,7 @@ Item {
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: Qt.formatDateTime(Clock.now, "HH:mm")
+                    text: Clock.time
                     color: Theme.primary
                     font.family: Theme.fontFamily
                     font.pixelSize: Config.island.fontSize

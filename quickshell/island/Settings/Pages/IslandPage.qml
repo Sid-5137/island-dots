@@ -21,6 +21,21 @@ Column {
 
     IslandPreview { width: parent.width }
 
+    SectionHeader { text: "Clock" }
+
+    ChoiceRow {
+        configKey: "island.clockFormat"
+        label: "Time"
+        description: "Every clock the shell draws — the island, the lock"
+            + " screen, the control centre and calendar events."
+        current: Config.island.clockFormat
+        options: [
+            { value: "24h", label: "24-hour" },
+            { value: "12h", label: "12-hour" }
+        ]
+        onSelected: function(v) { Config.island.clockFormat = v }
+    }
+
     SectionHeader { text: "Visibility" }
 
     ChoiceRow {
@@ -43,6 +58,15 @@ Column {
         description: "Out of the way of video and games."
         checked: Config.island.hideOnFullscreen
         onToggled: function(v) { Config.island.hideOnFullscreen = v }
+    }
+
+    ToggleRow {
+        configKey: "island.growFromCentre"
+        label: "Grow from the middle"
+        description: "Hovering and opening grow up and down at once."
+            + " Off, the island hangs from its top edge and grows down."
+        checked: Config.island.growFromCentre
+        onToggled: function(v) { Config.island.growFromCentre = v }
     }
 
     SectionHeader { text: "Pods" }
@@ -277,7 +301,7 @@ Column {
     Disclosure {
         width: parent.width
         text: "Media"
-        hint: "3 settings"
+        hint: "4 settings"
 
         ToggleRow {
             configKey: "island.pillTitle"
@@ -293,6 +317,16 @@ Column {
             description: "Briefly open the island when a new song starts."
             checked: Config.island.expandOnTrackChange
             onToggled: function(v) { Config.island.expandOnTrackChange = v }
+        }
+
+        ToggleRow {
+            configKey: "island.animateBars"
+            label: "Animate the bars"
+            description: "Keeps them moving while audio plays. That redraws"
+                + " the island every frame the whole time — on some"
+                + " laptops you can hear it as speaker crackle."
+            checked: Config.island.animateBars
+            onToggled: function(v) { Config.island.animateBars = v }
         }
 
         SliderRow {
@@ -314,15 +348,18 @@ Column {
         // stopwatch, and the rest are settings.json only. Moving any
         // of them puts this row on "Custom", which is how you can
         // tell from here that one has been moved.
-        description: "Apple's three springs. Snappy is the shipped one;"
-            + " smooth takes the overshoot out and bouncy spends more of it."
+        description: "Island is the Dynamic Island's own, and the shipped"
+            + " one. The other three are Apple's quicker springs: smooth"
+            + " without overshoot, snappy, and bouncy."
         current: Motion.tempo
         options: Motion.tempo === "custom"
-            ? [{ value: "smooth", label: "Smooth" },
+            ? [{ value: "island", label: "Island" },
+               { value: "smooth", label: "Smooth" },
                { value: "snappy", label: "Snappy" },
                { value: "bouncy", label: "Bouncy" },
                { value: "custom", label: "Custom" }]
-            : [{ value: "smooth", label: "Smooth" },
+            : [{ value: "island", label: "Island" },
+               { value: "smooth", label: "Smooth" },
                { value: "snappy", label: "Snappy" },
                { value: "bouncy", label: "Bouncy" }]
         // "custom" is not a tempo you can pick, only one you can be

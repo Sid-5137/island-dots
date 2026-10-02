@@ -178,6 +178,21 @@ Singleton {
     // name, because the bounce in each is Apple's number for it. The
     // sliders stay underneath.
     readonly property var tempos: ({
+        // The Dynamic Island's own feel, and the shipped one. Softer
+        // than the three below and a touch slower — a third of a
+        // second to open rather than a quarter — with an overshoot you
+        // feel rather than watch on the way in and a settle on the way
+        // out. Tried at 420ms first, which read as sluggish. The content timings are
+        // longer to match: long enough to see a panel shrink back
+        // into the pill instead of blinking out of it.
+        island: {
+            expandResponse: 340, collapseResponse: 300,
+            hoverResponse: 240,  popResponse: 300,
+            arriveBounce: 0.22, departBounce: 0.10, popBounce: 0.35,
+            contentLead: 50, contentInDuration: 180,
+            contentOutDuration: 120,
+            fadeIn: 100, fadeOut: 75
+        },
         smooth: {
             expandResponse: 280, collapseResponse: 230,
             hoverResponse: 210,  popResponse: 300,
@@ -263,6 +278,14 @@ Singleton {
     // mistake.
     readonly property int contentOut: Config.motion.contentOutDuration
 
+    // Content arriving as the island collapses into it — the pill's
+    // own, after a panel closes. It waits out the panel's fade first:
+    // started on the usual lead, the clock printed itself over a
+    // calendar still on its way out.
+    readonly property int contentInLate: contentOut + contentIn
+    readonly property var revealLate: leadCurve(
+        contentOut + Config.motion.contentLead, contentInLate)
+
     // Small cross-fades that are not part of a morph: a colour
     // changing, an indicator appearing.
     readonly property int fadeIn: Config.motion.fadeIn
@@ -280,6 +303,13 @@ Singleton {
     // Reduce Motion flattens it, per the note above.
     readonly property real emergeScale:
         reduced ? 1.0 : Config.motion.emergeScale
+
+    // A panel's scale while the shape is still the pill. It grows from
+    // here to full size as the shape opens and shrinks back into the
+    // pill as it closes, tied to the shape's own height, so content
+    // and outline are one movement on one spring — the way the Dynamic
+    // Island's content comes out of it and goes back in.
+    readonly property real contentFloor: reduced ? 1.0 : 0.84
 
     // How far a pod leans out of the way while it is absent.
     readonly property real absentScale: reduced ? 1.0 : 0.82
