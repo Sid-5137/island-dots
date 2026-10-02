@@ -76,6 +76,68 @@ Singleton {
     // as every other service.
     function refresh() {}
 
+    // ── Low battery ──────────────────────────────────────────
+    //
+    // Three stages, Config.idle.battery*: a warning, an urgent warning,
+    // and a minute's notice before suspending. Each fires once on the
+    // way down — `stage` is how far down this discharge has got — and
+    // plugging in starts the count over. A shell that only drew the
+    // number let the laptop run flat mid-sentence.
+    property int stage: 0
+
+    // On battery, as UPower sees it — not inferred from the status
+    // text, which says "Not charging" for a laptop plugged in and held
+    // at a charge limit.
+    readonly property bool draining: present && UPower.onBattery
+
+    onLevelChanged: check()
+    onDrainingChanged: check()
+
+    function check() {
+        if (!draining) {
+            stage = 0;
+            suspendCountdown.stop();
+            return;
+        }
+
+        const i = Config.idle;
+        const time = timeToEmpty > 0 ? " — about " + label.replace(" left", "") + " left." : ".";
+
+        if (i.batterySuspend > 0 && level <= i.batterySuspend && stage < 3) {
+            stage = 3;
+            notify("critical", "Battery at " + level + "%",
+                   "Suspending in a minute to keep your work. Plug in to cancel.");
+            suspendCountdown.restart();
+        } else if (i.batteryUrgent > 0 && level <= i.batteryUrgent && stage < 2) {
+            stage = 2;
+            notify("critical", "Battery critically low",
+                   level + "% remaining" + time + " Plug in soon.");
+        } else if (i.batteryWarn > 0 && level <= i.batteryWarn && stage < 1) {
+            stage = 1;
+            notify("normal", "Battery low", level + "% remaining" + time);
+        }
+    }
+
+    // Through the notification server — this shell — so it arrives as
+    // the island's own popup and stays in the centre's history.
+    function notify(urgency, summary, body) {
+        // No -i: the card draws the shell's own battery glyph for
+        // these (see NoticeFace), sharper than any themed icon here.
+        Quickshell.execDetached(["notify-send", "-a", "Battery",
+                                 "-u", urgency, summary, body]);
+    }
+
+    // Checked again when it fires: plugged in, or charged past the
+    // line, and nothing happens.
+    Timer {
+        id: suspendCountdown
+        interval: 60000
+        onTriggered: {
+            if (root.draining && root.level <= Config.idle.batterySuspend)
+                Quickshell.execDetached(["systemctl", "suspend"]);
+        }
+    }
+
     IpcHandler {
         target: "battery"
         function status(): string {

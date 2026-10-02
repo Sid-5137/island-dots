@@ -35,6 +35,9 @@
         "volumeCurve": "system"
     },
     "idle": {
+        "batterySuspend": 5,
+        "batteryUrgent": 10,
+        "batteryWarn": 20,
         "dimLevel": 10,
         "dimTimeout": 240,
         "enabled": true,

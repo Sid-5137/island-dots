@@ -718,6 +718,17 @@ Singleton {
                 property int lockTimeout: 300
                 property int screenOffTimeout: 360
                 property int suspendTimeout: 1800
+
+                // Low battery, in percent. A warning at the first, an
+                // urgent one at the second — urgent shows through Do
+                // Not Disturb — and at the last a minute's notice, then
+                // suspend: a laptop that runs flat loses whatever was
+                // unsaved, one that suspends keeps it in memory for
+                // hours more. Each fires once per discharge, and
+                // plugging in resets them. 0 turns a stage off.
+                property int batteryWarn: 20
+                property int batteryUrgent: 10
+                property int batterySuspend: 5
             }
 
             // The lock surface. Separate from `idle`, which decides

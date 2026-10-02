@@ -129,7 +129,12 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                text: Icons.bell
+                // The shell's own warnings get a glyph that says what
+                // they are about; anything else from an app with no
+                // icon gets the bell.
+                text: root.entry && root.entry.appName === "Battery"
+                    ? (root.critical ? Icons.batteryEmpty : Icons.batteryLow)
+                    : Icons.bell
                 color: root.critical ? Theme.textOnError : Theme.textDim
                 font.family: Theme.fontIcons
                 font.pixelSize: Math.round(root.iconSize * 0.42 / 2) * 2

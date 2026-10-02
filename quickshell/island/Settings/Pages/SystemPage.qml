@@ -114,6 +114,40 @@ Column {
         }
     }
 
+    // Shown only where there is a battery to run down.
+    SectionHeader { text: "Battery"; visible: Battery.present }
+
+    SliderRow {
+        configKey: "idle.batteryWarn"
+        visible: Battery.present
+        label: "Warn at"
+        description: "A notification on the way down. 0 to skip."
+        from: 0; to: 50; stepSize: 5; suffix: "%"
+        value: Config.idle.batteryWarn
+        onMoved: function(v) { Config.idle.batteryWarn = v }
+    }
+
+    SliderRow {
+        configKey: "idle.batteryUrgent"
+        visible: Battery.present
+        label: "Urgent at"
+        description: "Shows even with Do Not Disturb on. 0 to skip."
+        from: 0; to: 30; stepSize: 1; suffix: "%"
+        value: Config.idle.batteryUrgent
+        onMoved: function(v) { Config.idle.batteryUrgent = v }
+    }
+
+    SliderRow {
+        configKey: "idle.batterySuspend"
+        visible: Battery.present
+        label: "Suspend at"
+        description: "A minute's notice, then suspend so nothing is lost."
+            + " Plugging in cancels it. 0 never suspends."
+        from: 0; to: 15; stepSize: 1; suffix: "%"
+        value: Config.idle.batterySuspend
+        onMoved: function(v) { Config.idle.batterySuspend = v }
+    }
+
     SectionHeader { text: "Lock"; section: "lock" }
 
     // The lock screen is a real ext-session-lock surface with PAM

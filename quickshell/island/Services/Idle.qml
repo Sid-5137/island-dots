@@ -105,9 +105,39 @@ Singleton {
         onTriggered: root.apply()
     }
 
+    // ── Keep awake ───────────────────────────────────────────
+    //
+    // The control centre's toggle. It used to set a flag nothing read,
+    // so the screen dimmed, locked and suspended on schedule with it on.
+    //
+    // A logind inhibitor, held for exactly as long as the toggle is on.
+    // hypridle honours it (ignore_systemd_inhibit is off), it blocks
+    // the suspend at the end of the idle chain as well as the dim and
+    // the lock, and it shows in `systemd-inhibit --list`, so whether it
+    // is working is one command away. Not the Wayland idle inhibitor:
+    // that one counts only while its window is on screen, and this
+    // shell's windows are behind every fullscreen video — exactly when
+    // you would want it. Closing the lid still sleeps; logind lets the
+    // lid through any inhibitor unless told otherwise.
+    //
+    // What it holds the inhibitor open with watches this shell and
+    // exits when it does, so a crash cannot leave the machine unable to
+    // sleep until someone thinks to look.
+    readonly property bool keepAwake: Config.island.caffeine
+
+    Process {
+        running: root.keepAwake
+        command: ["systemd-inhibit", "--what=idle:sleep", "--mode=block",
+                  "--who=island", "--why=Keep awake is on",
+                  "sh", "-c",
+                  "shell=$(ps -o ppid= -p $PPID | tr -d ' '); "
+                  + "while kill -0 \"$shell\" 2>/dev/null; do sleep 15; done"]
+    }
+
     IpcHandler {
         target: "idle"
         function apply(): void { root.apply() }
         function preview(): string { return root.script() }
+        function keepAwake(): string { return root.keepAwake ? "on" : "off" }
     }
 }
