@@ -71,7 +71,7 @@ Variants {
             if (!root.primary) return WlrKeyboardFocus.None;
 
             if (searching || sessionOpen || centreOpen || picker !== ""
-                || Polkit.active || clipOpen || switcherOpen
+                || Polkit.active || clipOpen || switcherShown
                 || overviewOpen || root.expanded)
                 return WlrKeyboardFocus.Exclusive;
 
@@ -108,7 +108,13 @@ Variants {
 
         // ── Switcher and overview ────────────────────────────
 
+        // Switching is in progress — the list and the selection.
         property bool switcherOpen: false
+        // The switcher is on screen. A beat behind switcherOpen, the way
+        // macOS shows Cmd+Tab's panel only once you are still holding:
+        // a quick Alt+Tab never draws it, and so never takes the
+        // keyboard it would then have to hand back before the switch.
+        property bool switcherShown: false
         property int switchIndex: 0
         property bool overviewOpen: false
 
@@ -170,16 +176,28 @@ Variants {
                 // Anything that arrived since the last event is folded
                 // in by syncSwitchList, which preserves the selection.
                 Wm.refresh();
+                switchShow.restart();
             } else {
                 const n = switchList.length;
                 if (n > 0) switchIndex = (switchIndex + step + n) % n;
+                // A second Tab is a request to look, so show it now.
+                switchShow.stop();
+                switcherShown = true;
             }
-            // Commits itself once tabbing stops. Detecting the Alt
-            // release would need a bind on the bare modifier, which
-            // makes the compositor swallow every other Alt shortcut.
             switchCommit.restart();
         }
 
+        Timer {
+            id: switchShow
+            interval: 110
+            onTriggered: root.switcherShown = root.switcherOpen
+        }
+
+        // Letting go of Alt commits: hypr/binds.lua has a release bind
+        // on the bare modifier, delivered as IslandKeys.switchRelease.
+        // This is only the net under it, for a release that never
+        // arrives — long enough that holding Alt to read the list does
+        // not commit on you.
         Timer {
             id: switchCommit
             interval: Config.island.switcherCommitDelay
@@ -189,17 +207,39 @@ Variants {
         function activateSwitch() {
             if (!switcherOpen) return;
             switchCommit.stop();
+            switchShow.stop();
             const target = switchTarget;
+            const wasShown = switcherShown;
             switcherOpen = false;
-            if (target) {
-                const addr = target.address;
-                afterSurfaceDown(() => Wm.focusWindow(addr));
-            }
+            switcherShown = false;
+            if (!target) return;
+            const addr = target.address;
+            // Never shown, the island never took the keyboard, and there
+            // is nothing to wait for: switch now.
+            if (wasShown) afterSurfaceDown(() => Wm.focusWindow(addr));
+            else Wm.focusWindow(addr);
         }
 
         function cancelSwitch() {
             switchCommit.stop();
+            switchShow.stop();
             switcherOpen = false;
+            switcherShown = false;
+        }
+
+        // The compositor's shortcuts, primary island only. See
+        // Services/IslandKeys.qml.
+        Connections {
+            target: IslandKeys
+            enabled: root.primary
+            function onSwitchNext() { root.openSwitcher(1) }
+            function onSwitchPrevious() { root.openSwitcher(-1) }
+            function onSwitchCancel() { root.cancelSwitch() }
+            function onSwitchRelease() { root.activateSwitch() }
+            function onOverviewToggle() {
+                if (root.overviewOpen) root.closeOverview();
+                else root.openOverview();
+            }
         }
 
         // Run something once this surface has actually released its
@@ -766,7 +806,7 @@ Variants {
                 if (root.notice !== null && !root.searching && !root.sessionOpen
                     && !root.centreOpen && root.picker === "")
                     return "notify";
-                if (root.switcherOpen) return "switcher";
+                if (root.switcherShown) return "switcher";
                 if (root.overviewOpen) return "overview";
                 if (root.clipOpen) return "clipboard";
                 if (root.centreOpen) return "centre";
@@ -1078,20 +1118,20 @@ Variants {
                 // width mid-morph snaps a 1px outline away partway
                 // through the animation, which is the flicker around
                 // the edge on the way into the control centre.
-                borderColor: Qt.rgba(
-                    Qt.color(Theme.outlineVariant).r,
-                    Qt.color(Theme.outlineVariant).g,
-                    Qt.color(Theme.outlineVariant).b,
-                    1)
+                // Dark, not outlineVariant: see Theme.rim.
+                borderColor: Theme.rim
 
                 // Declared before everything else so the fill is
                 // underneath it, which is the job the Rectangle's own
                 // background used to do.
+                // Shaded top to bottom, a little darker at the base: a
+                // flat fill reads as a cut-out, a shaded one as volume.
                 Squircle {
                     smoothing: Config.appearance.cornerSmoothing
                     anchors.fill: parent
                     radius: pill.radius
                     color: pill.color
+                    colorEnd: Qt.darker(pill.color, 1.35)
                     borderWidth: 1
                     borderColor: pill.borderColor
                 }
@@ -1355,6 +1395,7 @@ Variants {
                     anchors.fill: parent
                     radius: shelf.radius
                     color: pill.color
+                    colorEnd: Qt.darker(pill.color, 1.35)
                     borderWidth: 1
                     borderColor: pill.borderColor
                 }

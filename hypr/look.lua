@@ -44,8 +44,12 @@ hl.config({
             size               = 8,
             passes             = 3,
             noise              = 0.02,
-            contrast           = 0.9,
-            brightness         = 0.85,
+            -- 1.0, not darker: a blurred surface's edge pixels show
+            -- the blurred background at full strength, and darkened
+            -- (0.85 / 0.9 here before) that was a dark haze hugging
+            -- the island's outline on every side.
+            contrast           = 1.0,
+            brightness         = 1.0,
             vibrancy           = 0.0,
             popups             = true,
             popups_ignorealpha = 0.2,

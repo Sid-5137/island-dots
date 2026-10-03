@@ -25,6 +25,20 @@ ShaderEffect {
     property real borderWidth: 0
     property color borderColor: "transparent"
 
+    // Optional, and off unless set: the colour at the bottom of the
+    // shape, for a fill or border that shades from top to bottom. A
+    // surface lit from above reads as having volume; a flat one reads
+    // as cut out of paper.
+    property color colorEnd: color
+    property color borderColorEnd: borderColor
+
+    // Also optional: draw the shape `inset` px inside the item and
+    // feather its edge across `softness` px either side — the room
+    // the inset leaves is where the falloff goes. Dark, offset and
+    // behind something, that is its shadow. 0 is the crisp edge.
+    property real inset: 0
+    property real softness: 0
+
     // ── Radius means how round it looks ──────────────────────
     //
     // A superellipse of the same radius as a circle does not look as
@@ -36,7 +50,8 @@ ShaderEffect {
         return (1 - Math.pow(2, -0.5)) / (1 - Math.pow(2, -1 / n));
     }
 
-    readonly property real half: Math.min(width, height) / 2
+    // The shape, not the item: an inset shape is smaller than its item.
+    readonly property real half: Math.max(0, Math.min(width, height) / 2 - inset)
 
     // ── A capsule stays a capsule ────────────────────────────
     //
@@ -64,7 +79,10 @@ ShaderEffect {
     readonly property real power: effectiveSmoothing
     readonly property real edge: Math.max(0, borderWidth)
     readonly property color fill: color
+    readonly property color fillEnd: colorEnd
     readonly property color line: borderColor
+    readonly property color lineEnd: borderColorEnd
+    readonly property real soft: Math.max(0, softness)
 
     fragmentShader: Qt.resolvedUrl("squircle.frag.qsb")
     blending: true

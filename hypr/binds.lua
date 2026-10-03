@@ -28,16 +28,34 @@ hl.bind(mod .. " + Q",         hl.dsp.window.close(), { description = "Windows: 
 hl.bind(mod .. " + Space",     hl.dsp.window.float({ action = "toggle" }), { description = "Windows: Float" })
 hl.bind(mod .. " + F",         hl.dsp.window.fullscreen({ mode = "fullscreen" }), { description = "Windows: Fullscreen" })
 hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized" }), { description = "Windows: Maximise" })
--- Alt+Tab steps through the switcher; it commits itself once you stop
--- tabbing. There is deliberately no bind on the bare Alt key: binding
--- a modifier alone makes the compositor capture it, which breaks every
--- other Alt shortcut and leaves the session feeling frozen.
-hl.bind("ALT + Tab",         hl.dsp.exec_cmd(Shell .. "switcher next"),     { repeating = true, description = "Windows: Switch window"})
-hl.bind("ALT + SHIFT + Tab", hl.dsp.exec_cmd(Shell .. "switcher previous"), { repeating = true, description = "Windows: Switch back"})
-hl.bind("ALT + Escape",      hl.dsp.exec_cmd(Shell .. "switcher cancel"), { description = "Windows: Cancel switching" })
+-- Alt+Tab steps through the switcher, and letting go of Alt switches.
+--
+-- Global shortcuts, not `exec_cmd(Shell .. …)`: hl.dsp.global hands the
+-- key straight to the running shell over Wayland, where exec started a
+-- `qs` process per press — about 120ms before the shell heard of each
+-- Tab. See quickshell/island/Services/IslandKeys.qml.
+--
+-- The Alt release is a release bind on the bare modifier, transparent
+-- and non-consuming: it fires only on the way up and never takes the
+-- key, so every other Alt shortcut still works. (A *press* bind on a
+-- bare modifier is the one that captures it and breaks them.)
+-- Bound twice, with and without ALT in the mask, because whether the
+-- modifier is still down when its own release is handled is the
+-- compositor's business; a second firing finds nothing open and does
+-- nothing. ignore_mods, so Alt+Shift+Tab's release counts too.
+hl.bind("ALT + Tab",         hl.dsp.global("island:switcher-next"),     { repeating = true, description = "Windows: Switch window"})
+hl.bind("ALT + SHIFT + Tab", hl.dsp.global("island:switcher-previous"), { repeating = true, description = "Windows: Switch back"})
+hl.bind("ALT + Escape",      hl.dsp.global("island:switcher-cancel"),   { description = "Windows: Cancel switching" })
+for _, key in ipairs({ "Alt_L", "Alt_R" }) do
+    for _, combo in ipairs({ "ALT + " .. key, key }) do
+        hl.bind(combo, hl.dsp.global("island:switcher-release"),
+                { release = true, transparent = true, non_consuming = true, ignore_mods = true,
+                  description = "Windows: Finish switching" })
+    end
+end
 
 
-hl.bind(mod .. " + W",         hl.dsp.exec_cmd(Shell .. "overview toggle"), { description = "Shell: Overview" })
+hl.bind(mod .. " + W",         hl.dsp.global("island:overview"), { description = "Shell: Overview" })
 hl.bind(mod .. " + Tab",       hl.dsp.window.cycle_next(), { description = "Windows: Cycle" })
 
 hl.bind("ALT + left",  hl.dsp.focus({ direction = "left" }), { description = "Windows: Focus left" })

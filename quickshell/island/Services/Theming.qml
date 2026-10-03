@@ -77,7 +77,34 @@ Singleton {
             "--font", a.fontFamily || "",
             "--font-mono", a.fontMono || ""
         ];
+        pendingIcons = a.iconTheme || "";
         proc.running = true;
+    }
+
+    // ── The shell's own icons ────────────────────────────────
+    //
+    // Everything else follows a new icon theme where it lands: GTK and
+    // Flatpak apps through gsettings and the portal, KDE apps through
+    // kdeglobals and the change signal island-gtk-apply sends. This
+    // process cannot. Qt takes its icon theme once, at startup, and
+    // nothing in Quickshell changes it afterwards — so the launcher,
+    // the tray and every notification kept the old icons until the
+    // next login. When the theme the shell started with is no longer
+    // the chosen one, it restarts itself once the files are written:
+    // a second's blink, rather than logging out. Only the icon theme
+    // does this; fonts and cursors reach the shell without it.
+    property string pendingIcons: ""
+    property string runningIcons: ""
+
+    // Started only if nothing is running a moment after the kill.
+    // Quickshell's crash guard relaunches a shell that dies badly on
+    // the way out — and this one can, in its own teardown — so starting
+    // one unconditionally could leave two islands on screen.
+    function restartForIcons() {
+        Quickshell.execDetached(["setsid", "-f", "sh", "-c",
+            "sleep 0.4; quickshell kill -c island; sleep 1.5; "
+            + "pgrep -x quickshell >/dev/null || "
+            + "exec quickshell -c island >/dev/null 2>&1"]);
     }
 
     Process {
@@ -85,6 +112,10 @@ Singleton {
         running: false
 
         onExited: function(code) {
+            if (code === 0) {
+                if (root.runningIcons === "") root.runningIcons = root.pendingIcons;
+                else if (root.pendingIcons !== root.runningIcons) root.restartForIcons();
+            }
             if (code === 127)
                 console.warn("[Theming] island-gtk-apply not found on PATH —"
                     + " run install.sh to link it into ~/.local/bin");

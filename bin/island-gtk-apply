@@ -104,6 +104,35 @@ ini_set() {
     fi
 }
 
+# Set `key` inside `[section]` of a Qt- or KDE-style ini file, adding
+# the key — and the section — when they are missing. ini_set above
+# assumes a single [Settings] group; qt6ct.conf and kdeglobals have
+# several, and the replace-only sed this replaces did nothing whenever
+# the key was absent, which in a fresh qt6ct.conf is always: Qt never
+# learned the icon theme at all, not even after logging out.
+conf_set() {
+    file="$1" section="$2" key="$3" value="$4"
+    [ -n "$value" ] || return 0
+    mkdir -p "$(dirname "$file")"
+    [ -f "$file" ] || : > "$file"
+    awk -v s="[$section]" -v k="$key" -v v="$value" '
+        /^\[.*\]$/ {
+            if (inside && !done) { print k "=" v; done = 1 }
+            inside = ($0 == s)
+        }
+        inside && index($0, k "=") == 1 {
+            if (!done) { print k "=" v; done = 1 }
+            next
+        }
+        { print }
+        END {
+            if (!done) {
+                if (!inside) print "\n" s
+                print k "=" v
+            }
+        }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+}
+
 for v in 3.0 4.0; do
     f="$CFG/gtk-$v/settings.ini"
     ini_set "$f" gtk-theme-name        "$gtk"
@@ -199,9 +228,7 @@ fi
 
 qtct="$CFG/qt6ct/qt6ct.conf"
 if [ -f "$qtct" ]; then
-    if [ -n "$icon" ]; then
-        sed -i "s|^icon_theme=.*|icon_theme=$icon|" "$qtct" || true
-    fi
+    conf_set "$qtct" Appearance icon_theme "$icon"
     if [ -n "$cursor" ]; then
         sed -i "s|^cursor_theme=.*|cursor_theme=$cursor|" "$qtct" || true
     fi
@@ -212,6 +239,22 @@ if [ -f "$qtct" ]; then
     fi
     if [ -n "$font_mono" ]; then
         sed -i "s|^fixed=\"[^,]*,|fixed=\"$font_mono,|" "$qtct" || true
+    fi
+fi
+
+# ── KDE icons ────────────────────────────────────────────────────────
+#
+# KF6 applications take the icon theme from kdeglobals, not qt6ct, and
+# re-read it live when told to: KGlobalSettings' change signal with
+# type 4, IconChanged. The same signal island-qt-apply sends for the
+# palette, with a different number.
+
+if [ -n "$icon" ]; then
+    conf_set "$CFG/kdeglobals" Icons Theme "$icon"
+    if have dbus-send; then
+        dbus-send --session --type=signal /KGlobalSettings \
+            org.kde.KGlobalSettings.notifyChange int32:4 int32:0 \
+            >/dev/null 2>&1 || true
     fi
 fi
 

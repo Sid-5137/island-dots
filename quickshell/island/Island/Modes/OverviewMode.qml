@@ -176,10 +176,7 @@ Item {
                                 anchors.centerIn: parent
                                 implicitSize: 32
                                 source: root.shown
-                                    ? Quickshell.iconPath(
-                                          thumb.modelData.cls.toLowerCase(),
-                                          "application-x-executable")
-                                    : ""
+                                    ? AppIcons.forClass(thumb.modelData.cls) : ""
                                 visible: !thumb.toplevel
                             }
 

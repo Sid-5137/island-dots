@@ -34,6 +34,14 @@ echo "Linking:"
 link "$DOTS/hypr" "$CONFIG/hypr"
 link "$DOTS/quickshell/island" "$CONFIG/quickshell/island"
 
+# The session target autostart.lua starts: it binds
+# graphical-session.target, without which xdg-desktop-portal refuses to
+# start — and with no portal, apps only see a new icon theme, dark mode
+# or font after logging out and in. See systemd/hyprland-session.target.
+link "$DOTS/systemd/hyprland-session.target" \
+     "$CONFIG/systemd/user/hyprland-session.target"
+command -v systemctl >/dev/null 2>&1 && systemctl --user daemon-reload 2>/dev/null || true
+
 # Text rendering. Qt reads fontconfig directly rather than gsettings,
 # so without this the shell rasterises differently from every GTK app
 # on the machine — grayscale where they get subpixel, and against a

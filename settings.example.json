@@ -7,7 +7,7 @@
         "blurSize": 8,
         "borderSize": 1,
         "colorSource": "wallpaper",
-        "cornerSmoothing": 4.0,
+        "cornerSmoothing": 3.25,
         "cursorSize": 24,
         "cursorTheme": "Bibata-Modern-Ice",
         "fontFamily": "Adwaita Sans",

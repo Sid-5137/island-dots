@@ -1,0 +1,20 @@
+# island-dots. GPL-3.0 — see LICENSE.
+#
+# The session target hypr/autostart.lua starts once Hyprland is up,
+# and stops on the way out. Its one job is to bind
+# graphical-session.target, which is what xdg-desktop-portal requires
+# before it will start at all — and the portal is how apps hear about
+# the icon theme, dark mode and fonts changing without a restart, how a
+# browser shares a screen and how a Flatpak opens a file.
+#
+# A session manager such as uwsm would normally provide this. Without
+# one, nothing did: graphical-session.target never came up, the portal
+# failed with "Dependency failed" on every launch, and a new icon
+# theme reached apps only after logging out and in. install.sh links
+# this into ~/.config/systemd/user/.
+
+[Unit]
+Description=Hyprland session (island-dots)
+BindsTo=graphical-session.target
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target

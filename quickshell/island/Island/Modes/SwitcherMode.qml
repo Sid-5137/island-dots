@@ -63,14 +63,30 @@ Item {
                 Behavior on color { ColorAnimation { duration: Motion.fadeIn } }
                 Behavior on border.color { ColorAnimation { duration: Motion.fadeIn } }
 
+                // See Services/AppIcons.qml for why not the class itself.
+                readonly property string iconSource: AppIcons.forClass(tile.modelData.cls)
+
                 IconImage {
                     anchors.centerIn: parent
                     implicitSize: Math.round(Config.island.switcherTile * 0.56)
-                    source: Quickshell.iconPath(tile.modelData.cls.toLowerCase(),
-                                                "application-x-executable")
+                    source: parent.iconSource
+                    visible: parent.iconSource !== ""
                     opacity: tile.active ? 1 : 0.6
 
                     Behavior on opacity { NumberAnimation { duration: Motion.fadeIn } }
+                }
+
+                // Nothing in the theme for it: a window glyph of the
+                // shell's own, never the missing-image checkerboard.
+                Text {
+                    anchors.centerIn: parent
+                    visible: parent.iconSource === ""
+                    text: Icons.tabApps
+                    color: Theme.textDim
+                    opacity: tile.active ? 1 : 0.6
+                    font.family: Theme.fontIcons
+                    font.pixelSize: Math.round(Config.island.switcherTile * 0.36 / 2) * 2
+                    renderType: Text.NativeRendering
                 }
 
                 Rectangle {
@@ -147,5 +163,12 @@ Item {
         focus: root.visible
         Keys.onEscapePressed: win.cancelSwitch()
         Keys.onReturnPressed: win.activateSwitch()
+        // The second way a release gets here: once the switcher is on
+        // screen it holds the keyboard, so Alt going up arrives as an
+        // ordinary key event, whatever the compositor's binds made of it.
+        Keys.onReleased: function(event) {
+            if (event.key === Qt.Key_Alt || event.key === Qt.Key_AltGr)
+                win.activateSwitch();
+        }
     }
 }

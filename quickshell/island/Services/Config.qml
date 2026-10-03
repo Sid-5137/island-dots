@@ -495,6 +495,10 @@ Singleton {
                 // How long after the last Tab the switcher commits.
                 // Long enough to keep tabbing, short enough not to
                 // feel like a wait once you have chosen.
+                // The switch commits when Alt is let go. This is the
+                // fallback for a release that never arrives — kept at
+                // what it was before the release existed, so a missed
+                // one costs no more than it ever did.
                 property int switcherCommitDelay: 650
 
                 property int switcherWidth: 900
@@ -643,16 +647,20 @@ Singleton {
                 property bool radiusLink: true
 
                 // How square a corner is, as the exponent of the
-                // superellipse it is drawn from. 2 is a circular arc
-                // — what Qt's Rectangle draws — and 4 is roughly the
-                // corner macOS draws.
+                // superellipse it is drawn from. 2 is a circular arc —
+                // what Qt's Rectangle draws — and 3.25 is macOS's
+                // continuous corner: Apple's curve reaches about 1.53x
+                // its radius along each edge, and this exponent reaches
+                // the same. 4, the old default, reaches 1.84x — flatter
+                // sides, a sharper turn between them, and a corner that
+                // reads as boxier than any Apple draws.
                 //
                 // One number for the compositor and the shell both. It
                 // goes to Hyprland as decoration:rounding_power for
                 // windows, and packages/qml-squircle draws the shell's
                 // own surfaces from it, so a window corner and a panel
                 // corner are the same curve.
-                property real cornerSmoothing: 4.0
+                property real cornerSmoothing: 3.25
 
                 // Applied to GTK, Qt and the shell together.
                 property string iconTheme: "Adwaita"

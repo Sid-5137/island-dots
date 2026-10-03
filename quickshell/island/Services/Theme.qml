@@ -44,6 +44,14 @@ Singleton {
     // register as a gap rather than as antialiasing.
     readonly property color bezel: Qt.rgba(1, 1, 1, 0.14)
 
+    // The dark half: the outer hairline of the island, its pods and its
+    // shelf. Darker than the surface it outlines, on any palette. It was
+    // outlineVariant, which on a dark palette is lighter than the fill —
+    // and a light ring round a dark shape, with the bezel's light line
+    // just inside it, reads as a grey haze leaking out of the edge
+    // rather than as the edge.
+    readonly property color rim: Qt.darker(surfaceLowest, 1.8)
+
     // Set on the Appearance page. The shipped names are the fallback
     // rather than the default, and they are doing real work: a font
     // that gets uninstalled after it was picked leaves the key

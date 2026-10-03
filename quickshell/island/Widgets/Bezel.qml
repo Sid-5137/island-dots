@@ -44,5 +44,10 @@ Squircle {
 
     color: "transparent"
     borderWidth: 1
+    // Lit from above: full strength along the top, nothing by the
+    // bottom. A ring of even light all the way round reads as a glow;
+    // light that falls off downward reads as a curved surface catching
+    // it, which is most of what gives the shape weight.
     borderColor: Theme.bezel
+    borderColorEnd: Qt.rgba(1, 1, 1, 0)
 }

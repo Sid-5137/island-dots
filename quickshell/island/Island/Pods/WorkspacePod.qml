@@ -177,9 +177,7 @@ Pod {
                         y: 0
                         visible: parent.busy
                         implicitSize: 15
-                        source: Quickshell.iconPath(
-                            Wm.classFor(parent.modelData.id).toLowerCase(),
-                            "application-x-executable")
+                        source: AppIcons.forClass(Wm.classFor(parent.modelData.id))
                         // The rest are there to be recognised, not
                         // read.
                         opacity: parent.active ? 1 : 0.5

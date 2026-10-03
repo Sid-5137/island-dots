@@ -29,8 +29,12 @@ layout(std140, binding = 0) uniform buf {
     float extent;   // corner reach along each edge, in pixels
     float power;    // superellipse exponent, >= 2
     float edge;     // border width, in pixels; 0 for none
-    vec4 fill;      // fill colour, premultiplied (Qt does it)
-    vec4 line;      // border colour, premultiplied
+    float inset;    // the shape's distance in from the item's edge, px
+    float soft;     // feather, px: 0 is a crisp antialiased edge
+    vec4 fill;      // fill colour at the top, premultiplied (Qt does it)
+    vec4 fillEnd;   // ... and at the bottom; the same for a flat fill
+    vec4 line;      // border colour at the top, premultiplied
+    vec4 lineEnd;   // ... and at the bottom
 };
 
 float lnorm(vec2 v, float n) {
@@ -46,20 +50,28 @@ float sdSuperBox(vec2 p, vec2 b, float r, float n) {
 
 void main() {
     vec2 p = qt_TexCoord0 * size - size * 0.5;
-    float d = sdSuperBox(p, size * 0.5, extent, power);
+    vec2 halfSize = size * 0.5 - inset;
+    float d = sdSuperBox(p, halfSize, extent, power);
 
-    // One pixel of antialiasing, measured off how fast the distance
-    // changes here rather than assumed to be unit — the L^n norm is
-    // not a true Euclidean distance through the corner, and this is
-    // what keeps its edge as crisp as the straights.
-    float aa = max(fwidth(d), 1e-4);
+    // Top of the shape to its bottom, so a gradient spans the shape
+    // rather than the item around it.
+    float t = clamp((p.y + halfSize.y) / max(2.0 * halfSize.y, 1e-4), 0.0, 1.0);
+    vec4 f = mix(fill, fillEnd, t);
+    vec4 l = mix(line, lineEnd, t);
+
+    // Feathered: the shape's falloff spread `soft` either side of its
+    // edge. A shadow is this, offset and dark.
+    if (soft > 0.0) {
+        fragColor = f * (1.0 - smoothstep(-soft, soft, d)) * qt_Opacity;
+        return;
+    }
+
+    // A pixel and a half of falloff, not one. The distance here is a
+    // superellipse's, not a circle's, and a one-pixel ramp along a
+    // curve that dark against something that light lands as visible
+    // steps; spread a little wider it reads as a curve.
+    float aa = max(fwidth(d), 1e-4) * 1.5;
     float outer = clamp(0.5 - d / aa, 0.0, 1.0);
     float inner = clamp(0.5 - (d + edge) / aa, 0.0, 1.0);
-
-    // Fill inside the ring, ring between inner and outer, nothing
-    // past the outline. Qt hands a QML `color` to a shader already
-    // premultiplied, and the scene graph blends premultiplied, so
-    // nothing here multiplies by alpha — doing it again is a fill a
-    // few levels too dark, which is how this line was found.
-    fragColor = (fill * inner + line * (outer - inner)) * qt_Opacity;
+    fragColor = (f * inner + l * (outer - inner)) * qt_Opacity;
 }

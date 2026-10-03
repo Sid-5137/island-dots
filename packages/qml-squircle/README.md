@@ -21,7 +21,7 @@ Hyprland draws for windows when `decoration:rounding_power` is above 2.
 Squircle {
     anchors.fill: parent
     radius: 16
-    smoothing: 4          // 2 is a circle; 4 is about macOS
+    smoothing: 3.25       // 2 is a circle; 3.25 is macOS
     color: "#1c1c1e"
     borderWidth: 1
     borderColor: "#3a3a3c"
@@ -37,7 +37,8 @@ it: the curve leaves the edge earlier and eases in.
 | `smoothing` | corner |
 |:--|:--|
 | `2` | a circle — pixel-identical to `Rectangle` |
-| `4` | about what macOS uses |
+| `3.25` | macOS's continuous corner — reaches `1.53 ×` its radius, as Apple's does |
+| `4` | squarer than macOS: flatter sides, a sharper turn |
 | `6`+ | visibly squared off |
 
 The curve is `|x/r|^n + |y/r|^n = 1`, traced parametrically as
@@ -132,6 +133,7 @@ The factor puts the 45° point of the curve where a circle's would be:
 |:--|:--|
 | `2` | `1.00 × radius` — a circle, unchanged |
 | `3` | `1.42 × radius` |
+| `3.25` | `1.53 × radius` — Apple's continuous corner |
 | `4` | `1.84 × radius` |
 | `6` | `2.69 × radius` |
 

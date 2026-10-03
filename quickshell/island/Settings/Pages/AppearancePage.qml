@@ -383,8 +383,9 @@ Column {
         configKey: "appearance.cornerSmoothing"
         advanced: true
         label: "Smoothing"
-        description: "2.0 is a circular corner; 4.0 is roughly macOS."
-        from: 2.0; to: 8.0; stepSize: 0.5; decimals: 1
+        description: "2.0 is a circular corner; 3.25 is macOS's continuous"
+            + " corner. Higher squares it off."
+        from: 2.0; to: 8.0; stepSize: 0.25; decimals: 2
         value: Config.appearance.cornerSmoothing
         onMoved: function(v) { Config.appearance.cornerSmoothing = v }
     }

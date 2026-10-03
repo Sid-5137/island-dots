@@ -202,8 +202,10 @@ Item {
         anchors.fill: parent
         radius: root.radius
         color: root.fill
+        colorEnd: Qt.darker(root.fill, 1.35)
         borderWidth: 1
-        borderColor: Theme.outlineVariant
+        // The pill's edge — see Theme.rim.
+        borderColor: Theme.rim
     }
 
     // The pill's second line too — a pod is the island in a smaller
